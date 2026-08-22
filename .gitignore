@@ -1,0 +1,57 @@
+# ===== General =====
+.DS_Store
+Thumbs.db
+*.log
+*.swp
+.env
+gcp-key.json
+backups/
+.claude/
+
+# ===== IDEs =====
+.idea/
+*.iml
+.history/
+
+# ===== Backend (FastAPI / Python) =====
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/**/*.pyo
+backend/.pytest_cache/
+backend/.ruff_cache/
+backend/.mypy_cache/
+backend/.env
+backend/*.egg-info/
+backend/storage/
+
+# ===== Frontend (Angular) =====
+frontend/node_modules/
+frontend/dist/
+frontend/tmp/
+frontend/out-tsc/
+frontend/.angular/cache
+frontend/.sass-cache/
+frontend/coverage/
+
+# ===== Mobile (Flutter) =====
+mobile/.dart_tool/
+mobile/.flutter-plugins-dependencies
+mobile/.flutter-plugins
+mobile/.pub-cache/
+mobile/.pub/
+mobile/build/
+mobile/coverage/
+mobile/**/doc/api/
+mobile/**/ios/Flutter/.last_build_id
+mobile/android/app/debug
+mobile/android/app/profile
+mobile/android/app/release
+
+# ===== Infra =====
+infra/seed/
+
+# Credenciales (NUNCA commitear)
+**/firebase-adminsdk-*.json
+**/*service-account*.json
