@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.catalogo import CategoriaOferta, Carrera, Ciudad, Habilidad
-from app.schemas.catalogo import CarreraResponse, CategoriaOfertaResponse, CiudadResponse, HabilidadResponse
+from app.features.catalogo.schema import CarreraResponse, CategoriaOfertaResponse, CiudadResponse, HabilidadResponse
 
 router = APIRouter(prefix="/catalogos", tags=["catalogos"])
 
