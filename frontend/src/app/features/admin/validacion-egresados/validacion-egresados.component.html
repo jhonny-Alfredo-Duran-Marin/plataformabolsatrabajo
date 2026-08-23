@@ -1,0 +1,69 @@
+<section class="validacion">
+  <h1>Validación de egresados pendientes</h1>
+
+  <div class="token-box">
+    <label>
+      Token de administrador (temporal, mientras no exista pantalla de login)
+      <input
+        type="text"
+        [ngModel]="adminToken.token()"
+        (ngModelChange)="guardarToken($event)"
+        placeholder="Bearer token"
+      />
+    </label>
+    <button type="button" (click)="cargar()" [disabled]="cargando()">Cargar pendientes</button>
+  </div>
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+  @if (mensaje()) {
+    <p class="ok">{{ mensaje() }}</p>
+  }
+
+  @if (cargando()) {
+    <p>Cargando...</p>
+  } @else {
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>CI</th>
+          <th>Carrera</th>
+          <th>Año egreso</th>
+          <th>Matrícula</th>
+          <th>Completitud</th>
+          <th>Motivo de rechazo</th>
+          <th>Decisión</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (perfil of pendientes(); track perfil.id) {
+          <tr>
+            <td>{{ perfil.nombres }} {{ perfil.apellidos }}</td>
+            <td>{{ perfil.ci }}</td>
+            <td>{{ nombreCarrera(perfil.carrera_id) }}</td>
+            <td>{{ perfil.anio_egreso ?? '—' }}</td>
+            <td>{{ perfil.matricula ?? '—' }}</td>
+            <td>{{ perfil.porcentaje_completitud }}%</td>
+            <td>
+              <input
+                type="text"
+                [(ngModel)]="motivosRechazo[perfil.id]"
+                placeholder="Motivo si se rechaza"
+              />
+            </td>
+            <td class="acciones">
+              <button type="button" (click)="aprobar(perfil)">Aprobar</button>
+              <button type="button" (click)="rechazar(perfil)">Rechazar</button>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="8">No hay solicitudes pendientes.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>

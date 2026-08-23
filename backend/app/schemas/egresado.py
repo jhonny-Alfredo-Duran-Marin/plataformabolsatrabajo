@@ -16,6 +16,7 @@ class PerfilEgresadoResponse(BaseModel):
     fecha_nacimiento: date | None
     carrera_id: int | None
     anio_egreso: int | None
+    matricula: str | None
     estado_validacion: EstadoValidacionEgresado
     porcentaje_completitud: int
     perfil_oculto: bool

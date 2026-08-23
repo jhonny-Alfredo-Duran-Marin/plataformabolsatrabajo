@@ -1,0 +1,41 @@
+.validacion {
+  padding: 1.5rem;
+
+  .token-box {
+    display: flex;
+    gap: 0.75rem;
+    align-items: end;
+    margin-bottom: 1rem;
+
+    input {
+      width: 100%;
+      max-width: 32rem;
+    }
+  }
+
+  .error {
+    color: #b00020;
+  }
+
+  .ok {
+    color: #1b7a3d;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th,
+    td {
+      border: 1px solid #ddd;
+      padding: 0.4rem 0.6rem;
+      text-align: left;
+      font-size: 0.85rem;
+    }
+
+    .acciones {
+      display: flex;
+      gap: 0.4rem;
+    }
+  }
+}

@@ -6,10 +6,10 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
 
 
-class AuditoriaLog(Base):
+class BitacoraLog(Base):
     """Bitácora de operaciones críticas del sistema. Módulo 5.1.1 (RNF-18)."""
 
-    __tablename__ = "auditoria_logs"
+    __tablename__ = "bitacora_logs"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     usuario_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"), nullable=True)

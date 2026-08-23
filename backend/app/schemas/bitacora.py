@@ -3,7 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
-class AuditoriaLogResponse(BaseModel):
+class BitacoraLogResponse(BaseModel):
     id: int
     usuario_id: int | None
     ip: str | None
