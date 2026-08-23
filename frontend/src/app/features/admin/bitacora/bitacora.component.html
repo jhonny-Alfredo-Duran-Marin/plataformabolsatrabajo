@@ -1,0 +1,80 @@
+<section class="bitacora">
+  <h1>Bitácora del sistema</h1>
+
+  <div class="token-box">
+    <label>
+      Token de administrador (temporal, mientras no exista pantalla de login)
+      <input
+        type="text"
+        [ngModel]="adminToken.token()"
+        (ngModelChange)="guardarToken($event)"
+        placeholder="Bearer token"
+      />
+    </label>
+  </div>
+
+  <form class="filtros" (ngSubmit)="buscar()">
+    <label>
+      Usuario ID
+      <input type="number" [(ngModel)]="filtros.usuarioId" name="usuarioId" />
+    </label>
+    <label>
+      Módulo
+      <input type="text" [(ngModel)]="filtros.modulo" name="modulo" placeholder="auth, validacion_institucional..." />
+    </label>
+    <label>
+      Acción
+      <input type="text" [(ngModel)]="filtros.accion" name="accion" placeholder="login, decidir_egresado..." />
+    </label>
+    <label>
+      Desde
+      <input type="datetime-local" [(ngModel)]="filtros.fechaDesde" name="fechaDesde" />
+    </label>
+    <label>
+      Hasta
+      <input type="datetime-local" [(ngModel)]="filtros.fechaHasta" name="fechaHasta" />
+    </label>
+    <button type="submit" [disabled]="cargando()">Buscar</button>
+    <button type="button" (click)="exportar('excel')">Exportar Excel</button>
+    <button type="button" (click)="exportar('pdf')">Exportar PDF</button>
+  </form>
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+
+  @if (cargando()) {
+    <p>Cargando...</p>
+  } @else {
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Usuario</th>
+          <th>IP</th>
+          <th>Módulo</th>
+          <th>Acción</th>
+          <th>Resultado</th>
+          <th>Detalles</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (log of logs(); track log.id) {
+          <tr [class.fallo]="!log.resultado">
+            <td>{{ log.fecha }}</td>
+            <td>{{ log.usuario_id ?? '—' }}</td>
+            <td>{{ log.ip ?? '—' }}</td>
+            <td>{{ log.modulo }}</td>
+            <td>{{ log.accion }}</td>
+            <td>{{ log.resultado ? 'Éxito' : 'Fallo' }}</td>
+            <td>{{ log.detalles ?? '—' }}</td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="7">Sin registros para los filtros aplicados.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>

@@ -6,6 +6,7 @@ from app.common.exceptions import ResourceNotFoundException
 from app.models.egresado import PerfilEgresado
 from app.models.enums import EstadoValidacionEgresado
 from app.repositories.egresado_repository import EgresadoRepository
+from app.repositories.usuario_repository import UsuarioRepository
 from app.schemas.egresado import PerfilEgresadoUpdateRequest, VisibilidadPerfilRequest
 from app.services.email_service import EmailService
 
@@ -25,6 +26,7 @@ class EgresadoService:
     def __init__(self, db: Session) -> None:
         self.db = db
         self.repo = EgresadoRepository(db)
+        self.usuarios = UsuarioRepository(db)
         self.email_service = EmailService()
 
     def obtener_por_usuario(self, usuario_id: int) -> PerfilEgresado:
@@ -61,6 +63,17 @@ class EgresadoService:
         )
         perfil.motivo_rechazo = None if aprobado else motivo_rechazo
         self.db.commit()
+
+        usuario = self.usuarios.obtener_por_id(perfil.usuario_id)
+        if usuario is not None:
+            if aprobado:
+                asunto = "Tu validación como egresado fue aprobada"
+                cuerpo = "Tu perfil fue validado por la universidad. Ya puedes postularte a vacantes."
+            else:
+                asunto = "Tu validación como egresado fue rechazada"
+                cuerpo = f"Tu solicitud de validación fue rechazada. Motivo: {motivo_rechazo or 'no especificado'}."
+            self.email_service.enviar(usuario.correo, asunto, cuerpo)
+
         return perfil
 
     @staticmethod

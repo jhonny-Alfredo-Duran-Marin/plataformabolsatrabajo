@@ -5,8 +5,8 @@ from app.common.exception_handlers import register_exception_handlers
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.routers import (
-    auditoria,
     auth,
+    bitacora,
     catalogos,
     comunicacion,
     health,
@@ -41,7 +41,7 @@ routers = [
     auth.router,
     perfiles.router,
     validacion.router,
-    auditoria.router,
+    bitacora.router,
     catalogos.router,
     vacantes.router,
     postulaciones.router,

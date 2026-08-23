@@ -1,6 +1,6 @@
 """Importa todas las entidades para que Alembic (autogenerate) detecte el metadata completo."""
 
-from app.models.auditoria import AuditoriaLog
+from app.models.bitacora import BitacoraLog
 from app.models.catalogo import CategoriaOferta, Carrera, Ciudad, Habilidad
 from app.models.comunicacion import Entrevista, Mensaje
 from app.models.egresado import (
@@ -20,7 +20,7 @@ from app.models.reporte import Colocacion, EncuestaSituacionLaboral, ReporteInst
 from app.models.usuario import Usuario
 
 __all__ = [
-    "AuditoriaLog",
+    "BitacoraLog",
     "CategoriaOferta",
     "Carrera",
     "Ciudad",

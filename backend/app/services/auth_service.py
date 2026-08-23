@@ -78,7 +78,7 @@ class AuthService:
         )
         return usuario
 
-    def login(self, correo: str, password: str) -> TokenResponse:
+    def login(self, correo: str, password: str) -> tuple[TokenResponse, int]:
         verificar_bloqueo(correo)
         usuario = self.usuarios.obtener_por_correo(correo)
         if usuario is None or not verify_password(password, usuario.password_hash):
@@ -89,8 +89,9 @@ class AuthService:
 
         limpiar_intentos(correo)
         subject = str(usuario.id)
-        return TokenResponse(
+        token = TokenResponse(
             access_token=create_access_token(subject, usuario.rol.value),
             refresh_token=create_refresh_token(subject, usuario.rol.value),
             rol=usuario.rol,
         )
+        return token, usuario.id

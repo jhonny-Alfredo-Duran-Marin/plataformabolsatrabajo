@@ -7,7 +7,7 @@ from app.models.enums import RolNombre
 from app.schemas.egresado import PerfilEgresadoResponse, ValidacionEgresadoDecisionRequest
 from app.schemas.empresa import DecisionEmpresaRequest, EmpresaResponse, SuspensionEmpresaRequest
 from app.security.dependencies import CurrentUser, require_roles
-from app.services.auditoria_service import AuditoriaService
+from app.services.bitacora_service import BitacoraService
 from app.services.egresado_service import EgresadoService
 from app.services.empresa_service import EmpresaService
 
@@ -30,7 +30,7 @@ def decidir_egresado(
     db: Session = Depends(get_db),
 ):
     perfil = EgresadoService(db).validar(perfil_id, data.aprobado, data.motivo_rechazo)
-    AuditoriaService(db).registrar(
+    BitacoraService(db).registrar(
         modulo="validacion_institucional",
         accion="decidir_egresado",
         usuario_id=current_user.id_usuario,
@@ -55,7 +55,7 @@ def decidir_empresa(
     db: Session = Depends(get_db),
 ):
     empresa = EmpresaService(db).decidir(empresa_id, data.aprobado, data.motivo_rechazo)
-    AuditoriaService(db).registrar(
+    BitacoraService(db).registrar(
         modulo="validacion_institucional",
         accion="decidir_empresa",
         usuario_id=current_user.id_usuario,
@@ -75,7 +75,7 @@ def suspender_empresa(
     db: Session = Depends(get_db),
 ):
     empresa = EmpresaService(db).suspender(empresa_id, data.motivo)
-    AuditoriaService(db).registrar(
+    BitacoraService(db).registrar(
         modulo="validacion_institucional",
         accion="suspender_empresa",
         usuario_id=current_user.id_usuario,
