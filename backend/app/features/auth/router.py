@@ -4,9 +4,9 @@ from sqlalchemy.orm import Session
 from app.common.exceptions import UnauthorizedException
 from app.common.request_context import get_client_ip
 from app.core.database import get_db
-from app.schemas.auth import LoginRequest, MessageResponse, RegistroEgresadoRequest, RegistroEmpresaRequest, TokenResponse
-from app.services.bitacora_service import BitacoraService
-from app.services.auth_service import AuthService
+from app.features.auth.schema import LoginRequest, MessageResponse, RegistroEgresadoRequest, RegistroEmpresaRequest, TokenResponse
+from app.features.bitacora.service import BitacoraService
+from app.features.auth.service import AuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

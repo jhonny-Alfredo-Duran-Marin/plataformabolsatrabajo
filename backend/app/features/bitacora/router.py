@@ -6,9 +6,9 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.enums import RolNombre
-from app.schemas.bitacora import BitacoraLogResponse
+from app.features.bitacora.schema import BitacoraLogResponse
 from app.security.dependencies import require_roles
-from app.services.bitacora_service import BitacoraService
+from app.features.bitacora.service import BitacoraService
 
 router = APIRouter(prefix="/bitacora", tags=["bitacora"])
 

@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 from app.common.exceptions import ResourceNotFoundException
 from app.models.empresa import Empresa
 from app.models.enums import EstadoVerificacionEmpresa
-from app.repositories.empresa_repository import EmpresaRepository
-from app.services.email_service import EmailService
+from app.features.empresa.repository import EmpresaRepository
+from app.shared.email_service import EmailService
 
 
 class EmpresaService:

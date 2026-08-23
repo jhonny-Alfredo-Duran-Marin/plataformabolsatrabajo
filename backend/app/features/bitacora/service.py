@@ -6,7 +6,7 @@ from openpyxl import Workbook
 from sqlalchemy.orm import Session
 
 from app.models.bitacora import BitacoraLog
-from app.repositories.bitacora_repository import BitacoraRepository
+from app.features.bitacora.repository import BitacoraRepository
 
 _COLUMNAS = ("Fecha", "Usuario ID", "IP", "Módulo", "Acción", "Resultado", "Detalles")
 

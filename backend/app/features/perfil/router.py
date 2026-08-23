@@ -3,9 +3,9 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.enums import RolNombre
-from app.schemas.egresado import PerfilEgresadoResponse, PerfilEgresadoUpdateRequest, VisibilidadPerfilRequest
+from app.features.perfil.schema import PerfilEgresadoResponse, PerfilEgresadoUpdateRequest, VisibilidadPerfilRequest
 from app.security.dependencies import CurrentUser, require_roles
-from app.services.egresado_service import EgresadoService
+from app.features.perfil.service import EgresadoService
 
 router = APIRouter(prefix="/perfiles", tags=["perfiles"])
 
