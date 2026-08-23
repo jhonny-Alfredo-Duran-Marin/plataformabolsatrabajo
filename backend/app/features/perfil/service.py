@@ -5,10 +5,10 @@ from sqlalchemy.orm import Session
 from app.common.exceptions import ResourceNotFoundException
 from app.models.egresado import PerfilEgresado
 from app.models.enums import EstadoValidacionEgresado
-from app.repositories.egresado_repository import EgresadoRepository
-from app.repositories.usuario_repository import UsuarioRepository
-from app.schemas.egresado import PerfilEgresadoUpdateRequest, VisibilidadPerfilRequest
-from app.services.email_service import EmailService
+from app.features.perfil.repository import EgresadoRepository
+from app.features.auth.repository import UsuarioRepository
+from app.features.perfil.schema import PerfilEgresadoUpdateRequest, VisibilidadPerfilRequest
+from app.shared.email_service import EmailService
 
 CAMPOS_COMPLETITUD = (
     "telefono",

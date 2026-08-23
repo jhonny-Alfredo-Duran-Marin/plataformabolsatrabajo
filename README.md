@@ -12,7 +12,9 @@ Este repositorio contiene únicamente el **esqueleto de la solución** (carpetas
 ## Estructura del monorepo
 
 ```
-backend/    API monolítica FastAPI (routers, services, repositories, models, schemas, security)
+backend/    API monolítica FastAPI, organizada por módulo de negocio en
+            app/features/<modulo>/ (router, service, repository, schema).
+            Ver backend/ARCHITECTURE.md para el detalle.
 frontend/   Aplicación web Angular (core, shared, features/<módulo>)
 mobile/     Aplicación móvil Flutter (core, features/<módulo>)
 infra/      Docker Compose, Nginx, scripts de despliegue y respaldo
@@ -67,7 +69,7 @@ Ver [infra/README.md](infra/README.md).
 
 ## Documentación del proyecto
 
-Ver [ROADMAP.md](ROADMAP.md) para los módulos del alcance y la planificación de sprints.
+Ver [ROADMAP.md](ROADMAP.md) para los módulos del alcance y la planificación de sprints, y [backend/ARCHITECTURE.md](backend/ARCHITECTURE.md) para cómo está organizado el código del backend y cómo se conectan sus capas.
 
 ## Equipo
 

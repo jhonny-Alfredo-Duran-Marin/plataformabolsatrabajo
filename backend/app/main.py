@@ -1,25 +1,23 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.common import health
 from app.common.exception_handlers import register_exception_handlers
 from app.core.config import get_settings
 from app.core.logging import configure_logging
-from app.routers import (
-    auth,
-    bitacora,
-    catalogos,
-    comunicacion,
-    health,
-    ia,
-    moderacion,
-    notificaciones,
-    perfiles,
-    postulaciones,
-    reportes,
-    seleccion,
-    vacantes,
-    validacion,
-)
+from app.features.auth import router as auth
+from app.features.bitacora import router as bitacora
+from app.features.catalogo import router as catalogos
+from app.features.comunicacion import router as comunicacion
+from app.features.ia import router as ia
+from app.features.moderacion import router as moderacion
+from app.features.notificaciones import router as notificaciones
+from app.features.perfil import router as perfiles
+from app.features.postulaciones import router as postulaciones
+from app.features.reportes import router as reportes
+from app.features.seleccion import router as seleccion
+from app.features.vacantes import router as vacantes
+from app.features.validacion import router as validacion
 
 settings = get_settings()
 configure_logging()

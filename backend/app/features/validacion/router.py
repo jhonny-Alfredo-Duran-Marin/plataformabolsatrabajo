@@ -4,12 +4,12 @@ from sqlalchemy.orm import Session
 from app.common.request_context import get_client_ip
 from app.core.database import get_db
 from app.models.enums import RolNombre
-from app.schemas.egresado import PerfilEgresadoResponse, ValidacionEgresadoDecisionRequest
-from app.schemas.empresa import DecisionEmpresaRequest, EmpresaResponse, SuspensionEmpresaRequest
+from app.features.perfil.schema import PerfilEgresadoResponse, ValidacionEgresadoDecisionRequest
+from app.features.empresa.schema import DecisionEmpresaRequest, EmpresaResponse, SuspensionEmpresaRequest
 from app.security.dependencies import CurrentUser, require_roles
-from app.services.bitacora_service import BitacoraService
-from app.services.egresado_service import EgresadoService
-from app.services.empresa_service import EmpresaService
+from app.features.bitacora.service import BitacoraService
+from app.features.perfil.service import EgresadoService
+from app.features.empresa.service import EmpresaService
 
 router = APIRouter(prefix="/validacion", tags=["validacion-institucional"])
 

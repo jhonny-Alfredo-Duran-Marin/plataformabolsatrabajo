@@ -5,14 +5,14 @@ from app.models.egresado import PerfilEgresado
 from app.models.empresa import Empresa
 from app.models.enums import EstadoVerificacionEmpresa, RolNombre
 from app.models.usuario import Usuario
-from app.repositories.egresado_repository import EgresadoRepository
-from app.repositories.empresa_repository import EmpresaRepository
-from app.repositories.usuario_repository import UsuarioRepository
-from app.schemas.auth import RegistroEgresadoRequest, RegistroEmpresaRequest, TokenResponse
+from app.features.perfil.repository import EgresadoRepository
+from app.features.empresa.repository import EmpresaRepository
+from app.features.auth.repository import UsuarioRepository
+from app.features.auth.schema import RegistroEgresadoRequest, RegistroEmpresaRequest, TokenResponse
 from app.security.jwt_provider import create_access_token, create_refresh_token
 from app.security.login_rate_limiter import limpiar_intentos, registrar_intento_fallido, verificar_bloqueo
 from app.security.password_hasher import hash_password, verify_password
-from app.services.email_service import EmailService
+from app.shared.email_service import EmailService
 
 
 class AuthService:
