@@ -81,3 +81,42 @@ Ver [ROADMAP.md](ROADMAP.md) para los módulos del alcance y la planificación d
 | Development Team | Quispe Tito Jorge Gabriel |
 | Development Team | Valencia Amezaga Andre |
 | Development Team | Moya Bustamante Manuel |
+
+## Base de datos y usuarios de acceso
+
+El backend se conecta a PostgreSQL en la nube (Supabase) mediante `DATABASE_URL`
+en `backend/.env`. Se usa el Session Pooler por compatibilidad con IPv4:
+
+```
+DATABASE_URL=postgresql+psycopg://postgres.etsonjspfydvvqdsappq:BaseDeDatosFicct@aws-0-sa-east-1.pooler.supabase.com:5432/postgres
+```
+
+El esquema y los datos demo se gestionan con los scripts de `basededatos/`
+(`schema.sql`, `seed.sql`, `consultas_utiles.sql`) y ya están cargados en el
+proyecto de Supabase.
+
+Para crear o restablecer los usuarios de inicio de sesión:
+
+```powershell
+cd backend
+.\.venv\Scripts\activate
+python -m scripts.crear_usuarios_demo
+```
+
+### Credenciales demo
+
+| Usuario | Contraseña | Rol |
+|---|---|---|
+| admin@uagrm.bo | Admin1234! | platform_admin |
+| moderador@uagrm.bo | Moderador1234! | moderator |
+| maria.fernandez@example.bo | Demo1234! | candidate |
+| carlos.mamani@example.bo | Demo1234! | candidate |
+| lucia.rojas@example.bo | Demo1234! | candidate |
+| diego.suarez@example.bo | Demo1234! | candidate |
+| rrhh@tecnova.bo | Demo1234! | empresa |
+| talento@finandina.bo | Demo1234! | empresa |
+
+Con el backend (`uvicorn app.main:app --reload`) y el frontend (`ng serve`)
+corriendo, inicia sesión en http://localhost:4200. Los usuarios
+platform_admin/moderator son redirigidos al panel de bitácora; los demás,
+a su perfil.

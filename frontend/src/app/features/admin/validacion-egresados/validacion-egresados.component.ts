@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { AdminTokenService } from '../../../core/services/admin-token.service';
+import { AuthService } from '../../auth/auth.service';
 import { Carrera, PerfilEgresado } from './validacion-egresados.model';
 import { ValidacionEgresadosService } from './validacion-egresados.service';
 
@@ -22,11 +22,11 @@ export class ValidacionEgresadosComponent {
   private readonly carreras = signal<Carrera[]>([]);
   readonly carrerasPorId = computed(() => new Map(this.carreras().map((c) => [c.id, c.nombre])));
 
-  motivosRechazo: Record<number, string> = {};
+  motivosRechazo: Record<string, string> = {};
 
   constructor(
     private readonly service: ValidacionEgresadosService,
-    readonly adminToken: AdminTokenService,
+    private readonly auth: AuthService,
   ) {
     this.service.listarCarreras().subscribe({
       next: (carreras) => this.carreras.set(carreras),
@@ -36,14 +36,10 @@ export class ValidacionEgresadosComponent {
     });
   }
 
-  guardarToken(token: string): void {
-    this.adminToken.guardar(token);
-  }
-
   cargar(): void {
-    const token = this.adminToken.token();
+    const token = this.auth.token();
     if (!token) {
-      this.error.set('Pega un token de administrador para consultar las solicitudes.');
+      this.error.set('Inicia sesión como administrador para consultar las solicitudes.');
       return;
     }
 
@@ -62,7 +58,7 @@ export class ValidacionEgresadosComponent {
     });
   }
 
-  nombreCarrera(carreraId: number | null): string {
+  nombreCarrera(carreraId: string | null): string {
     if (carreraId === null) return '—';
     return this.carrerasPorId().get(carreraId) ?? `#${carreraId}`;
   }
@@ -81,9 +77,9 @@ export class ValidacionEgresadosComponent {
   }
 
   private decidir(perfil: PerfilEgresado, aprobado: boolean, motivoRechazo?: string): void {
-    const token = this.adminToken.token();
+    const token = this.auth.token();
     if (!token) {
-      this.error.set('Pega un token de administrador para decidir sobre una solicitud.');
+      this.error.set('Inicia sesión como administrador para decidir sobre una solicitud.');
       return;
     }
 

@@ -3,9 +3,9 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { BitacoraLog, BitacoraFiltros } from './bitacora.model';
+import { environment } from '../../../../environments/environment';
 
-// TODO: mover a environments/ cuando se configure el flujo de build por entorno.
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = environment.apiUrl;
 
 @Injectable({ providedIn: 'root' })
 export class BitacoraService {

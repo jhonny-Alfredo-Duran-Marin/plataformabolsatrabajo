@@ -1,17 +1,10 @@
 <section class="validacion">
   <h1>Validación de egresados pendientes</h1>
 
-  <div class="token-box">
-    <label>
-      Token de administrador (temporal, mientras no exista pantalla de login)
-      <input
-        type="text"
-        [ngModel]="adminToken.token()"
-        (ngModelChange)="guardarToken($event)"
-        placeholder="Bearer token"
-      />
-    </label>
-    <button type="button" (click)="cargar()" [disabled]="cargando()">Cargar pendientes</button>
+  <div class="acciones-superiores">
+    <button type="button" (click)="cargar()" [disabled]="cargando()">
+      {{ cargando() ? 'Cargando…' : 'Cargar pendientes' }}
+    </button>
   </div>
 
   @if (error()) {

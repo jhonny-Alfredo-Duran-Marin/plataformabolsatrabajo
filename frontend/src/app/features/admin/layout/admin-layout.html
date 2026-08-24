@@ -1,0 +1,37 @@
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-marca">
+      <span class="logo">✦</span>
+      <span class="nombre">EGRESA</span>
+    </div>
+
+    <nav class="menu">
+      @for (item of itemsMenu; track item.ruta) {
+        <a
+          class="item"
+          [routerLink]="item.ruta"
+          routerLinkActive="activo"
+          [routerLinkActiveOptions]="{ exact: item.exacta }"
+        >
+          <span class="icono">{{ item.icono }}</span>
+          <span>{{ item.etiqueta }}</span>
+        </a>
+      }
+    </nav>
+
+    <div class="sidebar-pie">
+      <div class="usuario">
+        <span class="avatar">{{ correoInicial }}</span>
+        <div class="datos-usuario">
+          <span class="correo" [title]="auth.correo()">{{ auth.correo() || 'Administrador' }}</span>
+          <span class="rol">{{ auth.rol() }}</span>
+        </div>
+      </div>
+      <button type="button" class="btn-salir" (click)="cerrarSesion()">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <main class="contenido">
+    <router-outlet />
+  </main>
+</div>

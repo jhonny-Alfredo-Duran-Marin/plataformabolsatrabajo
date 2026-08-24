@@ -1,0 +1,83 @@
+<header class="cabecera">
+  <div>
+    <h1>Gestión de roles y permisos</h1>
+    <p class="sub">
+      Asigna el rol de cada usuario. El cambio se registra en la bitácora con tu
+      responsable y surte efecto cuando el usuario vuelve a iniciar sesión.
+    </p>
+  </div>
+</header>
+
+<section class="tarjeta">
+  @if (error()) {
+    <p class="banner banner-error" role="alert">{{ error() }}</p>
+  }
+  @if (mensaje()) {
+    <p class="banner banner-ok">{{ mensaje() }}</p>
+  }
+
+  <div class="barra-superior">
+    <div class="input-wrapper buscador">
+      <span class="input-icon">🔍</span>
+      <input
+        type="text"
+        placeholder="Buscar por correo o rol…"
+        [ngModel]="busqueda()"
+        (ngModelChange)="busqueda.set($event)"
+      />
+    </div>
+    <button type="button" class="btn-refrescar" (click)="cargar()" [disabled]="cargando()">
+      {{ cargando() ? 'Cargando…' : 'Actualizar' }}
+    </button>
+  </div>
+
+  <div class="encabezado-tabla">
+    <span>Usuario</span>
+    <span>Rol actual</span>
+    <span>Nuevo rol</span>
+    <span></span>
+  </div>
+
+  @if (!cargando() && filtrados().length === 0) {
+    <p class="estado-vacio">No se encontraron usuarios.</p>
+  }
+
+  <ul class="lista-usuarios">
+    @for (usuario of filtrados(); track usuario.id) {
+      <li class="usuario-fila">
+        <div class="usuario-datos">
+          <span class="correo" [title]="usuario.correo">{{ usuario.correo }}</span>
+          <span class="estado" [class.inactivo]="usuario.estado !== 'activo'">{{ usuario.estado }}</span>
+        </div>
+
+        <span class="rol-chip">{{ rolPrincipal(usuario) }}</span>
+
+        <select
+          class="selector-rol"
+          [ngModel]="rolActual(usuario)"
+          (ngModelChange)="seleccionarRol(usuario.id, $event)"
+          [disabled]="guardandoId() === usuario.id"
+        >
+          <option value="" disabled>Sin rol</option>
+          @for (rol of rolesAsignables(); track rol.id) {
+            <option [value]="rol.nombre">{{ etiquetasRol[rol.nombre] ?? rol.nombre }}</option>
+          }
+        </select>
+
+        <button
+          type="button"
+          class="btn-guardar"
+          [disabled]="!cambioPendiente(usuario) || guardandoId() === usuario.id"
+          (click)="guardar(usuario)"
+        >
+          {{ guardandoId() === usuario.id ? 'Guardando…' : 'Guardar' }}
+        </button>
+      </li>
+    }
+  </ul>
+</section>
+
+<footer class="nota-pie">
+  Los permisos viajan dentro del token JWT: tras un cambio, el usuario debe volver a
+  iniciar sesión para que surtan efecto.
+</footer>

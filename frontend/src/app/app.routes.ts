@@ -4,7 +4,7 @@ export const routes: Routes = [
   {
     path: '',
     redirectTo: 'auth/login',
-    pathMatch: 'full'
+    pathMatch: 'full',
   },
   {
     path: 'auth/login',
@@ -15,15 +15,30 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/registro-egresado/registro-egresado').then((m) => m.RegistroEgresado),
   },
   {
-    path: 'admin/bitacora',
-    loadComponent: () => import('./features/admin/bitacora/bitacora.component').then((m) => m.BitacoraComponent),
-  },
-  {
-    path: 'admin/validacion-egresados',
-    loadComponent: () =>
-      import('./features/admin/validacion-egresados/validacion-egresados.component').then(
-        (m) => m.ValidacionEgresadosComponent,
-      ),
+    path: 'admin',
+    loadComponent: () => import('./features/admin/layout/admin-layout').then((m) => m.AdminLayout),
+    children: [
+      {
+        path: '',
+        loadComponent: () => import('./features/admin/dashboard/dashboard').then((m) => m.Dashboard),
+      },
+      {
+        path: 'roles',
+        loadComponent: () =>
+          import('./features/admin/gestion-roles/gestion-roles.component').then((m) => m.GestionRolesComponent),
+      },
+      {
+        path: 'validacion-egresados',
+        loadComponent: () =>
+          import('./features/admin/validacion-egresados/validacion-egresados.component').then(
+            (m) => m.ValidacionEgresadosComponent,
+          ),
+      },
+      {
+        path: 'bitacora',
+        loadComponent: () => import('./features/admin/bitacora/bitacora.component').then((m) => m.BitacoraComponent),
+      },
+    ],
   },
   {
     path: 'perfil/visibilidad',

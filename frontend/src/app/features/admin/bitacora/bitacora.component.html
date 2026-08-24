@@ -1,18 +1,6 @@
 <section class="bitacora">
   <h1>Bitácora del sistema</h1>
 
-  <div class="token-box">
-    <label>
-      Token de administrador (temporal, mientras no exista pantalla de login)
-      <input
-        type="text"
-        [ngModel]="adminToken.token()"
-        (ngModelChange)="guardarToken($event)"
-        placeholder="Bearer token"
-      />
-    </label>
-  </div>
-
   <form class="filtros" (ngSubmit)="buscar()">
     <label>
       Usuario ID

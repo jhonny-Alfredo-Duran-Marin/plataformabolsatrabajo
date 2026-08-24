@@ -1,0 +1,43 @@
+<section class="dashboard">
+  <header class="cabecera">
+    <h1>Dashboard</h1>
+    <p>Resumen general de la plataforma · {{ saludo }}</p>
+  </header>
+
+  @if (cargando()) {
+    <p class="cargando">Cargando estadísticas…</p>
+  } @else if (error()) {
+    <div class="alerta error">{{ error() }}</div>
+  } @else {
+    <div class="tarjetas">
+      @for (stat of estadisticas(); track stat.etiqueta) {
+        <article class="tarjeta">
+          <span class="valor">{{ stat.valor }}</span>
+          <span class="etiqueta">{{ stat.etiqueta }}</span>
+          <span class="detalle">{{ stat.detalle }}</span>
+        </article>
+      }
+    </div>
+
+    <article class="panel-acciones">
+      <h2>Últimas acciones registradas</h2>
+      @if (ultimasAcciones().length === 0) {
+        <p class="vacio">Sin movimientos recientes en la bitácora.</p>
+      } @else {
+        <ul>
+          @for (accion of ultimasAcciones(); track accion.fecha) {
+            <li>
+              <span class="fecha">{{ accion.fecha }}</span>
+              <span class="cuerpo">
+                <strong>{{ accion.accion }}</strong>
+                @if (accion.detalles) {
+                  <em>{{ accion.detalles }}</em>
+                }
+              </span>
+            </li>
+          }
+        </ul>
+      }
+    </article>
+  }
+</section>
