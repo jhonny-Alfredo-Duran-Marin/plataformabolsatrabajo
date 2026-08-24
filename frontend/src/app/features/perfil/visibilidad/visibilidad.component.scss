@@ -1,0 +1,265 @@
+
+
+.visibility-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #1a1a2e;
+}
+
+.visibility-header {
+  margin-bottom: 2.5rem;
+  
+  h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+    color: #1a1a2e;
+  }
+  
+  p {
+    color: #64657d;
+    font-size: 1rem;
+    margin: 0;
+    line-height: 1.5;
+  }
+}
+
+.visibility-content {
+  position: relative;
+}
+
+.save-status {
+  position: absolute;
+  top: -2.5rem;
+  right: 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+
+  &.saving {
+    opacity: 1;
+    color: #7b7c93;
+    .icon { animation: spin 1s linear infinite; }
+  }
+  &.saved {
+    opacity: 1;
+    color: #38A169;
+  }
+  &.error {
+    opacity: 1;
+    color: #E53E3E;
+  }
+}
+
+@keyframes spin {
+  100% { transform: rotate(360deg); }
+}
+
+.settings-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f0f0f5;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  transition: all 0.3s ease;
+}
+
+.global-setting {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  border-left: 5px solid #E53E3E;
+  background-color: #FFF5F5;
+
+  &.is-hidden {
+    background-color: #f8f9fe;
+    border-left-color: #7b7c93;
+    opacity: 0.8;
+  }
+
+  .title-with-icon {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    .emoji-icon {
+      font-size: 1.5rem;
+    }
+  }
+
+  h2 {
+    font-size: 1.25rem;
+    margin: 0;
+    font-weight: 600;
+  }
+
+  p {
+    margin: 0.5rem 0 0 0;
+    font-size: 0.9rem;
+    color: #4a4b5e;
+    line-height: 1.5;
+  }
+
+  .info-note {
+    color: #7b7c93;
+    display: inline-block;
+    margin-top: 6px;
+  }
+}
+
+.sections-wrapper {
+  h3 {
+    font-size: 1.15rem;
+    margin: 0 0 0.3rem 0;
+    color: #1a1a2e;
+  }
+  
+  .subtitle {
+    color: #64657d;
+    font-size: 0.9rem;
+    margin: 0 0 1.5rem 0;
+  }
+
+  &.disabled-sections {
+    opacity: 0.5;
+    pointer-events: none;
+    filter: grayscale(100%);
+  }
+}
+
+.list-settings {
+  padding: 0;
+}
+
+.list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  
+  .item-info {
+    h4 {
+      margin: 0 0 0.2rem 0;
+      font-size: 1rem;
+      color: #1a1a2e;
+    }
+    p {
+      margin: 0;
+      font-size: 0.85rem;
+      color: #7b7c93;
+    }
+  }
+}
+
+.divider {
+  height: 1px;
+  background-color: #f0f0f5;
+  margin: 0 1.5rem;
+}
+
+/* iOS Style Toggle Switch */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+input:checked + .slider {
+  background-color: #38A169;
+}
+
+.global-switch input:checked + .slider {
+  background-color: #E53E3E; /* Rojo para ocultar todo */
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #38A169;
+}
+
+input:checked + .slider:before {
+  transform: translateX(22px);
+}
+
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+input:disabled + .slider {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Loading State */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 0;
+  color: #7b7c93;
+  
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(97, 97, 214, 0.2);
+    border-top-color: #6161D6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .global-setting {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.5rem;
+  }
+  
+  .global-setting .setting-action {
+    align-self: flex-end;
+  }
+}
