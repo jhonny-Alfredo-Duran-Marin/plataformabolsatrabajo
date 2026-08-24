@@ -1,0 +1,127 @@
+<div class="dashboard">
+
+  <!-- ══ TopBar ════════════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <div class="topbar__brand">
+      <div class="topbar__logo">
+        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M10 24L24 10L38 24L24 38L10 24Z" fill="url(#g1)" fill-opacity="0.9"/>
+          <path d="M18 24L24 18L30 24L24 30L18 24Z" fill="url(#g1)"/>
+          <defs>
+            <linearGradient id="g1" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#667eea"/><stop offset="1" stop-color="#764ba2"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <span class="topbar__name">EGRESA</span>
+    </div>
+
+    <div class="topbar__actions">
+      <span class="role-badge role-badge--{{ role().toLowerCase() }}">{{ role() }}</span>
+      <button id="btn-logout" class="btn-logout" (click)="auth.logout()">
+        <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h6a1 1 0 010 2H5v12h5a1 1 0 010 2H4a1 1 0 01-1-1V3zm12.293 4.293a1 1 0 011.414 0l2 2a1 1 0 010 1.414l-2 2a1 1 0 01-1.414-1.414L16.586 11H9a1 1 0 110-2h7.586l-1.293-1.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
+        </svg>
+        <span>Cerrar Sesión</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ══ Contenido Principal ════════════════════════════════════════════════ -->
+  <main class="main-content">
+
+    <!-- Panel de Egresado -->
+    @if (isEgresado()) {
+      <section class="dashboard-panel fade-in">
+        <div class="panel-header">
+          <span class="panel-header__emoji">🎓</span>
+          <div>
+            <h1 class="panel-header__title">¡Bienvenido a EGRESA!</h1>
+            <p class="panel-header__sub">Panel de Egresado y Estudiante — Gestiona tu perfil y postúlate a vacantes disponibles.</p>
+          </div>
+        </div>
+        <div class="card-grid">
+          <div class="stat-card stat-card--blue">
+            <span class="stat-card__num">0</span>
+            <span class="stat-card__label">Postulaciones activas</span>
+          </div>
+          <div class="stat-card stat-card--purple">
+            <span class="stat-card__num">0%</span>
+            <span class="stat-card__label">Perfil completado</span>
+          </div>
+          <div class="stat-card stat-card--green">
+            <span class="stat-card__num">0</span>
+            <span class="stat-card__label">Entrevistas pendientes</span>
+          </div>
+        </div>
+        <div class="action-area">
+          <a routerLink="/vacantes" class="btn btn--primary">Explorar vacantes</a>
+          <a routerLink="/perfil" class="btn btn--outline">Ver mi perfil</a>
+        </div>
+      </section>
+    }
+
+    <!-- Panel de Empresa -->
+    @if (isEmpresa()) {
+      <section class="dashboard-panel fade-in">
+        <div class="panel-header">
+          <span class="panel-header__emoji">🏢</span>
+          <div>
+            <h1 class="panel-header__title">¡Bienvenido a EGRESA!</h1>
+            <p class="panel-header__sub">Panel de Empresa — Gestiona tus vacantes y revisa candidatos calificados.</p>
+          </div>
+        </div>
+        <div class="card-grid">
+          <div class="stat-card stat-card--blue">
+            <span class="stat-card__num">0</span>
+            <span class="stat-card__label">Vacantes publicadas</span>
+          </div>
+          <div class="stat-card stat-card--purple">
+            <span class="stat-card__num">0</span>
+            <span class="stat-card__label">Postulantes recibidos</span>
+          </div>
+          <div class="stat-card stat-card--green">
+            <span class="stat-card__num">0</span>
+            <span class="stat-card__label">Entrevistas programadas</span>
+          </div>
+        </div>
+        <div class="action-area">
+          <a routerLink="/vacantes/crear" class="btn btn--primary">Publicar vacante</a>
+        </div>
+      </section>
+    }
+
+    <!-- Panel de Administrador -->
+    @if (isAdmin()) {
+      <section class="dashboard-panel fade-in">
+        <div class="panel-header">
+          <span class="panel-header__emoji">⚙️</span>
+          <div>
+            <h1 class="panel-header__title">¡Bienvenido a EGRESA!</h1>
+            <p class="panel-header__sub">Panel de Administración — Supervisión institucional de la plataforma EGRESA – UAGRM.</p>
+          </div>
+        </div>
+        <div class="card-grid">
+          <div class="stat-card stat-card--blue">
+            <span class="stat-card__num">0</span>
+            <span class="stat-card__label">Egresados pendientes</span>
+          </div>
+          <div class="stat-card stat-card--purple">
+            <span class="stat-card__num">0</span>
+            <span class="stat-card__label">Empresas por validar</span>
+          </div>
+          <div class="stat-card stat-card--orange">
+            <span class="stat-card__num">0</span>
+            <span class="stat-card__label">Denuncias activas</span>
+          </div>
+        </div>
+        <div class="action-area">
+          <a routerLink="/admin/validacion-egresados" class="btn btn--primary">Validar egresados</a>
+          <a routerLink="/admin/bitacora" class="btn btn--outline">Ver bitácora</a>
+        </div>
+      </section>
+    }
+
+  </main>
+</div>

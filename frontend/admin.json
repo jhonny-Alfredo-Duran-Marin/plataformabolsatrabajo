@@ -1,0 +1,10 @@
+﻿{
+  "nombres": "Ana",
+  "apellidos": "Admin",
+  "ci": "2222222",
+  "correo": "ana.admin@uagrm.edu.bo",
+  "password": "admin123",
+  "carrera_id": 1,
+  "anio_egreso": 2020,
+  "matricula": "219002222"
+}

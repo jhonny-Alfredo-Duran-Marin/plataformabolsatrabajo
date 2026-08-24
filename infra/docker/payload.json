@@ -1,0 +1,10 @@
+﻿{
+  "nombres": "Juan",
+  "apellidos": "Perez",
+  "ci": "1234567",
+  "correo": "juan.perez@uagrm.edu.bo",
+  "password": "miPasswordSuperSegura123",
+  "carrera_id": 1,
+  "anio_egreso": 2025,
+  "matricula": "219001234"
+}
