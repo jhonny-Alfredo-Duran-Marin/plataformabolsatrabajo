@@ -1,35 +1,63 @@
+import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, Text, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, func
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
-from app.models.enums import EstadoVerificacionEmpresa
 
 
-class Empresa(Base):
-    """Empresa / reclutador. Módulo 5.1.2 — validación institucional de empresas."""
+class Sector(Base):
+    """Catálogo de sectores económicos (tabla sector)."""
 
-    __tablename__ = "empresas"
+    __tablename__ = "sector"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    usuario_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id"), unique=True, nullable=False)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
 
-    razon_social: Mapped[str] = mapped_column(String(200), nullable=False)
-    nit: Mapped[str] = mapped_column(String(30), unique=True, nullable=False)
-    sector: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    descripcion: Mapped[str | None] = mapped_column(Text, nullable=True)
-    tamanio: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    direccion: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    telefono: Mapped[str | None] = mapped_column(String(30), nullable=True)
-    sitio_web: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    logo_url: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    representante_legal: Mapped[str | None] = mapped_column(String(150), nullable=True)
 
-    estado_verificacion: Mapped[EstadoVerificacionEmpresa] = mapped_column(
-        Enum(EstadoVerificacionEmpresa, name="estado_verificacion_empresa"),
-        default=EstadoVerificacionEmpresa.PENDIENTE,
+class Company(Base):
+    """Empresa registrada en la plataforma (tabla company)."""
+
+    __tablename__ = "company"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    legal_name: Mapped[str] = mapped_column(String(250), nullable=False)
+    trade_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    tax_id: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    sector_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sector.id", ondelete="RESTRICT"), nullable=True
     )
-    motivo_rechazo: Mapped[str | None] = mapped_column(Text, nullable=True)
+    company_size: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    website: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    contact_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    country_code: Mapped[str | None] = mapped_column(String(2), nullable=True)
+    city: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    address: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    verification_status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending")
+    account_status: Mapped[str] = mapped_column(String(30), nullable=False, default="active")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    fecha_registro: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    sector: Mapped[Sector | None] = relationship()
+
+
+class CompanyMember(Base):
+    """Usuario vinculado a una empresa con un rol dentro de ella (owner/admin/recruiter/viewer)."""
+
+    __tablename__ = "company_member"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("app_user.id", ondelete="RESTRICT"), nullable=False
+    )
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("company.id", ondelete="CASCADE"), nullable=False
+    )
+    member_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    job_title: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

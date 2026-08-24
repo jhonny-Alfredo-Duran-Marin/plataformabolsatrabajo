@@ -1,46 +1,58 @@
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.common.exceptions import ConflictException, UnauthorizedException
-from app.models.egresado import PerfilEgresado
-from app.models.empresa import Empresa
-from app.models.enums import EstadoVerificacionEmpresa, RolNombre
-from app.models.usuario import Usuario
-from app.features.perfil.repository import EgresadoRepository
-from app.features.empresa.repository import EmpresaRepository
-from app.features.auth.repository import UsuarioRepository
+from app.features.auth.repository import (
+    CandidateRepository,
+    EmpresaRegistroRepository,
+    UsuarioRepository,
+)
 from app.features.auth.schema import RegistroEgresadoRequest, RegistroEmpresaRequest, TokenResponse
+from app.models.candidato import CandidateProfile
+from app.models.empresa import Company, CompanyMember, Sector
+from app.models.seguridad import LoginAttempt
+from app.models.usuario import AppUser
 from app.security.jwt_provider import create_access_token, create_refresh_token
 from app.security.login_rate_limiter import limpiar_intentos, registrar_intento_fallido, verificar_bloqueo
 from app.security.password_hasher import hash_password, verify_password
 from app.shared.email_service import EmailService
+
+_ROL_PRIORIDAD = ("platform_admin", "moderator", "empresa", "candidate")
 
 
 class AuthService:
     def __init__(self, db: Session) -> None:
         self.db = db
         self.usuarios = UsuarioRepository(db)
-        self.egresados = EgresadoRepository(db)
-        self.empresas = EmpresaRepository(db)
+        self.candidatos = CandidateRepository(db)
+        self.empresas = EmpresaRegistroRepository(db)
         self.email_service = EmailService()
 
-    def registrar_egresado(self, data: RegistroEgresadoRequest) -> Usuario:
+    def registrar_egresado(self, data: RegistroEgresadoRequest) -> AppUser:
         if self.usuarios.existe_correo(data.correo):
             raise ConflictException("El correo electrónico ya está registrado.")
-        if self.egresados.existe_ci(data.ci):
+        if self.candidatos.existe_ci(data.ci):
             raise ConflictException("Ya existe un egresado registrado con ese CI.")
+        if data.carrera_id is not None and self.db.get(Sector, data.carrera_id) is None:
+            # Nota: el formulario envía field_of_study; se valida contra sector por compatibilidad histórica.
+            from app.models.catalogo import FieldOfStudy
 
-        usuario = self.usuarios.crear(
-            Usuario(correo=data.correo, password_hash=hash_password(data.password), rol=RolNombre.EGRESADO)
-        )
-        self.egresados.crear(
-            PerfilEgresado(
-                usuario_id=usuario.id,
-                nombres=data.nombres,
-                apellidos=data.apellidos,
-                ci=data.ci,
-                carrera_id=data.carrera_id,
-                anio_egreso=data.anio_egreso,
-                matricula=data.matricula,
+            if self.db.get(FieldOfStudy, data.carrera_id) is None:
+                raise ConflictException("La carrera indicada no existe.")
+
+        usuario = AppUser(email=data.correo.strip().lower(), password_hash=hash_password(data.password))
+        self.usuarios.crear(usuario)
+        self.usuarios.asignar_rol(usuario, "candidate")
+        self.candidatos.crear(
+            CandidateProfile(
+                user_id=usuario.id,
+                first_name=data.nombres.strip(),
+                last_name=data.apellidos.strip(),
+                country_code="BO",
+                document_type="ci",
+                document_number=data.ci,
+                document_country_code="BO",
+                verification_status="pending",
             )
         )
         self.db.commit()
@@ -49,27 +61,39 @@ class AuthService:
         )
         return usuario
 
-    def registrar_empresa(self, data: RegistroEmpresaRequest) -> Usuario:
+    def registrar_empresa(self, data: RegistroEmpresaRequest) -> AppUser:
         if self.usuarios.existe_correo(data.correo):
             raise ConflictException("El correo electrónico ya está registrado.")
         if self.empresas.existe_nit(data.nit):
             raise ConflictException("Ya existe una empresa registrada con ese NIT/RUC.")
 
-        usuario = self.usuarios.crear(
-            Usuario(correo=data.correo, password_hash=hash_password(data.password), rol=RolNombre.EMPRESA)
+        sector_id = None
+        if data.sector:
+            sector = self.db.scalar(select(Sector).where(func.lower(Sector.name) == data.sector.lower()))
+            sector_id = sector.id if sector else None
+
+        usuario = AppUser(email=data.correo.strip().lower(), password_hash=hash_password(data.password))
+        self.usuarios.crear(usuario)
+
+        empresa = Company(
+            legal_name=data.razon_social,
+            tax_id=data.nit,
+            sector_id=sector_id,
+            description=data.descripcion,
+            website=data.sitio_web,
+            phone=data.telefono,
+            contact_email=data.correo.strip().lower(),
+            country_code="BO",
+            city=data.ciudad,
+            address=data.direccion,
+            verification_status="pending",
+            account_status="active",
         )
-        self.empresas.crear(
-            Empresa(
-                usuario_id=usuario.id,
-                razon_social=data.razon_social,
-                nit=data.nit,
-                sector=data.sector,
-                direccion=data.direccion,
-                telefono=data.telefono,
-                representante_legal=data.representante_legal,
-                estado_verificacion=EstadoVerificacionEmpresa.PENDIENTE,
-            )
+        self.empresas.crear(empresa)
+        self.empresas.crear_miembro(
+            CompanyMember(user_id=usuario.id, company_id=empresa.id, member_type="owner", job_title="Propietario")
         )
+
         self.db.commit()
         self.email_service.enviar(
             data.correo,
@@ -78,20 +102,40 @@ class AuthService:
         )
         return usuario
 
-    def login(self, correo: str, password: str) -> tuple[TokenResponse, int]:
+    def login(self, correo: str, password: str) -> tuple[TokenResponse, AppUser]:
         verificar_bloqueo(correo)
         usuario = self.usuarios.obtener_por_correo(correo)
+
         if usuario is None or not verify_password(password, usuario.password_hash):
             registrar_intento_fallido(correo)
+            self._registrar_login_attempt(correo, usuario, success=False)
             raise UnauthorizedException("Correo o contraseña incorrectos.")
+
         if not usuario.activo:
-            raise UnauthorizedException("La cuenta se encuentra desactivada.")
+            estado = (
+                "pendiente de verificación" if usuario.account_status == "pending_verification" else "desactivada"
+            )
+            raise UnauthorizedException(f"La cuenta se encuentra {estado}.")
 
         limpiar_intentos(correo)
+        usuario.last_login_at = func.now()
+        roles = usuario.nombres_roles or (
+            ["empresa"] if self.usuarios.pertenece_a_empresa(usuario.id) else ["candidate"]
+        )
+        rol_principal = next((r for r in _ROL_PRIORIDAD if r in roles), roles[0] if roles else "candidate")
+
+        self._registrar_login_attempt(correo, usuario, success=True)
+
         subject = str(usuario.id)
         token = TokenResponse(
-            access_token=create_access_token(subject, usuario.rol.value),
-            refresh_token=create_refresh_token(subject, usuario.rol.value),
-            rol=usuario.rol,
+            access_token=create_access_token(subject, rol_principal, {"roles": roles}),
+            refresh_token=create_refresh_token(subject, rol_principal),
+            rol=rol_principal,
+            roles=roles,
         )
-        return token, usuario.id
+        return token, usuario
+
+    def _registrar_login_attempt(self, correo: str, usuario: AppUser | None, success: bool) -> None:
+        self.db.add(
+            LoginAttempt(email=correo.strip().lower(), user_id=usuario.id if usuario else None, success=success)
+        )

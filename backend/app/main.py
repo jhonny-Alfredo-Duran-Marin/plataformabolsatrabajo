@@ -15,6 +15,7 @@ from app.features.notificaciones import router as notificaciones
 from app.features.perfil import router as perfiles
 from app.features.postulaciones import router as postulaciones
 from app.features.reportes import router as reportes
+from app.features.roles import router as roles
 from app.features.seleccion import router as seleccion
 from app.features.vacantes import router as vacantes
 from app.features.validacion import router as validacion
@@ -41,6 +42,7 @@ routers = [
     validacion.router,
     bitacora.router,
     catalogos.router,
+    roles.router,
     vacantes.router,
     postulaciones.router,
     seleccion.router,

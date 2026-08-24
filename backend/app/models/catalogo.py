@@ -1,40 +1,38 @@
-from sqlalchemy import ForeignKey, String
+import uuid
+
+from sqlalchemy import Boolean, String
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
 
 
-class Carrera(Base):
-    """Catálogo de carreras de la UAGRM (módulo 5.1.2 / 5.1.10)."""
+class FieldOfStudy(Base):
+    """Catálogo de carreras / campos de estudio (tabla field_of_study)."""
 
-    __tablename__ = "carreras"
+    __tablename__ = "field_of_study"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    nombre: Mapped[str] = mapped_column(String(150), unique=True, nullable=False)
-    facultad: Mapped[str | None] = mapped_column(String(150), nullable=True)
-
-
-class Habilidad(Base):
-    """Catálogo de habilidades predefinidas (módulo 6.1.9)."""
-
-    __tablename__ = "habilidades"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    nombre: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
-    aprobada: Mapped[bool] = mapped_column(default=True)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    category: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
 
-class CategoriaOferta(Base):
-    """Áreas laborales para clasificar vacantes (módulo 6.1.9)."""
+class Skill(Base):
+    """Catálogo de habilidades (tabla skill)."""
 
-    __tablename__ = "categorias_oferta"
+    __tablename__ = "skill"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    nombre: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
+    category: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
 
-class Ciudad(Base):
-    __tablename__ = "ciudades"
+class JobCategory(Base):
+    """Categorías para clasificar vacantes (tabla job_category)."""
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    nombre: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    __tablename__ = "job_category"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

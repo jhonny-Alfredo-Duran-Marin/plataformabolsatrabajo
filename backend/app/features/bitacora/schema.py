@@ -1,15 +1,16 @@
+import uuid
 from datetime import datetime
 
 from pydantic import BaseModel
 
 
 class BitacoraLogResponse(BaseModel):
-    id: int
-    usuario_id: int | None
-    ip: str | None
+    id: uuid.UUID
+    usuario_id: uuid.UUID | None = None
+    ip: str | None = None
     modulo: str
     accion: str
-    detalles: str | None
+    detalles: str | None = None
     resultado: bool
     fecha: datetime
 
