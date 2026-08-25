@@ -1,0 +1,187 @@
+<div class="registro-container">
+  <header class="registro-header">
+    <div class="brand-badge">EGRESA • UAGRM</div>
+    <h1>Registro de Empresa</h1>
+    <p class="subtitle">
+      Únete a la plataforma para publicar ofertas laborales y conectar con el talento universitario.
+    </p>
+  </header>
+
+  <!-- Mensaje de Éxito / Solicitud Enviada -->
+  <div *ngIf="isSubmittedSuccess" class="success-card">
+    <div class="success-icon">
+      <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    </div>
+    <h2>¡Solicitud Recibida Exitosamente!</h2>
+    <p class="success-detail">{{ successMessage }}</p>
+    <div class="success-info-box">
+      <strong>¿Qué sigue?</strong>
+      <p>
+        El equipo de vinculación institucional de la universidad revisará los datos y documentación de tu empresa.
+        Una vez aprobada la cuenta, recibirás una notificación a tu correo para acceder y publicar tus vacantes.
+      </p>
+    </div>
+    <button type="button" class="btn-primary" (click)="resetForm()">
+      Registrar otra empresa
+    </button>
+  </div>
+
+  <!-- Formulario de Registro -->
+  <div *ngIf="!isSubmittedSuccess" class="form-card">
+    <div *ngIf="errorMessage" class="alert-banner error">
+      <svg viewBox="0 0 20 20" width="20" height="20" fill="currentColor">
+        <path fill-rule="evenodd"
+          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+          clip-rule="evenodd" />
+      </svg>
+      <span>{{ errorMessage }}</span>
+    </div>
+
+    <form [formGroup]="registroForm" (ngSubmit)="onSubmit()" novalidate>
+      <!-- SECCIÓN 1: DATOS CORPORATIVOS -->
+      <section class="form-section">
+        <h3 class="section-title">
+          <span class="step-num">1</span>
+          Datos de la Empresa
+        </h3>
+
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label for="razon_social">Razón Social o Nombre Comercial <span class="required">*</span></label>
+            <input id="razon_social" type="text" formControlName="razon_social"
+              placeholder="Ej. Corporación Tecnológica Santa Cruz S.A."
+              [class.is-invalid]="f['razon_social'].touched && f['razon_social'].invalid" />
+            <div *ngIf="f['razon_social'].touched && f['razon_social'].invalid" class="field-error">
+              <span *ngIf="f['razon_social'].errors?.['required']">La razón social es obligatoria.</span>
+              <span *ngIf="f['razon_social'].errors?.['minlength']">Debe tener al menos 2 caracteres.</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="nit">NIT / RUC / Identificación Fiscal <span class="required">*</span></label>
+            <input id="nit" type="text" formControlName="nit" placeholder="Ej. 1029384756"
+              [class.is-invalid]="f['nit'].touched && f['nit'].invalid" />
+            <div *ngIf="f['nit'].touched && f['nit'].invalid" class="field-error">
+              <span *ngIf="f['nit'].errors?.['required']">El NIT es obligatorio.</span>
+              <span *ngIf="f['nit'].errors?.['minlength']">Mínimo 4 caracteres.</span>
+              <span *ngIf="f['nit'].errors?.['pattern']">Solo números, letras o guiones.</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="sector">Sector / Rubro <span class="required">*</span></label>
+            <select id="sector" formControlName="sector"
+              [class.is-invalid]="f['sector'].touched && f['sector'].invalid">
+              <option value="" disabled selected>Selecciona un sector</option>
+              <option *ngFor="let s of sectores" [value]="s">{{ s }}</option>
+            </select>
+            <div *ngIf="f['sector'].touched && f['sector'].invalid" class="field-error">
+              <span>Debes seleccionar un sector.</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="tamanio">Tamaño de la Empresa</label>
+            <select id="tamanio" formControlName="tamanio">
+              <option value="">Selecciona el tamaño (opcional)</option>
+              <option *ngFor="let t of tamanios" [value]="t">{{ t }}</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="sitio_web">Sitio Web / Enlace</label>
+            <input id="sitio_web" type="url" formControlName="sitio_web" placeholder="https://www.tuempresa.com" />
+          </div>
+        </div>
+      </section>
+
+      <!-- SECCIÓN 2: CONTACTO Y UBICACIÓN -->
+      <section class="form-section">
+        <h3 class="section-title">
+          <span class="step-num">2</span>
+          Ubicación y Representante
+        </h3>
+
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label for="representante_legal">Representante Legal o Contacto Principal</label>
+            <input id="representante_legal" type="text" formControlName="representante_legal"
+              placeholder="Ej. Ing. Carlos Mendoza Suárez" />
+          </div>
+
+          <div class="form-group">
+            <label for="telefono">Teléfono / Celular de Contacto</label>
+            <input id="telefono" type="tel" formControlName="telefono" placeholder="Ej. +591 70012345 o 3-334455" />
+          </div>
+
+          <div class="form-group">
+            <label for="direccion">Dirección Física</label>
+            <input id="direccion" type="text" formControlName="direccion"
+              placeholder="Ej. Calle René Moreno #450, Centro" />
+          </div>
+
+          <div class="form-group full-width">
+            <label for="descripcion">Descripción de la Empresa</label>
+            <textarea id="descripcion" rows="3" formControlName="descripcion"
+              placeholder="Breve reseña sobre las actividades de la empresa y áreas en las que busca talento..."></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECCIÓN 3: CREDENCIALES DE ACCESO -->
+      <section class="form-section">
+        <h3 class="section-title">
+          <span class="step-num">3</span>
+          Credenciales de la Cuenta
+        </h3>
+
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label for="correo">Correo Electrónico Corporativo <span class="required">*</span></label>
+            <input id="correo" type="email" formControlName="correo"
+              placeholder="contacto@tuempresa.com o rrhh@empresa.bo"
+              [class.is-invalid]="f['correo'].touched && f['correo'].invalid" />
+            <div *ngIf="f['correo'].touched && f['correo'].invalid" class="field-error">
+              <span *ngIf="f['correo'].errors?.['required']">El correo es obligatorio.</span>
+              <span *ngIf="f['correo'].errors?.['email']">Ingresa un formato de correo válido.</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="password">Contraseña <span class="required">*</span></label>
+            <input id="password" type="password" formControlName="password" placeholder="Mínimo 8 caracteres"
+              [class.is-invalid]="f['password'].touched && f['password'].invalid" />
+            <div *ngIf="f['password'].touched && f['password'].invalid" class="field-error">
+              <span *ngIf="f['password'].errors?.['required']">La contraseña es obligatoria.</span>
+              <span *ngIf="f['password'].errors?.['minlength']">Debe tener al menos 8 caracteres.</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="confirmPassword">Confirmar Contraseña <span class="required">*</span></label>
+            <input id="confirmPassword" type="password" formControlName="confirmPassword"
+              placeholder="Repite tu contraseña"
+              [class.is-invalid]="(f['confirmPassword'].touched && f['confirmPassword'].invalid) || (f['confirmPassword'].touched && registroForm.hasError('passwordsMismatch'))" />
+            <div
+              *ngIf="f['confirmPassword'].touched && (f['confirmPassword'].invalid || registroForm.hasError('passwordsMismatch'))"
+              class="field-error">
+              <span *ngIf="f['confirmPassword'].errors?.['required']">Debes confirmar tu contraseña.</span>
+              <span *ngIf="registroForm.hasError('passwordsMismatch') && !f['confirmPassword'].errors?.['required']">Las
+                contraseñas no coinciden.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- BOTONES DE ACCIÓN -->
+      <div class="form-actions">
+        <button type="submit" class="btn-primary" [disabled]="isLoading">
+          <span *ngIf="!isLoading">Enviar Solicitud de Registro</span>
+          <span *ngIf="isLoading" class="loader-spinner">Registrando empresa...</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

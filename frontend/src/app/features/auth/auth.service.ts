@@ -1,9 +1,10 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, tap } from 'rxjs';
+import { Observable, catchError, tap, throwError } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
+import { MessageResponse, RegistroEmpresaRequest } from '../../core/models/auth.models';
 
 const TOKEN_KEY = 'token';
 const ROL_KEY = 'rol';
@@ -62,5 +63,29 @@ export class AuthService {
 
   estaAutenticado(): boolean {
     return this.token().length > 0;
+  }
+
+  /**
+   * Envía la solicitud de registro de una empresa.
+   * Queda en estado PENDIENTE de validación institucional.
+   */
+  registrarEmpresa(payload: RegistroEmpresaRequest): Observable<MessageResponse> {
+    return this.http
+      .post<MessageResponse>(`${environment.apiUrl}/auth/registro/empresa`, payload)
+      .pipe(catchError(this.handleError));
+  }
+
+  private handleError(error: HttpErrorResponse): Observable<never> {
+    let errorMessage = 'Ocurrió un error inesperado al procesar la solicitud.';
+    if (error.error) {
+      if (typeof error.error.detail === 'string') {
+        errorMessage = error.error.detail;
+      } else if (Array.isArray(error.error.detail) && error.error.detail.length > 0) {
+        errorMessage = error.error.detail.map((err: { msg: string }) => err.msg).join(', ');
+      } else if (error.status === 0) {
+        errorMessage = 'No se pudo conectar con el servidor de la API. Verifica tu conexión.';
+      }
+    }
+    return throwError(() => new Error(errorMessage));
   }
 }

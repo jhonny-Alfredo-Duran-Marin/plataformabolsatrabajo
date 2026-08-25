@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
@@ -25,7 +26,19 @@ def _a_dto(empresa: Company) -> EmpresaResponse:
         razon_social=empresa.trade_name or empresa.legal_name,
         nit=empresa.tax_id,
         sector=empresa.sector.name if empresa.sector else None,
+        tamanio=empresa.company_size,
+        direccion=empresa.address,
+        telefono=empresa.phone,
+        sitio_web=empresa.website,
+        descripcion=empresa.description,
+        representante_legal=empresa.legal_representative,
         estado_verificacion=estado or "PENDIENTE",
+        motivo_rechazo=empresa.rejection_reason,
+        notificaciones_activas=empresa.notifications_enabled,
+        postulaciones_activas=empresa.applications_enabled,
+        activo=empresa.deleted_at is None,
+        fecha_registro=empresa.created_at,
+        fecha_eliminacion=empresa.deleted_at,
     )
 
 
@@ -38,9 +51,13 @@ class EmpresaService:
     def listar_pendientes(self) -> list[EmpresaResponse]:
         return [_a_dto(empresa) for empresa in self.repo.listar_pendientes()]
 
+    def listar_todas(self, incluir_inactivas: bool = False) -> list[EmpresaResponse]:
+        return [_a_dto(empresa) for empresa in self.repo.listar_todas(incluir_inactivas=incluir_inactivas)]
+
     def decidir(self, empresa_id: uuid.UUID | str, aprobado: bool, motivo_rechazo: str | None) -> EmpresaResponse:
         empresa = self._obtener(empresa_id)
         empresa.verification_status = "verified" if aprobado else "rejected"
+        empresa.rejection_reason = None if aprobado else motivo_rechazo
         if not aprobado:
             self.email_service.enviar(
                 empresa.contact_email or "",
@@ -59,6 +76,35 @@ class EmpresaService:
     def suspender(self, empresa_id: uuid.UUID | str, motivo: str) -> EmpresaResponse:
         empresa = self._obtener(empresa_id)
         empresa.account_status = "suspended"
+        empresa.rejection_reason = motivo
+        self.db.commit()
+        return _a_dto(empresa)
+
+    def actualizar_configuracion(
+        self,
+        empresa_id: uuid.UUID | str,
+        notificaciones_activas: bool | None = None,
+        postulaciones_activas: bool | None = None,
+    ) -> EmpresaResponse:
+        empresa = self._obtener(empresa_id)
+        if notificaciones_activas is not None:
+            empresa.notifications_enabled = notificaciones_activas
+        if postulaciones_activas is not None:
+            empresa.applications_enabled = postulaciones_activas
+        self.db.commit()
+        return _a_dto(empresa)
+
+    def eliminar_logico(self, empresa_id: uuid.UUID | str) -> EmpresaResponse:
+        """Baja lógica (soft delete): preserva integridad histórica y auditoría."""
+        empresa = self._obtener(empresa_id)
+        empresa.deleted_at = datetime.now(timezone.utc)
+        self.db.commit()
+        return _a_dto(empresa)
+
+    def restaurar(self, empresa_id: uuid.UUID | str) -> EmpresaResponse:
+        """Restaura una empresa dada de baja lógicamente."""
+        empresa = self._obtener(empresa_id)
+        empresa.deleted_at = None
         self.db.commit()
         return _a_dto(empresa)
 

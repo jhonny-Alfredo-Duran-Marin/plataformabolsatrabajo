@@ -15,6 +15,13 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/registro-egresado/registro-egresado').then((m) => m.RegistroEgresado),
   },
   {
+    path: 'auth/registro-empresa',
+    loadComponent: () =>
+      import('./features/auth/registro-empresa/registro-empresa.component').then(
+        (m) => m.RegistroEmpresaComponent,
+      ),
+  },
+  {
     path: 'admin',
     loadComponent: () => import('./features/admin/layout/admin-layout').then((m) => m.AdminLayout),
     children: [
@@ -32,6 +39,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/admin/validacion-egresados/validacion-egresados.component').then(
             (m) => m.ValidacionEgresadosComponent,
+          ),
+      },
+      {
+        path: 'empresas',
+        loadComponent: () =>
+          import('./features/admin/empresas-gestion/empresas-gestion.component').then(
+            (m) => m.EmpresasGestionComponent,
           ),
       },
       {

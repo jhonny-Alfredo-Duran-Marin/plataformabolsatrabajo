@@ -30,5 +30,16 @@ class EmpresaRepository:
         return empresa
 
     def listar_pendientes(self) -> list[Company]:
-        stmt = select(Company).where(Company.verification_status == "pending")
+        stmt = (
+            select(Company)
+            .where(Company.deleted_at.is_(None))
+            .where(Company.verification_status == "pending")
+            .order_by(Company.created_at.desc())
+        )
+        return list(self.db.scalars(stmt))
+
+    def listar_todas(self, incluir_inactivas: bool = False) -> list[Company]:
+        stmt = select(Company).order_by(Company.created_at.desc())
+        if not incluir_inactivas:
+            stmt = stmt.where(Company.deleted_at.is_(None))
         return list(self.db.scalars(stmt))

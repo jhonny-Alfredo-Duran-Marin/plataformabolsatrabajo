@@ -1,10 +1,14 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.common import health
 from app.common.exception_handlers import register_exception_handlers
 from app.core.config import get_settings
+from app.core.database import Base, engine
 from app.core.logging import configure_logging
+import app.models  # noqa: F401 (registra todos los modelos en el metadata)
 from app.features.auth import router as auth
 from app.features.bitacora import router as bitacora
 from app.features.catalogo import router as catalogos
@@ -23,7 +27,16 @@ from app.features.validacion import router as validacion
 settings = get_settings()
 configure_logging()
 
-app = FastAPI(title=settings.app_name, version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Provisional: crea las tablas faltantes al arrancar. Se reemplaza por
+    # migraciones de Alembic cuando el esquema quede estable.
+    Base.metadata.create_all(bind=engine)
+    yield
+
+
+app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

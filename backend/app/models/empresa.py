@@ -37,8 +37,13 @@ class Company(Base):
     country_code: Mapped[str | None] = mapped_column(String(2), nullable=True)
     city: Mapped[str | None] = mapped_column(String(100), nullable=True)
     address: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    legal_representative: Mapped[str | None] = mapped_column(String(150), nullable=True)
     verification_status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending")
+    rejection_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     account_status: Mapped[str] = mapped_column(String(30), nullable=False, default="active")
+    notifications_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    applications_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

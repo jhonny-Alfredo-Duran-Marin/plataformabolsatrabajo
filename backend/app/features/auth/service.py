@@ -79,6 +79,7 @@ class AuthService:
             legal_name=data.razon_social,
             tax_id=data.nit,
             sector_id=sector_id,
+            company_size=data.tamanio,
             description=data.descripcion,
             website=data.sitio_web,
             phone=data.telefono,
@@ -86,6 +87,7 @@ class AuthService:
             country_code="BO",
             city=data.ciudad,
             address=data.direccion,
+            legal_representative=data.representante_legal,
             verification_status="pending",
             account_status="active",
         )

@@ -33,11 +33,13 @@ class RegistroEmpresaRequest(BaseModel):
     correo: EmailStr
     password: str = Field(min_length=8)
     sector: str | None = None
+    tamanio: str | None = None
     ciudad: str | None = None
     direccion: str | None = None
     telefono: str | None = None
     sitio_web: str | None = None
     descripcion: str | None = None
+    representante_legal: str | None = None
 
 
 class MessageResponse(BaseModel):

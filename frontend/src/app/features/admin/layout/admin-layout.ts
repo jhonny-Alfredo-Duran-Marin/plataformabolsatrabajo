@@ -26,6 +26,7 @@ export class AdminLayout {
     { ruta: '/admin', icono: '▦', etiqueta: 'Dashboard', exacta: true },
     { ruta: '/admin/roles', icono: '◉', etiqueta: 'Gestión de roles', exacta: false },
     { ruta: '/admin/validacion-egresados', icono: '✓', etiqueta: 'Validación de egresados', exacta: false },
+    { ruta: '/admin/empresas', icono: '🏢', etiqueta: 'Gestión de empresas', exacta: false },
     { ruta: '/admin/bitacora', icono: '☰', etiqueta: 'Bitácora del sistema', exacta: false },
   ];
 

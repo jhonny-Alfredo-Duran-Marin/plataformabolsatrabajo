@@ -1,0 +1,192 @@
+<div class="admin-container">
+  <!-- Encabezado de la Sección -->
+  <header class="admin-header">
+    <div>
+      <div class="header-badge">Administración Institucional • UAGRM</div>
+      <h1>Gestión y Control de Empresas</h1>
+      <p class="subtitle">
+        Controla la recepción de notificaciones, permisos de postulación y estados de baja lógica de las empresas.
+      </p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/registro-empresa" class="btn-secondary">
+        + Registrar Nueva Empresa
+      </a>
+      <button type="button" class="btn-refresh" (click)="cargarEmpresas()" [disabled]="isLoading">
+        🔄 Actualizar
+      </button>
+    </div>
+  </header>
+
+  <!-- Notificación Toast Flotante -->
+  <div *ngIf="toastMessage" class="toast-banner">
+    <span>{{ toastMessage }}</span>
+  </div>
+
+  <!-- Barra de Filtros y Búsqueda -->
+  <div class="filter-bar">
+    <div class="search-box">
+      <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor">
+        <path fill-rule="evenodd"
+          d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+          clip-rule="evenodd" />
+      </svg>
+      <input type="text" [(ngModel)]="searchTerm"
+        placeholder="Buscar por Razón Social, NIT, Sector o Representante..." />
+    </div>
+
+    <div class="filter-group">
+      <label for="filtroEstado">Mostrar:</label>
+      <select id="filtroEstado" [(ngModel)]="filtroEstado">
+        <option value="TODAS">Todas las empresas ({{ empresas.length }})</option>
+        <option value="ACTIVAS">Solo Activas</option>
+        <option value="INACTIVAS">Dadas de Baja (Baja Lógica)</option>
+        <option value="PENDIENTES">Pendientes de Validación</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Estado de Carga / Error -->
+  <div *ngIf="isLoading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Cargando listado de empresas...</p>
+  </div>
+
+  <div *ngIf="errorMessage && !isLoading" class="error-state">
+    <p>{{ errorMessage }}</p>
+    <button (click)="cargarEmpresas()" class="btn-secondary">Reintentar</button>
+  </div>
+
+  <!-- Tabla de Empresas -->
+  <div *ngIf="!isLoading && !errorMessage" class="table-card">
+    <div *ngIf="empresasFiltradas.length === 0" class="empty-state">
+      <p>No se encontraron empresas con los filtros aplicados.</p>
+    </div>
+
+    <div *ngIf="empresasFiltradas.length > 0" class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Empresa / Razón Social</th>
+            <th>Sector / Tamaño</th>
+            <th>Validación</th>
+            <th class="text-center">🔔 Notificaciones</th>
+            <th class="text-center">📨 Postulaciones</th>
+            <th>Estado Sistema</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let emp of empresasFiltradas" [class.is-inactive]="!emp.activo">
+            <!-- Empresa -->
+            <td>
+              <div class="empresa-cell">
+                <span class="empresa-name">{{ emp.razon_social }}</span>
+                <span class="empresa-meta">NIT: {{ emp.nit }}</span>
+                <span *ngIf="emp.representante_legal" class="empresa-rep">
+                  Rep: {{ emp.representante_legal }}
+                </span>
+              </div>
+            </td>
+
+            <!-- Sector y Tamaño -->
+            <td>
+              <div class="sector-cell">
+                <span>{{ emp.sector || 'No especificado' }}</span>
+                <small *ngIf="emp.tamanio">{{ emp.tamanio }}</small>
+              </div>
+            </td>
+
+            <!-- Estado Validación -->
+            <td>
+              <span class="badge" [ngClass]="'badge-' + emp.estado_verificacion.toLowerCase()">
+                {{ emp.estado_verificacion }}
+              </span>
+            </td>
+
+            <!-- Switch Notificaciones -->
+            <td class="text-center">
+              <label class="switch"
+                [title]="emp.notificaciones_activas ? 'Notificaciones activas' : 'Notificaciones desactivadas'">
+                <input type="checkbox" [checked]="emp.notificaciones_activas" [disabled]="!emp.activo"
+                  (change)="toggleNotificaciones(emp, $event)" />
+                <span class="slider"></span>
+              </label>
+            </td>
+
+            <!-- Switch Postulaciones -->
+            <td class="text-center">
+              <label class="switch"
+                [title]="emp.postulaciones_activas ? 'Postulaciones habilitadas' : 'Postulaciones inhabilitadas'">
+                <input type="checkbox" [checked]="emp.postulaciones_activas" [disabled]="!emp.activo"
+                  (change)="togglePostulaciones(emp, $event)" />
+                <span class="slider"></span>
+              </label>
+            </td>
+
+            <!-- Estado Sistema (Activa / Baja Lógica) -->
+            <td>
+              <span class="badge" [class.badge-active]="emp.activo" [class.badge-deleted]="!emp.activo">
+                {{ emp.activo ? 'Activa' : 'Baja Lógica' }}
+              </span>
+              <div *ngIf="!emp.activo && emp.fecha_eliminacion" class="meta-date">
+                Dado de baja el {{ emp.fecha_eliminacion | date:'short' }}
+              </div>
+            </td>
+
+            <!-- Acciones -->
+            <td class="text-center">
+              <button *ngIf="emp.activo" type="button" class="btn-danger-sm" title="Dar de baja lógica"
+                (click)="abrirModalBajaLogica(emp)">
+                🗑️ Desactivar
+              </button>
+
+              <button *ngIf="!emp.activo" type="button" class="btn-success-sm" title="Restaurar empresa"
+                (click)="restaurarEmpresa(emp)">
+                ♻️ Reactivar
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal de Confirmación de Baja Lógica (Soft Delete) -->
+  <div *ngIf="showDeleteModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-icon warning">
+        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      </div>
+
+      <h2>Confirmar Baja Lógica de Empresa</h2>
+      <p class="modal-desc">
+        ¿Estás seguro de dar de baja a <strong>{{ empresaParaDesactivar?.razon_social }}</strong> (NIT: {{
+        empresaParaDesactivar?.nit }})?
+      </p>
+
+      <div class="modal-alert-box">
+        <strong>ℹ️ Conservación Histórica (Soft Delete):</strong>
+        <p>
+          La empresa dejará de estar visible y no podrá publicar ni operar en la plataforma.
+          <strong>Ningún dato ni oferta previa será eliminada de la base de datos</strong>, garantizando la integridad
+          de las postulaciones existentes y la trazabilidad institucional. Podrá ser reactivada en cualquier momento.
+        </p>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" (click)="cerrarModal()" [disabled]="isProcessingAction">
+          Cancelar
+        </button>
+        <button type="button" class="btn-confirm-delete" (click)="confirmarBajaLogica()"
+          [disabled]="isProcessingAction">
+          <span *ngIf="!isProcessingAction">Confirmar Baja Lógica</span>
+          <span *ngIf="isProcessingAction">Procesando...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -42,12 +42,14 @@ def ejecutar() -> None:
             usuario = db.query(AppUser).filter(AppUser.email == correo).one_or_none()
             if usuario is None:
                 usuario = AppUser(email=correo)
+                db.add(usuario)
                 print(f"[crear ] {correo}")
             else:
                 print(f"[update] {correo}")
             usuario.password_hash = hash_password(password)
             usuario.account_status = "active"
             usuario.deleted_at = None
+            db.flush()
             if rol is not None:
                 role_id = ROLES_FIJOS[rol]
                 existe = (
