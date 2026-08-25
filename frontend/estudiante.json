@@ -1,0 +1,10 @@
+﻿{
+  "nombres": "Carlos",
+  "apellidos": "Estudiante",
+  "ci": "1111111",
+  "correo": "carlos.estudiante@uagrm.edu.bo",
+  "password": "estudiante123",
+  "carrera_id": 1,
+  "anio_egreso": 2026,
+  "matricula": "219001111"
+}
