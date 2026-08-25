@@ -15,6 +15,7 @@ backups/
 
 # ===== Backend (FastAPI / Python) =====
 backend/.venv/
+backend/venv/
 backend/__pycache__/
 backend/**/__pycache__/
 backend/**/*.pyc
@@ -25,6 +26,7 @@ backend/.mypy_cache/
 backend/.env
 backend/*.egg-info/
 backend/storage/
+backend/log.txt
 
 # ===== Frontend (Angular) =====
 frontend/node_modules/

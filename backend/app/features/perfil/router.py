@@ -2,14 +2,13 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.models.enums import RolNombre
 from app.features.perfil.schema import PerfilEgresadoResponse, PerfilEgresadoUpdateRequest, VisibilidadPerfilRequest
 from app.security.dependencies import CurrentUser, require_roles
 from app.features.perfil.service import EgresadoService
 
 router = APIRouter(prefix="/perfiles", tags=["perfiles"])
 
-_solo_egresado = require_roles(RolNombre.EGRESADO, RolNombre.ESTUDIANTE)
+_solo_egresado = require_roles("candidate")
 
 
 @router.get("/me", response_model=PerfilEgresadoResponse)

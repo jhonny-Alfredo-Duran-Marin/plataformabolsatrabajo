@@ -1,0 +1,131 @@
+<div class="visibility-container">
+  <header class="visibility-header">
+    <h1>Privacidad y Visibilidad</h1>
+    <p>Controla qué información pueden ver las empresas cuando revisan tu perfil profesional.</p>
+  </header>
+
+  @if (isLoading) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Cargando tu configuración...</p>
+    </div>
+  } @else {
+    <main class="visibility-content">
+      
+      <!-- Estado de guardado en la esquina superior derecha -->
+      <div class="save-status" [ngClass]="savingStatus">
+        @if (savingStatus === 'saving') {
+          <span class="icon">↻</span> Guardando cambios...
+        }
+        @if (savingStatus === 'saved') {
+          <span class="icon">✓</span> Guardado
+        }
+        @if (savingStatus === 'error') {
+          <span class="icon error-icon">⚠</span> Error al guardar (¿Iniciaste sesión?)
+        }
+      </div>
+
+      <!-- Tarjeta Principal: Visibilidad Global -->
+      <div class="settings-card global-setting" [class.is-hidden]="visibilidad.perfil_oculto">
+        <div class="setting-info">
+          <div class="title-with-icon">
+            <span class="emoji-icon">
+              {{ visibilidad.perfil_oculto ? '👁️‍🗨️' : '👁️' }}
+            </span>
+            <h2>Ocultar mi perfil completo</h2>
+          </div>
+          <p>
+            Al activar esto, <strong>ninguna empresa podrá encontrarte ni ver tus datos</strong>. 
+            Útil si ya encontraste trabajo o no buscas oportunidades por el momento.
+            <br><small class="info-note">* La universidad seguirá teniendo acceso a tus datos para validación y reportes.</small>
+          </p>
+        </div>
+        <div class="setting-action">
+          <label class="switch global-switch">
+            <input type="checkbox" [checked]="visibilidad.perfil_oculto" (change)="toggleGlobal()">
+            <span class="slider round"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Secciones Individuales -->
+      <div class="sections-wrapper" [class.disabled-sections]="visibilidad.perfil_oculto">
+        <h3>Secciones de tu perfil</h3>
+        <p class="subtitle">Decide qué partes específicas quieres compartir con los reclutadores.</p>
+
+        <div class="settings-card list-settings">
+          
+          <!-- Datos de Contacto -->
+          <div class="list-item">
+            <div class="item-info">
+              <h4>Datos de Contacto</h4>
+              <p>Tu correo electrónico, teléfono y dirección.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [checked]="visibilidad.secciones_visibles.datos_contacto" (change)="toggleSeccion('datos_contacto')" [disabled]="visibilidad.perfil_oculto">
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Experiencia Laboral -->
+          <div class="list-item">
+            <div class="item-info">
+              <h4>Experiencia Laboral</h4>
+              <p>Tus trabajos anteriores, cargos y fechas.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [checked]="visibilidad.secciones_visibles.experiencia_laboral" (change)="toggleSeccion('experiencia_laboral')" [disabled]="visibilidad.perfil_oculto">
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Formación Académica / Adicional -->
+          <div class="list-item">
+            <div class="item-info">
+              <h4>Formación Adicional</h4>
+              <p>Posgrados, diplomados y cursos extras.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [checked]="visibilidad.secciones_visibles.formacion_adicional" (change)="toggleSeccion('formacion_adicional')" [disabled]="visibilidad.perfil_oculto">
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Idiomas -->
+          <div class="list-item">
+            <div class="item-info">
+              <h4>Idiomas</h4>
+              <p>Idiomas que dominas y su nivel.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [checked]="visibilidad.secciones_visibles.idiomas" (change)="toggleSeccion('idiomas')" [disabled]="visibilidad.perfil_oculto">
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Habilidades -->
+          <div class="list-item">
+            <div class="item-info">
+              <h4>Habilidades</h4>
+              <p>Habilidades técnicas y blandas.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [checked]="visibilidad.secciones_visibles.habilidades" (change)="toggleSeccion('habilidades')" [disabled]="visibilidad.perfil_oculto">
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+        </div>
+      </div>
+      
+    </main>
+  }
+</div>

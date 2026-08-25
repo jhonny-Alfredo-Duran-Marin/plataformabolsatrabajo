@@ -15,6 +15,7 @@ from app.features.notificaciones import router as notificaciones
 from app.features.perfil import router as perfiles
 from app.features.postulaciones import router as postulaciones
 from app.features.reportes import router as reportes
+from app.features.roles import router as roles
 from app.features.seleccion import router as seleccion
 from app.features.vacantes import router as vacantes
 from app.features.validacion import router as validacion
@@ -26,7 +27,7 @@ app = FastAPI(title=settings.app_name, version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_allowed_origins,
+    allow_origins=["http://localhost:4200", "http://127.0.0.1:4200", "http://localhost:8000", "http://127.0.0.1:8000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -41,6 +42,7 @@ routers = [
     validacion.router,
     bitacora.router,
     catalogos.router,
+    roles.router,
     vacantes.router,
     postulaciones.router,
     seleccion.router,

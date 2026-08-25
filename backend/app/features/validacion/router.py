@@ -1,9 +1,10 @@
+import uuid
+
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from app.common.request_context import get_client_ip
 from app.core.database import get_db
-from app.models.enums import RolNombre
 from app.features.perfil.schema import PerfilEgresadoResponse, ValidacionEgresadoDecisionRequest
 from app.features.empresa.schema import DecisionEmpresaRequest, EmpresaResponse, SuspensionEmpresaRequest
 from app.security.dependencies import CurrentUser, require_roles
@@ -13,7 +14,7 @@ from app.features.empresa.service import EmpresaService
 
 router = APIRouter(prefix="/validacion", tags=["validacion-institucional"])
 
-_solo_admin = require_roles(RolNombre.ADMINISTRADOR)
+_solo_admin = require_roles("platform_admin", "moderator")
 
 
 @router.get("/egresados/pendientes", response_model=list[PerfilEgresadoResponse])
@@ -23,7 +24,7 @@ def listar_egresados_pendientes(current_user: CurrentUser = Depends(_solo_admin)
 
 @router.post("/egresados/{perfil_id}/decision", response_model=PerfilEgresadoResponse)
 def decidir_egresado(
-    perfil_id: int,
+    perfil_id: uuid.UUID,
     data: ValidacionEgresadoDecisionRequest,
     request: Request,
     current_user: CurrentUser = Depends(_solo_admin),
@@ -48,7 +49,7 @@ def listar_empresas_pendientes(current_user: CurrentUser = Depends(_solo_admin),
 
 @router.post("/empresas/{empresa_id}/decision", response_model=EmpresaResponse)
 def decidir_empresa(
-    empresa_id: int,
+    empresa_id: uuid.UUID,
     data: DecisionEmpresaRequest,
     request: Request,
     current_user: CurrentUser = Depends(_solo_admin),
@@ -68,7 +69,7 @@ def decidir_empresa(
 
 @router.post("/empresas/{empresa_id}/suspender", response_model=EmpresaResponse)
 def suspender_empresa(
-    empresa_id: int,
+    empresa_id: uuid.UUID,
     data: SuspensionEmpresaRequest,
     request: Request,
     current_user: CurrentUser = Depends(_solo_admin),

@@ -35,7 +35,7 @@ def registrar_empresa(data: RegistroEmpresaRequest, request: Request, db: Sessio
 def login(data: LoginRequest, request: Request, db: Session = Depends(get_db)) -> TokenResponse:
     ip = get_client_ip(request)
     try:
-        token, usuario_id = AuthService(db).login(data.correo, data.password)
+        token, usuario = AuthService(db).login(data.correo, data.password)
     except UnauthorizedException:
         BitacoraService(db).registrar(
             modulo="auth",
@@ -47,6 +47,6 @@ def login(data: LoginRequest, request: Request, db: Session = Depends(get_db)) -
         db.commit()
         raise
 
-    BitacoraService(db).registrar(modulo="auth", accion="login", usuario_id=usuario_id, ip=ip)
+    BitacoraService(db).registrar(modulo="auth", accion="login", usuario_id=usuario.id, ip=ip)
     db.commit()
     return token

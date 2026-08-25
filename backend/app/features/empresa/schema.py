@@ -1,15 +1,15 @@
-from pydantic import BaseModel
+import uuid
 
-from app.models.enums import EstadoVerificacionEmpresa
+from pydantic import BaseModel
 
 
 class EmpresaResponse(BaseModel):
-    id: int
-    usuario_id: int
+    id: uuid.UUID
+    usuario_id: uuid.UUID | None = None
     razon_social: str
     nit: str
-    sector: str | None
-    estado_verificacion: EstadoVerificacionEmpresa
+    sector: str | None = None
+    estado_verificacion: str  # PENDIENTE | VERIFICADA | RECHAZADA | SUSPENDIDA (mapeado)
 
     model_config = {"from_attributes": True}
 

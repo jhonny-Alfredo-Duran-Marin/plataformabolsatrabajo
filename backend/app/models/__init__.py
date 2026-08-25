@@ -1,49 +1,26 @@
-"""Importa todas las entidades para que Alembic (autogenerate) detecte el metadata completo."""
+"""Entidades ORM mapeadas al esquema PostgreSQL gestionado por schema.sql (UUID PKs).
 
-from app.models.bitacora import BitacoraLog
-from app.models.catalogo import CategoriaOferta, Carrera, Ciudad, Habilidad
-from app.models.comunicacion import Entrevista, Mensaje
-from app.models.egresado import (
-    CertificacionEgresado,
-    ExperienciaLaboral,
-    FormacionAdicional,
-    HabilidadEgresado,
-    IdiomaEgresado,
-    PerfilEgresado,
-)
-from app.models.empresa import Empresa
-from app.models.moderacion import Denuncia
-from app.models.notificacion import Notificacion
-from app.models.oferta import Oferta, PreguntaFiltro
-from app.models.postulacion import EtapaSeleccion, Postulacion, PostulacionEtapa, RespuestaFiltro
-from app.models.reporte import Colocacion, EncuestaSituacionLaboral, ReporteInstitucional
-from app.models.usuario import Usuario
+Los módulos aún sin implementar (vacantes, postulaciones, entrevistas, etc.) usan
+las tablas correspondientes del mismo esquema cuando se desarrollen.
+"""
+
+from app.models.candidato import CandidateProfile
+from app.models.catalogo import FieldOfStudy, JobCategory, Skill
+from app.models.empresa import Company, CompanyMember, Sector
+from app.models.seguridad import AuditLog, LoginAttempt
+from app.models.usuario import AppUser, Role, UserRole
 
 __all__ = [
-    "BitacoraLog",
-    "CategoriaOferta",
-    "Carrera",
-    "Ciudad",
-    "Habilidad",
-    "Entrevista",
-    "Mensaje",
-    "CertificacionEgresado",
-    "ExperienciaLaboral",
-    "FormacionAdicional",
-    "HabilidadEgresado",
-    "IdiomaEgresado",
-    "PerfilEgresado",
-    "Empresa",
-    "Denuncia",
-    "Notificacion",
-    "Oferta",
-    "PreguntaFiltro",
-    "EtapaSeleccion",
-    "Postulacion",
-    "PostulacionEtapa",
-    "RespuestaFiltro",
-    "Colocacion",
-    "EncuestaSituacionLaboral",
-    "ReporteInstitucional",
-    "Usuario",
+    "AppUser",
+    "AuditLog",
+    "CandidateProfile",
+    "Company",
+    "CompanyMember",
+    "FieldOfStudy",
+    "JobCategory",
+    "LoginAttempt",
+    "Role",
+    "Sector",
+    "Skill",
+    "UserRole",
 ]

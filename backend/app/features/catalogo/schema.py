@@ -1,30 +1,30 @@
+import uuid
+
 from pydantic import BaseModel
 
 
 class CarreraResponse(BaseModel):
-    id: int
+    id: uuid.UUID
     nombre: str
-    facultad: str | None
+    facultad: str | None = None
 
     model_config = {"from_attributes": True}
 
 
 class HabilidadResponse(BaseModel):
-    id: int
+    id: uuid.UUID
     nombre: str
 
     model_config = {"from_attributes": True}
 
 
 class CategoriaOfertaResponse(BaseModel):
-    id: int
+    id: uuid.UUID
     nombre: str
 
     model_config = {"from_attributes": True}
 
 
 class CiudadResponse(BaseModel):
-    id: int
+    id: uuid.UUID | None = None
     nombre: str
-
-    model_config = {"from_attributes": True}

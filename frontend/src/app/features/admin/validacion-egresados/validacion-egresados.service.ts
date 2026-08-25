@@ -3,9 +3,9 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { Carrera, PerfilEgresado, ValidacionDecisionRequest } from './validacion-egresados.model';
+import { environment } from '../../../../environments/environment';
 
-// TODO: mover a environments/ cuando se configure el flujo de build por entorno.
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = environment.apiUrl;
 
 @Injectable({ providedIn: 'root' })
 export class ValidacionEgresadosService {
@@ -21,7 +21,7 @@ export class ValidacionEgresadosService {
     });
   }
 
-  decidir(token: string, perfilId: number, data: ValidacionDecisionRequest): Observable<PerfilEgresado> {
+  decidir(token: string, perfilId: string, data: ValidacionDecisionRequest): Observable<PerfilEgresado> {
     return this.http.post<PerfilEgresado>(
       `${API_BASE}/validacion/egresados/${perfilId}/decision`,
       data,

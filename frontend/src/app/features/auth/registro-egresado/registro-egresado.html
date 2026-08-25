@@ -1,0 +1,147 @@
+<div class="login-container">
+  <!-- Left Side: Information & Branding -->
+  <div class="login-info-panel">
+    <div class="info-content">
+      <div class="brand">
+        <div class="logo-icon">✦</div>
+        <h2>EGRESA</h2>
+      </div>
+      
+      <h1>Únete a la red de egresados de la UAGRM.</h1>
+      <p class="subtitle">Registra tus datos para acceder a vacantes exclusivas y conectar con empresas líderes que buscan talento universitario.</p>
+    </div>
+    <div class="bg-circle circle-1"></div>
+    <div class="bg-circle circle-2"></div>
+    <div class="bg-circle circle-3"></div>
+  </div>
+
+  <!-- Right Side: Form -->
+  <div class="login-form-panel">
+    <div class="login-card">
+      <h2>Registro de Egresado</h2>
+      <p class="text-muted">Ingresa tus datos personales y académicos.</p>
+      
+      <!-- Mensajes de Éxito / Error -->
+      @if (mensajeExito) {
+        <div class="alert alert-success">
+          {{ mensajeExito }}
+          <p><small>Redirigiendo al login...</small></p>
+        </div>
+      }
+      
+      @if (mensajeError) {
+        <div class="alert alert-danger">
+          {{ mensajeError }}
+        </div>
+      }
+
+      @if (!mensajeExito) {
+        <form [formGroup]="registroForm" (ngSubmit)="onSubmit()">
+          
+          <div class="form-row">
+            <div class="form-group half-width">
+              <label for="nombres">Nombres</label>
+              <div class="input-wrapper">
+                <input type="text" id="nombres" formControlName="nombres" placeholder="Ej. Juan">
+              </div>
+              @if (registroForm.get('nombres')?.touched && registroForm.get('nombres')?.invalid) {
+                <div class="error-msg">Requerido</div>
+              }
+            </div>
+            
+            <div class="form-group half-width">
+              <label for="apellidos">Apellidos</label>
+              <div class="input-wrapper">
+                <input type="text" id="apellidos" formControlName="apellidos" placeholder="Ej. Perez">
+              </div>
+              @if (registroForm.get('apellidos')?.touched && registroForm.get('apellidos')?.invalid) {
+                <div class="error-msg">Requerido</div>
+              }
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group half-width">
+              <label for="ci">Cédula de Identidad</label>
+              <div class="input-wrapper">
+                <input type="text" id="ci" formControlName="ci" placeholder="Ej. 1234567">
+              </div>
+              @if (registroForm.get('ci')?.touched && registroForm.get('ci')?.invalid) {
+                <div class="error-msg">Requerido</div>
+              }
+            </div>
+
+            <div class="form-group half-width">
+              <label for="correo">Correo Electrónico</label>
+              <div class="input-wrapper">
+                <input type="email" id="correo" formControlName="correo" placeholder="tu.correo@uagrm.edu.bo">
+              </div>
+              @if (registroForm.get('correo')?.touched && registroForm.get('correo')?.invalid) {
+                <div class="error-msg">Correo inválido</div>
+              }
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="carrera_id">Carrera de Egreso</label>
+            <div class="input-wrapper">
+              <select id="carrera_id" formControlName="carrera_id" [disabled]="isCargandoCarreras">
+                @if (isCargandoCarreras) {
+                  <option value="">Cargando carreras...</option>
+                } @else {
+                  <option value="">Selecciona tu carrera</option>
+                  @for (carrera of carreras; track carrera.id) {
+                    <option [value]="carrera.id">{{ carrera.nombre }}</option>
+                  }
+                }
+              </select>
+            </div>
+            @if (registroForm.get('carrera_id')?.touched && registroForm.get('carrera_id')?.invalid) {
+              <div class="error-msg">Requerido</div>
+            }
+            @if (carrerasError) {
+              <div class="error-msg" style="color: #e53e3e; margin-top: 5px;">Error conectando al backend: {{ carrerasError }}</div>
+            }
+          </div>
+
+          <div class="form-row">
+            <div class="form-group half-width">
+              <label for="anio_egreso">Año de Egreso</label>
+              <div class="input-wrapper">
+                <input type="number" id="anio_egreso" formControlName="anio_egreso" placeholder="Ej. 2023">
+              </div>
+              @if (registroForm.get('anio_egreso')?.touched && registroForm.get('anio_egreso')?.invalid) {
+                <div class="error-msg">Año inválido</div>
+              }
+            </div>
+
+            <div class="form-group half-width">
+              <label for="matricula">Matrícula (Opcional)</label>
+              <div class="input-wrapper">
+                <input type="text" id="matricula" formControlName="matricula" placeholder="Nro de registro">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="password">Contraseña</label>
+            <div class="input-wrapper">
+              <input type="password" id="password" formControlName="password" placeholder="Mínimo 8 caracteres">
+            </div>
+            @if (registroForm.get('password')?.touched && registroForm.get('password')?.invalid) {
+              <div class="error-msg">Mínimo 8 caracteres</div>
+            }
+          </div>
+          
+          <button type="submit" class="btn-primary" [disabled]="isLoading">
+            {{ isLoading ? 'Procesando...' : 'Completar Registro' }}
+          </button>
+        </form>
+      }
+      
+      <div class="register-prompt">
+        ¿Ya tienes cuenta? <a routerLink="/auth/login">Iniciar sesión</a>
+      </div>
+    </div>
+  </div>
+</div>

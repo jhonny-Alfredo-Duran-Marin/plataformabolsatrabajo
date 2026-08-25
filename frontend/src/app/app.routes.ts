@@ -1,90 +1,47 @@
 import { Routes } from '@angular/router';
-import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
-
-  // ── Raíz → Login ───────────────────────────────────────────────────────────
-  { path: '', redirectTo: 'login', pathMatch: 'full' },
-
-  // ── Públicas ────────────────────────────────────────────────────────────────
   {
-    path: 'login',
-    loadComponent: () =>
-      import('./features/auth/login/login.component').then((m) => m.LoginComponent),
+    path: '',
+    redirectTo: 'auth/login',
+    pathMatch: 'full',
   },
   {
-    path: 'registro',
-    loadComponent: () =>
-      import('./features/auth/login/login.component').then((m) => m.LoginComponent),
-    // TODO: Reemplazar con RegistroComponent cuando esté implementado
-  },
-
-  // ── Dashboard Unificado (redirige por rol desde AuthService) ────────────────
-  {
-    path: 'dashboard',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
-  },
-
-  // ── Sub-dashboards por Rol ─────────────────────────────────────────────────
-  {
-    path: 'dashboard/egresado',
-    canActivate: [authGuard],
-    data: { roles: ['EGRESADO', 'ESTUDIANTE'] },
-    loadComponent: () =>
-      import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+    path: 'auth/login',
+    loadComponent: () => import('./features/auth/login/login').then((m) => m.Login),
   },
   {
-    path: 'dashboard/empresa',
-    canActivate: [authGuard],
-    data: { roles: ['EMPRESA'] },
-    loadComponent: () =>
-      import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+    path: 'auth/registro',
+    loadComponent: () => import('./features/auth/registro-egresado/registro-egresado').then((m) => m.RegistroEgresado),
   },
   {
-    path: 'dashboard/admin',
-    canActivate: [authGuard],
-    data: { roles: ['ADMINISTRADOR'] },
-    loadComponent: () =>
-      import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
-  },
-
-  // ── Rutas protegidas ────────────────────────────────────────────────────────
-  {
-    path: 'perfil',
-    canActivate: [authGuard],
-    data: { roles: ['EGRESADO', 'ESTUDIANTE'] },
-    loadComponent: () =>
-      import('./features/auth/login/login.component').then((m) => m.LoginComponent),
-    // TODO: Reemplazar con PerfilComponent cuando esté implementado
-  },
-  {
-    path: 'vacantes',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./features/auth/login/login.component').then((m) => m.LoginComponent),
-    // TODO: Reemplazar con VacantesComponent cuando esté implementado
-  },
-
-  // ── Panel de Administración ─────────────────────────────────────────────────
-  {
-    path: 'admin/bitacora',
-    canActivate: [authGuard],
-    data: { roles: ['ADMINISTRADOR'] },
-    loadComponent: () =>
-      import('./features/admin/bitacora/bitacora.component').then((m) => m.BitacoraComponent),
+    path: 'admin',
+    loadComponent: () => import('./features/admin/layout/admin-layout').then((m) => m.AdminLayout),
+    children: [
+      {
+        path: '',
+        loadComponent: () => import('./features/admin/dashboard/dashboard').then((m) => m.Dashboard),
+      },
+      {
+        path: 'roles',
+        loadComponent: () =>
+          import('./features/admin/gestion-roles/gestion-roles.component').then((m) => m.GestionRolesComponent),
+      },
+      {
+        path: 'validacion-egresados',
+        loadComponent: () =>
+          import('./features/admin/validacion-egresados/validacion-egresados.component').then(
+            (m) => m.ValidacionEgresadosComponent,
+          ),
+      },
+      {
+        path: 'bitacora',
+        loadComponent: () => import('./features/admin/bitacora/bitacora.component').then((m) => m.BitacoraComponent),
+      },
+    ],
   },
   {
-    path: 'admin/validacion-egresados',
-    canActivate: [authGuard],
-    data: { roles: ['ADMINISTRADOR'] },
-    loadComponent: () =>
-      import('./features/admin/validacion-egresados/validacion-egresados.component').then(
-        (m) => m.ValidacionEgresadosComponent,
-      ),
+    path: 'perfil/visibilidad',
+    loadComponent: () => import('./features/perfil/visibilidad/visibilidad.component').then((m) => m.VisibilidadComponent),
   },
-
-  // ── Comodín (404) → Login ───────────────────────────────────────────────────
-  { path: '**', redirectTo: 'login' },
 ];

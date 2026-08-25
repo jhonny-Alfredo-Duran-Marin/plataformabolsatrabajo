@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { AdminTokenService } from '../../../core/services/admin-token.service';
+import { AuthService } from '../../auth/auth.service';
 import { BitacoraLog, BitacoraFiltros } from './bitacora.model';
 import { BitacoraService } from './bitacora.service';
 
@@ -28,17 +28,13 @@ export class BitacoraComponent {
 
   constructor(
     private readonly bitacoraService: BitacoraService,
-    readonly adminToken: AdminTokenService,
+    private readonly auth: AuthService,
   ) {}
 
-  guardarToken(token: string): void {
-    this.adminToken.guardar(token);
-  }
-
   buscar(): void {
-    const token = this.adminToken.token();
+    const token = this.auth.token();
     if (!token) {
-      this.error.set('Pega un token de administrador para consultar la bitácora.');
+      this.error.set('Inicia sesión como administrador para consultar la bitácora.');
       return;
     }
 
@@ -50,16 +46,16 @@ export class BitacoraComponent {
         this.cargando.set(false);
       },
       error: () => {
-        this.error.set('No se pudo cargar la bitácora. Verifica el token y los filtros.');
+        this.error.set('No se pudo cargar la bitácora. Verifica los filtros.');
         this.cargando.set(false);
       },
     });
   }
 
   exportar(formato: 'excel' | 'pdf'): void {
-    const token = this.adminToken.token();
+    const token = this.auth.token();
     if (!token) {
-      this.error.set('Pega un token de administrador para exportar la bitácora.');
+      this.error.set('Inicia sesión como administrador para exportar la bitácora.');
       return;
     }
 
