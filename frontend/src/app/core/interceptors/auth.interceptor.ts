@@ -1,36 +1,42 @@
 /**
  * AuthInterceptor — HttpInterceptorFn moderno (Angular 18+).
  * - Inyecta automáticamente el header Authorization: Bearer <token> en peticiones a /api/.
- * - Captura errores 401 (sesión expirada) y 403 (acceso denegado) globalmente.
+ * - Captura errores 401 (sesión expirada) y 403 (acceso denegado) globalmente,
+ *   salvo en los endpoints públicos de autenticación (login/registro), donde un 401
+ *   significa "credenciales incorrectas" y no "sesión expirada".
  */
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { catchError, throwError } from 'rxjs';
-import { TokenService } from '../services/token.service';
 import { ToastService } from '../services/toast.service';
 import { Router } from '@angular/router';
 
+const TOKEN_KEY = 'token';
+const ROL_KEY = 'rol';
+const CORREO_KEY = 'correo';
+
+const _RUTAS_PUBLICAS = ['/auth/login', '/auth/registro'];
+
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  const tokens = inject(TokenService);
-  const toast  = inject(ToastService);
+  const toast = inject(ToastService);
   const router = inject(Router);
 
-  // Solo enriquecer peticiones que van a la API propia
   const isApiCall = req.url.includes('/api/');
-  const token = tokens.getAccessToken();
+  const esRutaPublica = _RUTAS_PUBLICAS.some((ruta) => req.url.includes(ruta));
+  const token = localStorage.getItem(TOKEN_KEY);
 
-  // Clonar la petición inyectando el Bearer token si existe
-  const authReq = (isApiCall && token)
+  const authReq = isApiCall && token && !esRutaPublica
     ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
     : req;
 
   return next(authReq).pipe(
     catchError((err: HttpErrorResponse) => {
-      if (err.status === 401) {
-        // Sesión expirada o token inválido
-        tokens.clearTokens();
+      if (err.status === 401 && !esRutaPublica) {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(ROL_KEY);
+        localStorage.removeItem(CORREO_KEY);
         toast.warning('Tu sesión ha expirado. Inicia sesión nuevamente.');
-        router.navigate(['/login']);
+        router.navigate(['/auth/login']);
       } else if (err.status === 403) {
         toast.error('No tienes permisos para realizar esta acción.');
       } else if (err.status === 0) {

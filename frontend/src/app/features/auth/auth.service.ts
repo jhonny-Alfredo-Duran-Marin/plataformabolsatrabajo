@@ -1,10 +1,11 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, catchError, tap, throwError } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { MessageResponse, RegistroEmpresaRequest } from '../../core/models/auth.models';
+import { TimeoutService } from '../../core/services/timeout.service';
 
 const TOKEN_KEY = 'token';
 const ROL_KEY = 'rol';
@@ -24,10 +25,16 @@ export class AuthService {
   readonly rol = signal<string>(localStorage.getItem(ROL_KEY) ?? '');
   readonly correo = signal<string>(localStorage.getItem(CORREO_KEY) ?? '');
 
+  private readonly timeout = inject(TimeoutService);
+
   constructor(
     private readonly http: HttpClient,
     private readonly router: Router,
-  ) {}
+  ) {
+    if (this.estaAutenticado()) {
+      this.timeout.start(() => this.cerrarSesion());
+    }
+  }
 
   login(correoIngresado: string, password: string): Observable<LoginResponse> {
     return this.http
@@ -49,9 +56,11 @@ export class AuthService {
     localStorage.setItem(ROL_KEY, respuesta.rol);
     this.token.set(respuesta.access_token);
     this.rol.set(respuesta.rol);
+    this.timeout.start(() => this.cerrarSesion());
   }
 
   cerrarSesion(): void {
+    this.timeout.stop();
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(ROL_KEY);
     localStorage.removeItem(CORREO_KEY);

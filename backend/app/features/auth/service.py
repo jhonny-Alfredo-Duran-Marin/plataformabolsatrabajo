@@ -33,14 +33,17 @@ class AuthService:
             raise ConflictException("El correo electrónico ya está registrado.")
         if self.candidatos.existe_ci(data.ci):
             raise ConflictException("Ya existe un egresado registrado con ese CI.")
-        if data.carrera_id is not None and self.db.get(Sector, data.carrera_id) is None:
-            # Nota: el formulario envía field_of_study; se valida contra sector por compatibilidad histórica.
+        if data.carrera_id is not None:
             from app.models.catalogo import FieldOfStudy
 
             if self.db.get(FieldOfStudy, data.carrera_id) is None:
                 raise ConflictException("La carrera indicada no existe.")
 
-        usuario = AppUser(email=data.correo.strip().lower(), password_hash=hash_password(data.password))
+        usuario = AppUser(
+            email=data.correo.strip().lower(),
+            password_hash=hash_password(data.password),
+            account_status="active",
+        )
         self.usuarios.crear(usuario)
         self.usuarios.asignar_rol(usuario, "candidate")
         self.candidatos.crear(
@@ -53,11 +56,14 @@ class AuthService:
                 document_number=data.ci,
                 document_country_code="BO",
                 verification_status="pending",
+                field_of_study_id=data.carrera_id,
+                graduation_year=data.anio_egreso,
+                student_id_code=data.matricula,
             )
         )
         self.db.commit()
         self.email_service.enviar(
-            data.correo, "Verifica tu cuenta en EGRESA", "Gracias por registrarte. Confirma tu cuenta para continuar."
+            data.correo, "Bienvenido a EGRESA", "Gracias por registrarte. Tu cuenta ya está lista para iniciar sesión."
         )
         return usuario
 
@@ -66,14 +72,21 @@ class AuthService:
             raise ConflictException("El correo electrónico ya está registrado.")
         if self.empresas.existe_nit(data.nit):
             raise ConflictException("Ya existe una empresa registrada con ese NIT/RUC.")
+        if self.empresas.existe_razon_social(data.razon_social):
+            raise ConflictException("Ya existe una empresa registrada con esa razón social.")
 
         sector_id = None
         if data.sector:
             sector = self.db.scalar(select(Sector).where(func.lower(Sector.name) == data.sector.lower()))
             sector_id = sector.id if sector else None
 
-        usuario = AppUser(email=data.correo.strip().lower(), password_hash=hash_password(data.password))
+        usuario = AppUser(
+            email=data.correo.strip().lower(),
+            password_hash=hash_password(data.password),
+            account_status="active",
+        )
         self.usuarios.crear(usuario)
+        self.usuarios.asignar_rol(usuario, "empresa")
 
         empresa = Company(
             legal_name=data.razon_social,
@@ -118,6 +131,11 @@ class AuthService:
                 "pendiente de verificación" if usuario.account_status == "pending_verification" else "desactivada"
             )
             raise UnauthorizedException(f"La cuenta se encuentra {estado}.")
+
+        empresa = self.usuarios.obtener_empresa_de_usuario(usuario.id)
+        if empresa is not None and (empresa.account_status == "suspended" or empresa.deleted_at is not None):
+            self._registrar_login_attempt(correo, usuario, success=False)
+            raise UnauthorizedException("La empresa asociada a esta cuenta se encuentra suspendida.")
 
         limpiar_intentos(correo)
         usuario.last_login_at = func.now()

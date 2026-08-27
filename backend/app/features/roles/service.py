@@ -14,7 +14,7 @@ _ETIQUETAS_ESTADO = {
     "blocked": "bloqueado",
 }
 
-_ROLES_ASIGNABLES = ("candidate", "moderator", "platform_admin")
+_ROLES_ASIGNABLES = ("candidate", "moderator", "platform_admin", "empresa")
 
 
 class RolesService:

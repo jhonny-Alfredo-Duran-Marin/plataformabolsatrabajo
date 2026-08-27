@@ -1,0 +1,102 @@
+.perfil-profesional {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px;
+
+  .completitud {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+
+    .barra {
+      flex: 1;
+      height: 8px;
+      background: #e5e7eb;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .relleno {
+      height: 100%;
+      background: #16a34a;
+    }
+  }
+
+  .bloque {
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e5e7eb;
+
+    label {
+      display: block;
+      margin-bottom: 12px;
+
+      input,
+      select,
+      textarea {
+        display: block;
+        width: 100%;
+        margin-top: 4px;
+        padding: 8px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+      }
+    }
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 12px;
+
+    th,
+    td {
+      text-align: left;
+      padding: 6px 8px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+  }
+
+  .form-agregar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+
+    input,
+    select {
+      padding: 6px 8px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+    }
+  }
+
+  .lista-chips {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0;
+    margin-bottom: 12px;
+
+    li {
+      background: #f3f4f6;
+      padding: 4px 10px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+
+      button {
+        border: none;
+        background: none;
+        cursor: pointer;
+      }
+    }
+  }
+
+  .estado-guardado {
+    color: #6b7280;
+    font-size: 0.85rem;
+  }
+}

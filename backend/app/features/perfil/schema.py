@@ -16,6 +16,7 @@ class PerfilEgresadoResponse(BaseModel):
     carrera_id: uuid.UUID | None = None
     anio_egreso: int | None = None
     matricula: str | None = None
+    disponibilidad: str | None = None
     estado_validacion: str  # PENDIENTE | APROBADO | RECHAZADO (mapeado desde verification_status)
     porcentaje_completitud: int
     perfil_oculto: bool
@@ -35,6 +36,62 @@ class PerfilEgresadoUpdateRequest(BaseModel):
     titulo_profesional: str | None = None
     resumen_profesional: str | None = None
     ciudad: str | None = None
+    carrera_id: uuid.UUID | None = None
+    anio_egreso: int | None = None
+    matricula: str | None = None
+
+
+class FormacionRequest(BaseModel):
+    institucion: str
+    programa: str
+    estado_academico: str | None = None
+    fecha_inicio: date | None = None
+    fecha_fin: date | None = None
+
+
+class FormacionResponse(FormacionRequest):
+    id: uuid.UUID
+
+
+class ExperienciaRequest(BaseModel):
+    empresa: str
+    cargo: str
+    descripcion: str | None = None
+    fecha_inicio: date | None = None
+    fecha_fin: date | None = None
+
+
+class ExperienciaResponse(ExperienciaRequest):
+    id: uuid.UUID
+
+
+class IdiomaRequest(BaseModel):
+    idioma: str
+    nivel: str = "basico"
+
+
+class IdiomaResponse(IdiomaRequest):
+    id: uuid.UUID
+
+
+class CertificacionRequest(BaseModel):
+    nombre: str
+    entidad_emisora: str | None = None
+    fecha_obtencion: date | None = None
+
+
+class CertificacionResponse(CertificacionRequest):
+    id: uuid.UUID
+
+
+class HabilidadesRequest(BaseModel):
+    habilidades: list[str]
+
+
+class HabilidadResponse(BaseModel):
+    id: uuid.UUID
+    nombre: str
+    categoria: str | None = None
 
 
 class ValidacionEgresadoDecisionRequest(BaseModel):

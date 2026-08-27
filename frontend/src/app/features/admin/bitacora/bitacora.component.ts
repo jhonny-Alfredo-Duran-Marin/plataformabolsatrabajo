@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, signal } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { AuthService } from '../../auth/auth.service';
@@ -13,7 +13,7 @@ import { BitacoraService } from './bitacora.service';
   templateUrl: './bitacora.component.html',
   styleUrl: './bitacora.component.scss',
 })
-export class BitacoraComponent {
+export class BitacoraComponent implements OnInit {
   readonly logs = signal<BitacoraLog[]>([]);
   readonly cargando = signal(false);
   readonly error = signal<string | null>(null);
@@ -30,6 +30,10 @@ export class BitacoraComponent {
     private readonly bitacoraService: BitacoraService,
     private readonly auth: AuthService,
   ) {}
+
+  ngOnInit(): void {
+    this.buscar();
+  }
 
   buscar(): void {
     const token = this.auth.token();

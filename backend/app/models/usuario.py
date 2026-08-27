@@ -9,7 +9,7 @@ from app.core.database import Base
 
 
 class Role(Base):
-    """Catálogo de roles de la plataforma (CHECK: candidate/moderator/platform_admin)."""
+    """Catálogo de roles de la plataforma: candidate/moderator/platform_admin/empresa."""
 
     __tablename__ = "role"
 

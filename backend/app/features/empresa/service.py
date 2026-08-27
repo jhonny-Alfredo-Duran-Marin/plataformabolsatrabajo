@@ -77,6 +77,11 @@ class EmpresaService:
         empresa = self._obtener(empresa_id)
         empresa.account_status = "suspended"
         empresa.rejection_reason = motivo
+        self.email_service.enviar(
+            empresa.contact_email or "",
+            "Empresa suspendida",
+            f"Tu empresa fue suspendida de la plataforma. Motivo: {motivo or 'no especificado'}.",
+        )
         self.db.commit()
         return _a_dto(empresa)
 
@@ -102,9 +107,17 @@ class EmpresaService:
         return _a_dto(empresa)
 
     def restaurar(self, empresa_id: uuid.UUID | str) -> EmpresaResponse:
-        """Restaura una empresa dada de baja lógicamente."""
+        """Restaura una empresa dada de baja lógicamente o revierte su suspensión."""
         empresa = self._obtener(empresa_id)
         empresa.deleted_at = None
+        if empresa.account_status == "suspended":
+            empresa.account_status = "active"
+            empresa.rejection_reason = None
+            self.email_service.enviar(
+                empresa.contact_email or "",
+                "Empresa reactivada",
+                "Tu empresa fue reactivada y puede volver a operar en la plataforma.",
+            )
         self.db.commit()
         return _a_dto(empresa)
 

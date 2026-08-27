@@ -6,9 +6,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.common import health
 from app.common.exception_handlers import register_exception_handlers
 from app.core.config import get_settings
-from app.core.database import Base, engine
+from app.core.database import Base, SessionLocal, engine
 from app.core.logging import configure_logging
 import app.models  # noqa: F401 (registra todos los modelos en el metadata)
+from app.models.usuario import Role
 from app.features.auth import router as auth
 from app.features.bitacora import router as bitacora
 from app.features.catalogo import router as catalogos
@@ -28,11 +29,20 @@ settings = get_settings()
 configure_logging()
 
 
+_ROLES_BASE = ("candidate", "moderator", "platform_admin", "empresa")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Provisional: crea las tablas faltantes al arrancar. Se reemplaza por
     # migraciones de Alembic cuando el esquema quede estable.
     Base.metadata.create_all(bind=engine)
+    with SessionLocal() as db:
+        existentes = {rol.name for rol in db.query(Role).all()}
+        for nombre in _ROLES_BASE:
+            if nombre not in existentes:
+                db.add(Role(name=nombre))
+        db.commit()
     yield
 
 

@@ -1,0 +1,142 @@
+<section class="perfil-profesional" *ngIf="!cargando">
+  <h1>Perfil profesional</h1>
+  <button type="button" class="btn-descargar-cv" (click)="descargarCv()">Descargar CV (PDF)</button>
+
+  <div class="completitud" *ngIf="perfil">
+    <div class="barra">
+      <div class="relleno" [style.width.%]="perfil.porcentaje_completitud"></div>
+    </div>
+    <span>{{ perfil.porcentaje_completitud }}% completo</span>
+  </div>
+
+  <section class="bloque" *ngIf="perfil">
+    <h2>Datos básicos</h2>
+    <label>
+      Carrera / Año de egreso / Matrícula (definidos en el registro)
+      <input type="text" disabled [value]="(perfil.anio_egreso ?? '—') + ' — ' + (perfil.matricula ?? 'sin matrícula')" />
+    </label>
+    <label>
+      Título profesional
+      <input type="text" [(ngModel)]="perfil.titulo_profesional" (blur)="guardarDatosBasicos()" />
+    </label>
+    <label>
+      Resumen profesional
+      <textarea rows="3" [(ngModel)]="perfil.resumen_profesional" (blur)="guardarDatosBasicos()"></textarea>
+    </label>
+    <label>
+      Disponibilidad
+      <select [(ngModel)]="perfil.disponibilidad" (change)="guardarDatosBasicos()">
+        <option [ngValue]="null">Selecciona...</option>
+        <option *ngFor="let op of disponibilidadOpciones" [value]="op.valor">{{ op.etiqueta }}</option>
+      </select>
+    </label>
+    <span class="estado-guardado" *ngIf="guardando">Guardando...</span>
+  </section>
+
+  <section class="bloque">
+    <h2>Formación académica adicional</h2>
+    <table>
+      <thead>
+        <tr><th>Institución</th><th>Programa</th><th>Estado</th><th></th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let f of formaciones">
+          <td>{{ f.institucion }}</td>
+          <td>{{ f.programa }}</td>
+          <td>{{ f.estado_academico ?? '—' }}</td>
+          <td><button type="button" (click)="eliminarFormacion(f.id)">Eliminar</button></td>
+        </tr>
+      </tbody>
+    </table>
+    <form class="form-agregar" (ngSubmit)="agregarFormacion()">
+      <input type="text" placeholder="Institución" [(ngModel)]="nuevaFormacion.institucion" name="institucion" />
+      <input type="text" placeholder="Programa" [(ngModel)]="nuevaFormacion.programa" name="programa" />
+      <input type="text" placeholder="Estado (en curso, concluido...)" [(ngModel)]="nuevaFormacion.estado_academico" name="estado_academico" />
+      <button type="submit">Agregar</button>
+    </form>
+  </section>
+
+  <section class="bloque">
+    <h2>Experiencia laboral</h2>
+    <table>
+      <thead>
+        <tr><th>Empresa</th><th>Cargo</th><th></th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let e of experiencias">
+          <td>{{ e.empresa }}</td>
+          <td>{{ e.cargo }}</td>
+          <td><button type="button" (click)="eliminarExperiencia(e.id)">Eliminar</button></td>
+        </tr>
+      </tbody>
+    </table>
+    <form class="form-agregar" (ngSubmit)="agregarExperiencia()">
+      <input type="text" placeholder="Empresa" [(ngModel)]="nuevaExperiencia.empresa" name="empresa" />
+      <input type="text" placeholder="Cargo" [(ngModel)]="nuevaExperiencia.cargo" name="cargo" />
+      <button type="submit">Agregar</button>
+    </form>
+  </section>
+
+  <section class="bloque">
+    <h2>Idiomas</h2>
+    <table>
+      <thead>
+        <tr><th>Idioma</th><th>Nivel</th><th></th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let i of idiomas">
+          <td>{{ i.idioma }}</td>
+          <td>{{ i.nivel }}</td>
+          <td><button type="button" (click)="eliminarIdioma(i.id)">Eliminar</button></td>
+        </tr>
+      </tbody>
+    </table>
+    <form class="form-agregar" (ngSubmit)="agregarIdioma()">
+      <input type="text" placeholder="Idioma" [(ngModel)]="nuevoIdioma.idioma" name="idioma" />
+      <select [(ngModel)]="nuevoIdioma.nivel" name="nivel">
+        <option value="basico">Básico</option>
+        <option value="intermedio">Intermedio</option>
+        <option value="avanzado">Avanzado</option>
+        <option value="nativo">Nativo</option>
+      </select>
+      <button type="submit">Agregar</button>
+    </form>
+  </section>
+
+  <section class="bloque">
+    <h2>Certificaciones</h2>
+    <table>
+      <thead>
+        <tr><th>Nombre</th><th>Entidad</th><th></th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let c of certificaciones">
+          <td>{{ c.nombre }}</td>
+          <td>{{ c.entidad_emisora ?? '—' }}</td>
+          <td><button type="button" (click)="eliminarCertificacion(c.id)">Eliminar</button></td>
+        </tr>
+      </tbody>
+    </table>
+    <form class="form-agregar" (ngSubmit)="agregarCertificacion()">
+      <input type="text" placeholder="Nombre" [(ngModel)]="nuevaCertificacion.nombre" name="nombre" />
+      <input type="text" placeholder="Entidad emisora" [(ngModel)]="nuevaCertificacion.entidad_emisora" name="entidad_emisora" />
+      <button type="submit">Agregar</button>
+    </form>
+  </section>
+
+  <section class="bloque">
+    <h2>Habilidades</h2>
+    <ul class="lista-chips">
+      <li *ngFor="let h of habilidades">
+        {{ h.nombre }}
+        <button type="button" (click)="eliminarHabilidad(h.nombre)">×</button>
+      </li>
+    </ul>
+    <form class="form-agregar" (ngSubmit)="agregarHabilidad()">
+      <input type="text" placeholder="Nueva habilidad" [(ngModel)]="habilidadTexto" name="habilidadTexto" />
+      <button type="submit">Agregar</button>
+    </form>
+  </section>
+</section>
+
+<p *ngIf="cargando">Cargando...</p>

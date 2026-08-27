@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 
 import { AuthService } from '../auth.service';
 
@@ -32,14 +33,13 @@ export class Login {
     this.auth.login(this.correo().trim(), this.password()).subscribe({
       next: (respuesta) => {
         this.cargando.set(false);
-        const destino = ['platform_admin', 'moderator'].includes(respuesta.rol)
-          ? '/admin'
-          : '/perfil/visibilidad';
+        const destino = ['platform_admin', 'moderator'].includes(respuesta.rol) ? '/admin' : '/dashboard';
         void this.router.navigate([destino]);
       },
-      error: () => {
+      error: (err: HttpErrorResponse) => {
         this.cargando.set(false);
-        this.error.set('Credenciales incorrectas o cuenta no activa. Verifica tus datos e intenta de nuevo.');
+        const detalle = typeof err.error?.detail === 'string' ? err.error.detail : null;
+        this.error.set(detalle ?? 'Credenciales incorrectas o cuenta no activa. Verifica tus datos e intenta de nuevo.');
       },
     });
   }

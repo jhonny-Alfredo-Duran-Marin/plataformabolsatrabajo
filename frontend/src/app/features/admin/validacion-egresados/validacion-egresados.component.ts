@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, signal } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { AuthService } from '../../auth/auth.service';
@@ -13,7 +13,7 @@ import { ValidacionEgresadosService } from './validacion-egresados.service';
   templateUrl: './validacion-egresados.component.html',
   styleUrl: './validacion-egresados.component.scss',
 })
-export class ValidacionEgresadosComponent {
+export class ValidacionEgresadosComponent implements OnInit {
   readonly pendientes = signal<PerfilEgresado[]>([]);
   readonly cargando = signal(false);
   readonly error = signal<string | null>(null);
@@ -34,6 +34,10 @@ export class ValidacionEgresadosComponent {
         /* no bloquea el listado si el catálogo de carreras falla */
       },
     });
+  }
+
+  ngOnInit(): void {
+    this.cargar();
   }
 
   cargar(): void {

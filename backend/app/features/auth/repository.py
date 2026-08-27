@@ -30,7 +30,9 @@ class UsuarioRepository:
     def asignar_rol(self, usuario: AppUser, nombre_rol: str) -> None:
         rol = self.db.scalar(select(Role).where(Role.name == nombre_rol))
         if rol is None:
-            raise ValueError(f"El rol '{nombre_rol}' no existe en la base de datos.")
+            rol = Role(name=nombre_rol)
+            self.db.add(rol)
+            self.db.flush()
         ya_asignado = any(ur.role_id == rol.id for ur in usuario.user_roles)
         if not ya_asignado:
             self.db.add(UserRole(user_id=usuario.id, role_id=rol.id))
@@ -39,6 +41,15 @@ class UsuarioRepository:
     def pertenece_a_empresa(self, usuario_id: uuid.UUID) -> bool:
         stmt = select(CompanyMember.id).where(CompanyMember.user_id == usuario_id).limit(1)
         return self.db.scalar(stmt) is not None
+
+    def obtener_empresa_de_usuario(self, usuario_id: uuid.UUID) -> Company | None:
+        stmt = (
+            select(Company)
+            .join(CompanyMember, CompanyMember.company_id == Company.id)
+            .where(CompanyMember.user_id == usuario_id)
+            .limit(1)
+        )
+        return self.db.scalar(stmt)
 
 
 class CandidateRepository:
@@ -63,6 +74,10 @@ class EmpresaRegistroRepository:
 
     def existe_nit(self, nit: str) -> bool:
         return self.db.scalar(select(Company.id).where(Company.tax_id == nit)) is not None
+
+    def existe_razon_social(self, razon_social: str) -> bool:
+        stmt = select(Company.id).where(func.lower(Company.legal_name) == razon_social.strip().lower())
+        return self.db.scalar(stmt) is not None
 
     def crear(self, empresa: Company) -> Company:
         self.db.add(empresa)

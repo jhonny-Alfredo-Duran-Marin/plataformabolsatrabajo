@@ -8,10 +8,11 @@ import { Injectable, OnDestroy, inject } from '@angular/core';
 import { fromEvent, merge, Subscription, timer } from 'rxjs';
 import { switchMap, tap } from 'rxjs/operators';
 import { ToastService } from './toast.service';
+import { environment } from '../../../environments/environment';
 
-const TIMEOUT_MS     = 15 * 60 * 1000; // 15 minutos
-const WARNING_LEAD_MS = 2 * 60 * 1000; // Advertencia 2 min antes (→ a los 13 min)
-const WARNING_TOAST_MS = (TIMEOUT_MS - WARNING_LEAD_MS); // 13 min
+const TIMEOUT_MS = (environment.sessionTimeoutMinutes ?? 15) * 60 * 1000;
+const WARNING_LEAD_MS = Math.min(2 * 60 * 1000, TIMEOUT_MS / 2); // Advertencia antes del cierre
+const WARNING_TOAST_MS = TIMEOUT_MS - WARNING_LEAD_MS;
 
 /** Eventos del usuario que reinician el contador de inactividad. */
 const ACTIVITY_EVENTS = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];

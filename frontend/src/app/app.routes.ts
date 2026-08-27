@@ -55,7 +55,16 @@ export const routes: Routes = [
     ],
   },
   {
+    path: 'dashboard',
+    loadComponent: () => import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+  },
+  {
     path: 'perfil/visibilidad',
     loadComponent: () => import('./features/perfil/visibilidad/visibilidad.component').then((m) => m.VisibilidadComponent),
+  },
+  {
+    path: 'perfil/profesional',
+    loadComponent: () =>
+      import('./features/perfil/profesional/profesional.component').then((m) => m.ProfesionalComponent),
   },
 ];
