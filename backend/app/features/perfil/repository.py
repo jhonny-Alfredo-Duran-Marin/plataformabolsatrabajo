@@ -4,14 +4,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.candidato import (
-    CandidateCertification,
     CandidateEducation,
-    CandidateExperience,
     CandidateLanguage,
     CandidateProfile,
     CandidateSkill,
+    Certification,
+    WorkExperience,
 )
-from app.models.catalogo import Skill
+from app.models.catalogo import Language, Skill
 
 
 class EgresadoRepository:
@@ -38,7 +38,7 @@ class EgresadoRepository:
         )
         return list(self.db.scalars(stmt))
 
-    # --- Formación académica adicional ---
+    # --- Formación académica ---
     def listar_formacion(self, candidate_id: uuid.UUID) -> list[CandidateEducation]:
         stmt = select(CandidateEducation).where(CandidateEducation.candidate_id == candidate_id)
         return list(self.db.scalars(stmt))
@@ -54,29 +54,51 @@ class EgresadoRepository:
     def eliminar_formacion(self, item: CandidateEducation) -> None:
         self.db.delete(item)
 
-    # --- Experiencia laboral ---
-    def listar_experiencia(self, candidate_id: uuid.UUID) -> list[CandidateExperience]:
-        stmt = select(CandidateExperience).where(CandidateExperience.candidate_id == candidate_id)
+    MARCADOR_EDUCACION_REGISTRO = "[registro-carrera]"
+
+    def obtener_educacion_principal(self, candidate_id: uuid.UUID) -> CandidateEducation | None:
+        """Fila de candidate_education que representa la carrera/año/matrícula capturados
+        en el registro. Se identifica con un marcador fijo en `description` (candidate_education
+        no tiene columna para matrícula ni una bandera "es del registro"), ya que las filas que
+        el usuario agrega manualmente desde "Formación adicional" no llevan ese marcador."""
+        stmt = (
+            select(CandidateEducation)
+            .where(
+                CandidateEducation.candidate_id == candidate_id,
+                CandidateEducation.description.like(f"{self.MARCADOR_EDUCACION_REGISTRO}%"),
+            )
+            .order_by(CandidateEducation.created_at.asc())
+            .limit(1)
+        )
+        return self.db.scalar(stmt)
+
+    # --- Experiencia laboral (tabla work_experience) ---
+    def listar_experiencia(self, candidate_id: uuid.UUID) -> list[WorkExperience]:
+        stmt = select(WorkExperience).where(WorkExperience.candidate_id == candidate_id)
         return list(self.db.scalars(stmt))
 
-    def obtener_experiencia(self, item_id: uuid.UUID | str) -> CandidateExperience | None:
-        return self.db.get(CandidateExperience, item_id)
+    def obtener_experiencia(self, item_id: uuid.UUID | str) -> WorkExperience | None:
+        return self.db.get(WorkExperience, item_id)
 
-    def crear_experiencia(self, item: CandidateExperience) -> CandidateExperience:
+    def crear_experiencia(self, item: WorkExperience) -> WorkExperience:
         self.db.add(item)
         self.db.flush()
         return item
 
-    def eliminar_experiencia(self, item: CandidateExperience) -> None:
+    def eliminar_experiencia(self, item: WorkExperience) -> None:
         self.db.delete(item)
 
-    # --- Idiomas ---
-    def listar_idiomas(self, candidate_id: uuid.UUID) -> list[CandidateLanguage]:
-        stmt = select(CandidateLanguage).where(CandidateLanguage.candidate_id == candidate_id)
-        return list(self.db.scalars(stmt))
+    # --- Idiomas (candidate_language contra el catálogo language) ---
+    def listar_idiomas(self, candidate_id: uuid.UUID) -> list[tuple[CandidateLanguage, Language]]:
+        stmt = (
+            select(CandidateLanguage, Language)
+            .join(Language, Language.id == CandidateLanguage.language_id)
+            .where(CandidateLanguage.candidate_id == candidate_id)
+        )
+        return [(cl, lang) for cl, lang in self.db.execute(stmt).all()]
 
-    def obtener_idioma(self, item_id: uuid.UUID | str) -> CandidateLanguage | None:
-        return self.db.get(CandidateLanguage, item_id)
+    def obtener_idioma(self, candidate_id: uuid.UUID, language_id: uuid.UUID | str) -> CandidateLanguage | None:
+        return self.db.get(CandidateLanguage, {"candidate_id": candidate_id, "language_id": language_id})
 
     def crear_idioma(self, item: CandidateLanguage) -> CandidateLanguage:
         self.db.add(item)
@@ -86,20 +108,28 @@ class EgresadoRepository:
     def eliminar_idioma(self, item: CandidateLanguage) -> None:
         self.db.delete(item)
 
+    def obtener_o_crear_idioma(self, nombre: str) -> Language:
+        idioma = self.db.scalar(select(Language).where(Language.name == nombre))
+        if idioma is None:
+            idioma = Language(name=nombre)
+            self.db.add(idioma)
+            self.db.flush()
+        return idioma
+
     # --- Certificaciones ---
-    def listar_certificaciones(self, candidate_id: uuid.UUID) -> list[CandidateCertification]:
-        stmt = select(CandidateCertification).where(CandidateCertification.candidate_id == candidate_id)
+    def listar_certificaciones(self, candidate_id: uuid.UUID) -> list[Certification]:
+        stmt = select(Certification).where(Certification.candidate_id == candidate_id)
         return list(self.db.scalars(stmt))
 
-    def obtener_certificacion(self, item_id: uuid.UUID | str) -> CandidateCertification | None:
-        return self.db.get(CandidateCertification, item_id)
+    def obtener_certificacion(self, item_id: uuid.UUID | str) -> Certification | None:
+        return self.db.get(Certification, item_id)
 
-    def crear_certificacion(self, item: CandidateCertification) -> CandidateCertification:
+    def crear_certificacion(self, item: Certification) -> Certification:
         self.db.add(item)
         self.db.flush()
         return item
 
-    def eliminar_certificacion(self, item: CandidateCertification) -> None:
+    def eliminar_certificacion(self, item: Certification) -> None:
         self.db.delete(item)
 
     # --- Habilidades (N:M con el catálogo) ---

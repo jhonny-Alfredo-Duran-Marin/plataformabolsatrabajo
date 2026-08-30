@@ -18,7 +18,15 @@ class Sector(Base):
 
 
 class Company(Base):
-    """Empresa registrada en la plataforma (tabla company)."""
+    """Empresa registrada en la plataforma (tabla company del esquema real de Supabase).
+
+    NOTA: el esquema real NO tiene legal_representative, rejection_reason,
+    notifications_enabled, applications_enabled ni deleted_at. El motivo de
+    rechazo/suspensión se guarda en la tabla company_verification (ver CompanyVerification
+    más abajo); notifications_enabled/applications_enabled no tienen dónde persistirse
+    (ver limitación documentada en empresa/service.py); "baja lógica" se modela
+    reutilizando account_status='suspended' porque no existe una bandera de borrado separada.
+    """
 
     __tablename__ = "company"
 
@@ -37,17 +45,36 @@ class Company(Base):
     country_code: Mapped[str | None] = mapped_column(String(2), nullable=True)
     city: Mapped[str | None] = mapped_column(String(100), nullable=True)
     address: Mapped[str | None] = mapped_column(String(300), nullable=True)
-    legal_representative: Mapped[str | None] = mapped_column(String(150), nullable=True)
     verification_status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending")
-    rejection_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     account_status: Mapped[str] = mapped_column(String(30), nullable=False, default="active")
-    notifications_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    applications_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     sector: Mapped[Sector | None] = relationship()
+
+
+class CompanyVerification(Base):
+    """Historial de revisiones de verificación/autorización de una empresa (tabla company_verification).
+
+    Aquí vive el motivo de rechazo/suspensión real (rejection_reason), ya que la tabla
+    company no tiene esa columna directamente.
+    """
+
+    __tablename__ = "company_verification"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("company.id", ondelete="CASCADE"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="in_review")
+    document_key: Mapped[str] = mapped_column(String(500), nullable=False)
+    reviewed_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("app_user.id", ondelete="SET NULL"), nullable=True
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    rejection_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class CompanyMember(Base):

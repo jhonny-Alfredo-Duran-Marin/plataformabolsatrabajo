@@ -1,3 +1,4 @@
+import jwt
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -8,11 +9,11 @@ from app.features.auth.repository import (
     UsuarioRepository,
 )
 from app.features.auth.schema import RegistroEgresadoRequest, RegistroEmpresaRequest, TokenResponse
-from app.models.candidato import CandidateProfile
+from app.models.candidato import CandidateEducation, CandidateProfile
 from app.models.empresa import Company, CompanyMember, Sector
 from app.models.seguridad import LoginAttempt
 from app.models.usuario import AppUser
-from app.security.jwt_provider import create_access_token, create_refresh_token
+from app.security.jwt_provider import create_access_token, create_refresh_token, decode_token
 from app.security.login_rate_limiter import limpiar_intentos, registrar_intento_fallido, verificar_bloqueo
 from app.security.password_hasher import hash_password, verify_password
 from app.shared.email_service import EmailService
@@ -46,7 +47,7 @@ class AuthService:
         )
         self.usuarios.crear(usuario)
         self.usuarios.asignar_rol(usuario, "candidate")
-        self.candidatos.crear(
+        perfil = self.candidatos.crear(
             CandidateProfile(
                 user_id=usuario.id,
                 first_name=data.nombres.strip(),
@@ -56,11 +57,29 @@ class AuthService:
                 document_number=data.ci,
                 document_country_code="BO",
                 verification_status="pending",
-                field_of_study_id=data.carrera_id,
-                graduation_year=data.anio_egreso,
-                student_id_code=data.matricula,
             )
         )
+        # carrera_id/anio_egreso/matricula no tienen columna en candidate_profile en el
+        # esquema real: se guardan como una fila "principal" de candidate_education
+        # (identificada por traer field_of_study_id set). Ver EgresadoRepository.
+        if data.carrera_id is not None or data.anio_egreso is not None or data.matricula is not None:
+            from datetime import date as _date
+
+            from app.features.perfil.repository import EgresadoRepository
+
+            marcador = EgresadoRepository.MARCADOR_EDUCACION_REGISTRO
+            descripcion = f"{marcador} Matrícula: {data.matricula}" if data.matricula else marcador
+            self.db.add(
+                CandidateEducation(
+                    candidate_id=perfil.id,
+                    program_name="Carrera universitaria",
+                    field_of_study_id=data.carrera_id,
+                    education_level="undergraduate",
+                    academic_status="graduated" if data.anio_egreso else "in_progress",
+                    graduation_date=_date(data.anio_egreso, 12, 31) if data.anio_egreso else None,
+                    description=descripcion,
+                )
+            )
         self.db.commit()
         self.email_service.enviar(
             data.correo, "Bienvenido a EGRESA", "Gracias por registrarte. Tu cuenta ya está lista para iniciar sesión."
@@ -100,7 +119,6 @@ class AuthService:
             country_code="BO",
             city=data.ciudad,
             address=data.direccion,
-            legal_representative=data.representante_legal,
             verification_status="pending",
             account_status="active",
         )
@@ -133,16 +151,14 @@ class AuthService:
             raise UnauthorizedException(f"La cuenta se encuentra {estado}.")
 
         empresa = self.usuarios.obtener_empresa_de_usuario(usuario.id)
-        if empresa is not None and (empresa.account_status == "suspended" or empresa.deleted_at is not None):
+        if empresa is not None and empresa.account_status == "suspended":
             self._registrar_login_attempt(correo, usuario, success=False)
             raise UnauthorizedException("La empresa asociada a esta cuenta se encuentra suspendida.")
 
         limpiar_intentos(correo)
         usuario.last_login_at = func.now()
-        roles = usuario.nombres_roles or (
-            ["empresa"] if self.usuarios.pertenece_a_empresa(usuario.id) else ["candidate"]
-        )
-        rol_principal = next((r for r in _ROL_PRIORIDAD if r in roles), roles[0] if roles else "candidate")
+        roles = self._roles_de(usuario)
+        rol_principal = self._rol_principal(roles)
 
         self._registrar_login_attempt(correo, usuario, success=True)
 
@@ -154,6 +170,41 @@ class AuthService:
             roles=roles,
         )
         return token, usuario
+
+    def refrescar_token(self, refresh_token: str) -> TokenResponse:
+        try:
+            payload = decode_token(refresh_token)
+        except jwt.PyJWTError as exc:
+            raise UnauthorizedException("El token de actualización es inválido o ha expirado.") from exc
+
+        if payload.get("type") != "refresh":
+            raise UnauthorizedException("El token de actualización es inválido.")
+
+        usuario = self.usuarios.obtener_por_id(payload.get("sub", ""))
+        if usuario is None or not usuario.activo:
+            raise UnauthorizedException("La cuenta no está activa.")
+
+        empresa = self.usuarios.obtener_empresa_de_usuario(usuario.id)
+        if empresa is not None and empresa.account_status == "suspended":
+            raise UnauthorizedException("La empresa asociada a esta cuenta se encuentra suspendida.")
+
+        roles = self._roles_de(usuario)
+        rol_principal = self._rol_principal(roles)
+        subject = str(usuario.id)
+        return TokenResponse(
+            access_token=create_access_token(subject, rol_principal, {"roles": roles}),
+            refresh_token=create_refresh_token(subject, rol_principal),
+            rol=rol_principal,
+            roles=roles,
+        )
+
+    def _roles_de(self, usuario: AppUser) -> list[str]:
+        return usuario.nombres_roles or (
+            ["empresa"] if self.usuarios.pertenece_a_empresa(usuario.id) else ["candidate"]
+        )
+
+    def _rol_principal(self, roles: list[str]) -> str:
+        return next((r for r in _ROL_PRIORIDAD if r in roles), roles[0] if roles else "candidate")
 
     def _registrar_login_attempt(self, correo: str, usuario: AppUser | None, success: bool) -> None:
         self.db.add(

@@ -29,6 +29,10 @@ settings = get_settings()
 configure_logging()
 
 
+# El CHECK ck_role_name de `role.name` fue ampliado (migración aditiva) para admitir
+# también "empresa", que ahora se asigna como fila real de user_role al registrar una
+# empresa (ver AuthService.registrar_empresa), cumpliendo HU-03 ("ningún usuario sin
+# rol asignado").
 _ROLES_BASE = ("candidate", "moderator", "platform_admin", "empresa")
 
 

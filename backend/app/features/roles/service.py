@@ -14,7 +14,10 @@ _ETIQUETAS_ESTADO = {
     "blocked": "bloqueado",
 }
 
-_ROLES_ASIGNABLES = ("candidate", "moderator", "platform_admin", "empresa")
+# "empresa" existe como rol real (ver AuthService.registrar_empresa) pero no es asignable
+# manualmente desde este panel: siempre se otorga junto con una fila de company_member,
+# nunca de forma aislada.
+_ROLES_ASIGNABLES = ("candidate", "moderator", "platform_admin")
 
 
 class RolesService:

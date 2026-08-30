@@ -36,3 +36,13 @@ class JobCategory(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+
+class Language(Base):
+    """Catálogo de idiomas (tabla language)."""
+
+    __tablename__ = "language"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(80), unique=True, nullable=False)
+    iso_code: Mapped[str | None] = mapped_column(String(10), unique=True, nullable=True)
