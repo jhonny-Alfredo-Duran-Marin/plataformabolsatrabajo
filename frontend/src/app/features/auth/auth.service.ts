@@ -8,6 +8,7 @@ import { MessageResponse, RegistroEmpresaRequest } from '../../core/models/auth.
 import { TimeoutService } from '../../core/services/timeout.service';
 
 const TOKEN_KEY = 'token';
+const REFRESH_KEY = 'refresh_token';
 const ROL_KEY = 'rol';
 const CORREO_KEY = 'correo';
 
@@ -53,6 +54,7 @@ export class AuthService {
 
   guardarSesion(respuesta: LoginResponse): void {
     localStorage.setItem(TOKEN_KEY, respuesta.access_token);
+    localStorage.setItem(REFRESH_KEY, respuesta.refresh_token);
     localStorage.setItem(ROL_KEY, respuesta.rol);
     this.token.set(respuesta.access_token);
     this.rol.set(respuesta.rol);
@@ -62,6 +64,7 @@ export class AuthService {
   cerrarSesion(): void {
     this.timeout.stop();
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_KEY);
     localStorage.removeItem(ROL_KEY);
     localStorage.removeItem(CORREO_KEY);
     this.token.set('');
@@ -72,6 +75,21 @@ export class AuthService {
 
   estaAutenticado(): boolean {
     return this.token().length > 0;
+  }
+
+  /**
+   * Renueva el access_token usando el refresh_token guardado. Usado por el
+   * interceptor para renovar la sesión de forma silenciosa ante un 401, sin
+   * desloguear al usuario si aún tiene actividad reciente (HU-02).
+   */
+  refrescarToken(): Observable<LoginResponse> {
+    const refreshToken = localStorage.getItem(REFRESH_KEY);
+    if (!refreshToken) {
+      return throwError(() => new Error('No hay token de actualización disponible.'));
+    }
+    return this.http
+      .post<LoginResponse>(`${environment.apiUrl}/auth/refresh`, { refresh_token: refreshToken })
+      .pipe(tap((respuesta) => this.guardarSesion(respuesta)));
   }
 
   /**
