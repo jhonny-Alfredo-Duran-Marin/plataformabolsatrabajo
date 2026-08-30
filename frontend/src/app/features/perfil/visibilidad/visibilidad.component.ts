@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
@@ -24,11 +24,11 @@ interface VisibilidadData {
 })
 export class VisibilidadComponent implements OnInit {
   private http = inject(HttpClient);
-  
-  isLoading = true;
-  savingStatus: 'idle' | 'saving' | 'saved' | 'error' = 'idle';
-  
-  visibilidad: VisibilidadData = {
+
+  readonly isLoading = signal(true);
+  readonly savingStatus = signal<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  readonly visibilidad = signal<VisibilidadData>({
     perfil_oculto: false,
     secciones_visibles: {
       datos_contacto: true,
@@ -38,15 +38,13 @@ export class VisibilidadComponent implements OnInit {
       certificaciones: true,
       habilidades: true
     }
-  };
+  });
 
   ngOnInit() {
     this.cargarConfiguracion();
   }
 
   private getHeaders() {
-    // Aquí normalmente iría el token de un servicio de autenticación
-    // Por ahora usamos localStorage simulado
     const token = localStorage.getItem('token');
     return new HttpHeaders({
       'Authorization': `Bearer ${token}`
@@ -57,54 +55,64 @@ export class VisibilidadComponent implements OnInit {
     this.http.get<any>(`${environment.apiUrl}/perfiles/me`, { headers: this.getHeaders() })
       .subscribe({
         next: (perfil) => {
-          this.visibilidad.perfil_oculto = perfil.perfil_oculto || false;
+          const actual = this.visibilidad();
+          let secciones = actual.secciones_visibles;
           if (perfil.visibilidad_secciones) {
             try {
-              // El backend devuelve un string JSON (Text en DB)
-              const parsed = typeof perfil.visibilidad_secciones === 'string' 
-                ? JSON.parse(perfil.visibilidad_secciones) 
+              const parsed = typeof perfil.visibilidad_secciones === 'string'
+                ? JSON.parse(perfil.visibilidad_secciones)
                 : perfil.visibilidad_secciones;
-              this.visibilidad.secciones_visibles = { ...this.visibilidad.secciones_visibles, ...parsed };
-            } catch (e) {}
+              secciones = { ...secciones, ...parsed };
+            } catch (e) {
+              /* se mantiene el valor por defecto si el JSON es invalido */
+            }
           }
-          this.isLoading = false;
+          this.visibilidad.set({
+            perfil_oculto: perfil.perfil_oculto || false,
+            secciones_visibles: secciones,
+          });
+          this.isLoading.set(false);
         },
         error: (err) => {
           console.error('Error cargando perfil', err);
-          // Permitimos que cargue la interfaz de todas formas para demostración
-          this.isLoading = false; 
+          this.isLoading.set(false);
         }
       });
   }
 
   toggleGlobal() {
-    this.visibilidad.perfil_oculto = !this.visibilidad.perfil_oculto;
+    this.visibilidad.update((actual) => ({ ...actual, perfil_oculto: !actual.perfil_oculto }));
     this.guardarCambios();
   }
 
   toggleSeccion(seccion: keyof VisibilidadData['secciones_visibles']) {
-    this.visibilidad.secciones_visibles[seccion] = !this.visibilidad.secciones_visibles[seccion];
+    this.visibilidad.update((actual) => ({
+      ...actual,
+      secciones_visibles: {
+        ...actual.secciones_visibles,
+        [seccion]: !actual.secciones_visibles[seccion],
+      },
+    }));
     this.guardarCambios();
   }
 
   guardarCambios() {
-    this.savingStatus = 'saving';
-    
-    // Convertimos la data al formato del backend
+    this.savingStatus.set('saving');
+
     const payload = {
-      perfil_oculto: this.visibilidad.perfil_oculto,
-      secciones_visibles: this.visibilidad.secciones_visibles
+      perfil_oculto: this.visibilidad().perfil_oculto,
+      secciones_visibles: this.visibilidad().secciones_visibles
     };
 
     this.http.patch(`${environment.apiUrl}/perfiles/me/visibilidad`, payload, { headers: this.getHeaders() })
       .subscribe({
         next: () => {
-          this.savingStatus = 'saved';
-          setTimeout(() => this.savingStatus = 'idle', 2000);
+          this.savingStatus.set('saved');
+          setTimeout(() => this.savingStatus.set('idle'), 2000);
         },
         error: (err) => {
           console.error('Error al guardar', err);
-          this.savingStatus = 'error';
+          this.savingStatus.set('error');
         }
       });
   }

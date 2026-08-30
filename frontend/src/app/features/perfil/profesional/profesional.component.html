@@ -1,36 +1,46 @@
-<section class="perfil-profesional" *ngIf="!cargando">
+<section class="perfil-profesional" *ngIf="!cargando()">
   <h1>Perfil profesional</h1>
   <button type="button" class="btn-descargar-cv" (click)="descargarCv()">Descargar CV (PDF)</button>
 
-  <div class="completitud" *ngIf="perfil">
+  <div class="completitud" *ngIf="perfil() as p">
     <div class="barra">
-      <div class="relleno" [style.width.%]="perfil.porcentaje_completitud"></div>
+      <div class="relleno" [style.width.%]="p.porcentaje_completitud"></div>
     </div>
-    <span>{{ perfil.porcentaje_completitud }}% completo</span>
+    <span>{{ p.porcentaje_completitud }}% completo</span>
   </div>
 
-  <section class="bloque" *ngIf="perfil">
+  <section class="bloque" *ngIf="perfil() as p">
     <h2>Datos básicos</h2>
     <label>
       Carrera / Año de egreso / Matrícula (definidos en el registro)
-      <input type="text" disabled [value]="(perfil.anio_egreso ?? '—') + ' — ' + (perfil.matricula ?? 'sin matrícula')" />
+      <input type="text" disabled [value]="(p.anio_egreso ?? '—') + ' — ' + (p.matricula ?? 'sin matrícula')" />
     </label>
     <label>
       Título profesional
-      <input type="text" [(ngModel)]="perfil.titulo_profesional" (blur)="guardarDatosBasicos()" />
+      <input
+        type="text"
+        [ngModel]="p.titulo_profesional"
+        (ngModelChange)="actualizarPerfil({ titulo_profesional: $event })"
+        (blur)="guardarDatosBasicos()"
+      />
     </label>
     <label>
       Resumen profesional
-      <textarea rows="3" [(ngModel)]="perfil.resumen_profesional" (blur)="guardarDatosBasicos()"></textarea>
+      <textarea
+        rows="3"
+        [ngModel]="p.resumen_profesional"
+        (ngModelChange)="actualizarPerfil({ resumen_profesional: $event })"
+        (blur)="guardarDatosBasicos()"
+      ></textarea>
     </label>
     <label>
       Disponibilidad
-      <select [(ngModel)]="perfil.disponibilidad" (change)="guardarDatosBasicos()">
+      <select [ngModel]="p.disponibilidad" (ngModelChange)="actualizarPerfil({ disponibilidad: $event }); guardarDatosBasicos()">
         <option [ngValue]="null">Selecciona...</option>
         <option *ngFor="let op of disponibilidadOpciones" [value]="op.valor">{{ op.etiqueta }}</option>
       </select>
     </label>
-    <span class="estado-guardado" *ngIf="guardando">Guardando...</span>
+    <span class="estado-guardado" *ngIf="guardando()">Guardando...</span>
   </section>
 
   <section class="bloque">
@@ -40,7 +50,7 @@
         <tr><th>Institución</th><th>Programa</th><th>Estado</th><th></th></tr>
       </thead>
       <tbody>
-        <tr *ngFor="let f of formaciones">
+        <tr *ngFor="let f of formaciones()">
           <td>{{ f.institucion }}</td>
           <td>{{ f.programa }}</td>
           <td>{{ f.estado_academico ?? '—' }}</td>
@@ -63,7 +73,7 @@
         <tr><th>Empresa</th><th>Cargo</th><th></th></tr>
       </thead>
       <tbody>
-        <tr *ngFor="let e of experiencias">
+        <tr *ngFor="let e of experiencias()">
           <td>{{ e.empresa }}</td>
           <td>{{ e.cargo }}</td>
           <td><button type="button" (click)="eliminarExperiencia(e.id)">Eliminar</button></td>
@@ -84,7 +94,7 @@
         <tr><th>Idioma</th><th>Nivel</th><th></th></tr>
       </thead>
       <tbody>
-        <tr *ngFor="let i of idiomas">
+        <tr *ngFor="let i of idiomas()">
           <td>{{ i.idioma }}</td>
           <td>{{ i.nivel }}</td>
           <td><button type="button" (click)="eliminarIdioma(i.id)">Eliminar</button></td>
@@ -110,7 +120,7 @@
         <tr><th>Nombre</th><th>Entidad</th><th></th></tr>
       </thead>
       <tbody>
-        <tr *ngFor="let c of certificaciones">
+        <tr *ngFor="let c of certificaciones()">
           <td>{{ c.nombre }}</td>
           <td>{{ c.entidad_emisora ?? '—' }}</td>
           <td><button type="button" (click)="eliminarCertificacion(c.id)">Eliminar</button></td>
@@ -127,7 +137,7 @@
   <section class="bloque">
     <h2>Habilidades</h2>
     <ul class="lista-chips">
-      <li *ngFor="let h of habilidades">
+      <li *ngFor="let h of habilidades()">
         {{ h.nombre }}
         <button type="button" (click)="eliminarHabilidad(h.nombre)">×</button>
       </li>
@@ -139,4 +149,4 @@
   </section>
 </section>
 
-<p *ngIf="cargando">Cargando...</p>
+<p *ngIf="cargando()">Cargando...</p>
