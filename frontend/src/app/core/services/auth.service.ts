@@ -28,11 +28,16 @@ export interface TokenResponse {
 export type UserRole = 'EGRESADO' | 'ESTUDIANTE' | 'EMPRESA' | 'ADMINISTRADOR';
 
 /** Mapa de roles a rutas de dashboard */
-const ROLE_DASHBOARD: Record<UserRole, string> = {
-  EGRESADO:      '/dashboard/egresado',
-  ESTUDIANTE:    '/dashboard/egresado',
-  EMPRESA:        '/dashboard/empresa',
-  ADMINISTRADOR:  '/dashboard/admin',
+const ROLE_DASHBOARD: Record<string, string> = {
+  EGRESADO:      '/dashboard',
+  ESTUDIANTE:    '/dashboard',
+  EMPRESA:       '/dashboard',
+  ADMINISTRADOR: '/admin',
+  // Nombres en minúsculas que vienen del backend
+  candidate:      '/dashboard',
+  empresa:        '/dashboard',
+  platform_admin: '/admin',
+  moderator:      '/admin',
 };
 
 const API = environment.apiUrl;
@@ -84,7 +89,7 @@ export class AuthService {
     this._isAuth.set(false);
     this._role.set(null);
     this.toast.info('Sesión cerrada correctamente.');
-    this.router.navigate(['/login']);
+    this.router.navigate(['/auth/login']);
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

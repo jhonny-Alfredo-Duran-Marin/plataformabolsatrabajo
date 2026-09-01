@@ -16,6 +16,15 @@ from app.models.catalogo import FieldOfStudy, JobCategory, Language, Skill
 from app.models.empresa import Company, CompanyMember, CompanyVerification, Sector
 from app.models.seguridad import AuditLog, LoginAttempt
 from app.models.usuario import AppUser, Role, UserRole
+from app.models.vacante import (
+    EmploymentType,
+    JobPosting,
+    JobSkill,
+    JobStatus,
+    SeniorityLevel,
+    SkillProficiencyLevel,
+    WorkModality,
+)
 
 __all__ = [
     "AppUser",
@@ -28,13 +37,20 @@ __all__ = [
     "Company",
     "CompanyMember",
     "CompanyVerification",
+    "EmploymentType",
     "FieldOfStudy",
     "JobCategory",
+    "JobPosting",
+    "JobSkill",
+    "JobStatus",
     "Language",
     "LoginAttempt",
     "Role",
     "Sector",
+    "SeniorityLevel",
     "Skill",
+    "SkillProficiencyLevel",
     "UserRole",
     "WorkExperience",
+    "WorkModality",
 ]

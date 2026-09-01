@@ -1,0 +1,540 @@
+.mis-vacantes-container {
+  max-width: 1100px;
+  margin: 2rem auto;
+  padding: 0 1.5rem 3rem 1.5rem;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #1e293b;
+}
+
+// ─── Header ─────────────────────────────────────────────────────────────────
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .badge-tag {
+    display: inline-block;
+    background-color: #ede9fe;
+    color: #6d28d9;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  .title {
+    font-size: 1.875rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 0.5rem 0;
+    letter-spacing: -0.025em;
+  }
+
+  .subtitle {
+    color: #64748b;
+    font-size: 0.9375rem;
+    margin: 0;
+    max-width: 650px;
+    line-height: 1.5;
+  }
+
+  .header-actions {
+    flex-shrink: 0;
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.25rem;
+      border-radius: 0.5rem;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+
+      .icon-sm {
+        width: 1.125rem;
+        height: 1.125rem;
+      }
+    }
+
+    .btn--primary {
+      background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+
+      &:hover {
+        background: linear-gradient(135deg, #4338ca 0%, #3730a3 100%);
+        transform: translateY(-1px);
+      }
+    }
+  }
+}
+
+// ─── Pestañas de Filtro ─────────────────────────────────────────────────────
+
+.tabs-nav {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 1.5rem;
+  overflow-x: auto;
+  padding-bottom: 1px;
+
+  .tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: #64748b;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+
+    &:hover {
+      color: #0f172a;
+    }
+
+    &.active {
+      color: #4f46e5;
+      border-bottom-color: #4f46e5;
+    }
+
+    .tab-count {
+      background: #f1f5f9;
+      color: #475569;
+      font-size: 0.75rem;
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+    }
+  }
+}
+
+// ─── Tabla Card ─────────────────────────────────────────────────────────────
+
+.vacantes-table-card {
+  background: #ffffff;
+  border-radius: 0.875rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.vacantes-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+
+  th {
+    background: #f8fafc;
+    padding: 0.875rem 1.25rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  td {
+    padding: 1.125rem 1.25rem;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.875rem;
+    vertical-align: middle;
+  }
+
+  tr:hover td {
+    background-color: #f8fafc;
+  }
+
+  .text-right {
+    text-align: right;
+  }
+
+  .job-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    .job-title {
+      color: #0f172a;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 0.2s ease;
+
+      &:hover {
+        color: #4f46e5;
+      }
+    }
+
+    .job-meta {
+      color: #64748b;
+      font-size: 0.75rem;
+    }
+  }
+
+  .modality-tag {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background: #f1f5f9;
+    color: #475569;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .salary-text {
+    font-weight: 600;
+    color: #0f172a;
+    font-size: 0.8125rem;
+  }
+
+  .salary-hidden {
+    color: #94a3b8;
+    font-style: italic;
+    font-size: 0.75rem;
+  }
+
+  .date-text {
+    color: #64748b;
+    font-size: 0.8125rem;
+  }
+}
+
+// ─── Badges de Estado ───────────────────────────────────────────────────────
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+
+  &--published {
+    background-color: #ecfdf5;
+    color: #047857;
+  }
+
+  &--draft {
+    background-color: #fffbeb;
+    color: #b45309;
+  }
+
+  &--paused {
+    background-color: #fff7ed;
+    color: #c2410c;
+  }
+
+  &--closed {
+    background-color: #f1f5f9;
+    color: #475569;
+  }
+
+  &--rejected {
+    background-color: #fef2f2;
+    color: #b91c1c;
+  }
+}
+
+// ─── Botones de Acción de Fila ──────────────────────────────────────────────
+
+.action-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  .btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.375rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s ease;
+
+    .icon-sm {
+      width: 1rem;
+      height: 1rem;
+    }
+
+    &:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+
+    &--danger:hover {
+      background: #fee2e2;
+      border-color: #fca5a5;
+      color: #ef4444;
+    }
+  }
+
+  .btn-state {
+    padding: 0.3125rem 0.625rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &--publish {
+      background: #ecfdf5;
+      border-color: #a7f3d0;
+      color: #065f46;
+
+      &:hover {
+        background: #d1fae5;
+      }
+    }
+
+    &--pause {
+      background: #fff7ed;
+      border-color: #fed7aa;
+      color: #9a3412;
+
+      &:hover {
+        background: #ffedd5;
+      }
+    }
+
+    &--resume {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+      color: #1e40af;
+
+      &:hover {
+        background: #dbeafe;
+      }
+    }
+
+    &--close {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+      color: #475569;
+
+      &:hover {
+        background: #e2e8f0;
+        color: #1e293b;
+      }
+    }
+  }
+}
+
+// ─── Estados Vacío y de Carga ───────────────────────────────────────────────
+
+.loading-state,
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+
+  .spinner {
+    width: 2rem;
+    height: 2rem;
+    border: 3px solid #e2e8f0;
+    border-top-color: #4f46e5;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 1rem;
+  }
+
+  .empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 0.5rem 0;
+  }
+
+  p {
+    color: #64748b;
+    font-size: 0.875rem;
+    max-width: 400px;
+    margin: 0 0 1.5rem 0;
+    line-height: 1.5;
+  }
+
+  .btn--outline {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.5rem;
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    color: #334155;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: #f8fafc;
+      border-color: #94a3b8;
+    }
+  }
+}
+
+// ─── Paginación ─────────────────────────────────────────────────────────────
+
+.pagination-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background: #ffffff;
+  border-top: 1px solid #f1f5f9;
+
+  .pagination-info {
+    font-size: 0.8125rem;
+    color: #64748b;
+  }
+
+  .pagination-controls {
+    display: flex;
+    gap: 0.5rem;
+
+    .page-btn {
+      padding: 0.375rem 0.75rem;
+      border-radius: 0.375rem;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover:not(:disabled) {
+        background: #f8fafc;
+        border-color: #94a3b8;
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+  }
+}
+
+// ─── Modal de Confirmación ──────────────────────────────────────────────────
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  padding: 1rem;
+
+  .modal-card {
+    background: #ffffff;
+    border-radius: 0.875rem;
+    max-width: 440px;
+    width: 100%;
+    padding: 1.75rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    text-align: center;
+
+    .modal-icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 0.5rem 0;
+    }
+
+    p {
+      color: #64748b;
+      font-size: 0.875rem;
+      line-height: 1.5;
+      margin: 0 0 1.5rem 0;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+
+      .btn {
+        padding: 0.625rem 1.25rem;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .btn--outline {
+        background: #ffffff;
+        border: 1.5px solid #cbd5e1;
+        color: #475569;
+
+        &:hover:not(:disabled) {
+          background: #f8fafc;
+        }
+      }
+
+      .btn--danger {
+        background: #ef4444;
+        border: none;
+        color: #ffffff;
+
+        &:hover:not(:disabled) {
+          background: #dc2626;
+        }
+      }
+    }
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

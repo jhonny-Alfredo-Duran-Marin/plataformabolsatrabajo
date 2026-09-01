@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   {
@@ -66,5 +67,37 @@ export const routes: Routes = [
     path: 'perfil/profesional',
     loadComponent: () =>
       import('./features/perfil/profesional/profesional.component').then((m) => m.ProfesionalComponent),
+  },
+  {
+    path: 'vacantes',
+    redirectTo: 'vacantes/mis-vacantes',
+    pathMatch: 'full',
+  },
+  {
+    path: 'vacantes/crear',
+    canActivate: [authGuard],
+    data: { roles: ['EMPRESA'] },
+    loadComponent: () =>
+      import('./features/vacantes/crear-vacante/crear-vacante.component').then(
+        (m) => m.CrearVacanteComponent,
+      ),
+  },
+  {
+    path: 'vacantes/mis-vacantes',
+    canActivate: [authGuard],
+    data: { roles: ['EMPRESA'] },
+    loadComponent: () =>
+      import('./features/vacantes/mis-vacantes/mis-vacantes.component').then(
+        (m) => m.MisVacantesComponent,
+      ),
+  },
+  {
+    path: 'vacantes/:id',
+    canActivate: [authGuard],
+    data: { roles: ['EGRESADO', 'ESTUDIANTE', 'EMPRESA', 'ADMINISTRADOR'] },
+    loadComponent: () =>
+      import('./features/vacantes/vacante-detalle/vacante-detalle.component').then(
+        (m) => m.VacanteDetalleComponent,
+      ),
   },
 ];

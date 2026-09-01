@@ -1,0 +1,227 @@
+<div class="vacante-detalle-container">
+
+  <!-- ══ Barra de Navegación Superior ════════════════════════════════════════ -->
+  <nav class="nav-bar">
+    @if (isEmpresa) {
+      <a routerLink="/vacantes/mis-vacantes" class="back-link">
+        <svg viewBox="0 0 20 20" fill="currentColor" class="icon" aria-hidden="true">
+          <path fill-rule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clip-rule="evenodd" />
+        </svg>
+        <span>Volver a Mis Vacantes</span>
+      </a>
+    } @else {
+      <a routerLink="/dashboard" class="back-link">
+        <svg viewBox="0 0 20 20" fill="currentColor" class="icon" aria-hidden="true">
+          <path fill-rule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clip-rule="evenodd" />
+        </svg>
+        <span>Volver al Dashboard</span>
+      </a>
+    }
+  </nav>
+
+  @if (cargando) {
+    <div class="loading-container">
+      <div class="spinner"></div>
+      <p>Cargando información de la vacante...</p>
+    </div>
+  } @else if (errorMsg) {
+    <div class="error-container">
+      <div class="error-icon">⚠️</div>
+      <h2>No pudimos cargar la vacante</h2>
+      <p>{{ errorMsg }}</p>
+      <a routerLink="/vacantes/mis-vacantes" class="btn btn--outline">Regresar</a>
+    </div>
+  } @else if (vacante) {
+    <!-- ══ Layout de Detalle (2 Columnas) ════════════════════════════════════ -->
+    <div class="detalle-layout">
+
+      <!-- ── Columna Principal: Contenido del Puesto ──────────────────────── -->
+      <main class="main-column">
+
+        <!-- Cabecera de la Vacante -->
+        <article class="content-card header-card">
+          <div class="header-top">
+            <div class="company-badge">
+              <span class="company-icon">🏢</span>
+              <span class="company-name">{{ vacante.company_name || 'Empresa Confidencial' }}</span>
+            </div>
+            <span class="badge" [ngClass]="obtenerBadgeClase(vacante.status)">
+              {{ obtenerBadgeTexto(vacante.status) }}
+            </span>
+          </div>
+
+          <h1 class="job-title">{{ vacante.title }}</h1>
+
+          <div class="job-quick-meta">
+            @if (vacante.category_name) {
+              <span class="meta-item">
+                <svg viewBox="0 0 20 20" fill="currentColor" class="meta-icon" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M6 3.75A2.75 2.75 0 018.75 1h2.5A2.75 2.75 0 0114 3.75v.443c.572.055 1.14.122 1.706.2C17.053 4.582 18 5.75 18 7.07v3.469c0 1.126-.694 2.132-1.745 2.53l-1.255.476v2.205c0 1.519-1.231 2.75-2.75 2.75h-4.5A2.75 2.75 0 015 15.75v-2.205l-1.255-.476A2.705 2.705 0 012 10.539V7.07c0-1.32.947-2.489 2.294-2.676A41.047 41.047 0 016 4.193V3.75zM8.75 2.5c-.69 0-1.25.56-1.25 1.25v.325c.827.025 1.66.04 2.5.04s1.673-.015 2.5-.04V3.75c0-.69-.56-1.25-1.25-1.25h-2.5z" clip-rule="evenodd" />
+                </svg>
+                <span>{{ vacante.category_name }}</span>
+              </span>
+            }
+
+            <span class="meta-item">
+              <svg viewBox="0 0 20 20" fill="currentColor" class="meta-icon" aria-hidden="true">
+                <path fill-rule="evenodd" d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 103 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 002.273 1.765 11.842 11.842 0 00.976.544l.062.029.018.008.006.003zM10 11.25a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z" clip-rule="evenodd" />
+              </svg>
+              <span>{{ vacante.city || 'Santa Cruz' }}, {{ vacante.country_code || 'BO' }}</span>
+            </span>
+
+            <span class="meta-item">
+              <svg viewBox="0 0 20 20" fill="currentColor" class="meta-icon" aria-hidden="true">
+                <path fill-rule="evenodd" d="M5.75 2a.75.75 0 01.75.75V4h7V2.75a.75.75 0 011.5 0V4h.25A2.75 2.75 0 0118 6.75v8.5A2.75 2.75 0 0115.25 18H4.75A2.75 2.75 0 012 15.25v-8.5A2.75 2.75 0 014.75 4H5V2.75A.75.75 0 015.75 2zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75z" clip-rule="evenodd" />
+              </svg>
+              <span>Publicado: {{ (vacante.published_at || vacante.created_at) | date:'mediumDate' }}</span>
+            </span>
+          </div>
+        </article>
+
+        <!-- Descripción General -->
+        <article class="content-card">
+          <h2 class="section-title">Descripción del Puesto</h2>
+          <div class="prose-text">
+            <p>{{ vacante.description }}</p>
+          </div>
+        </article>
+
+        <!-- Responsabilidades -->
+        @if (vacante.responsibilities) {
+          <article class="content-card">
+            <h2 class="section-title">Responsabilidades Principales</h2>
+            <div class="prose-text whitespace-preline">
+              {{ vacante.responsibilities }}
+            </div>
+          </article>
+        }
+
+        <!-- Requisitos Adicionales -->
+        @if (vacante.requirements) {
+          <article class="content-card">
+            <h2 class="section-title">Requisitos y Competencias</h2>
+            <div class="prose-text whitespace-preline">
+              {{ vacante.requirements }}
+            </div>
+          </article>
+        }
+
+        <!-- Habilidades Requeridas -->
+        @if (vacante.skills && vacante.skills.length > 0) {
+          <article class="content-card">
+            <h2 class="section-title">Habilidades Técnicas y Competencias (Skills)</h2>
+            <div class="skills-grid">
+              @for (sk of vacante.skills; track sk.skill_id) {
+                <div class="skill-badge-card" [class.is-required]="sk.is_required">
+                  <div class="skill-main">
+                    <span class="skill-name">{{ sk.skill_name || 'Habilidad' }}</span>
+                    @if (sk.is_required) {
+                      <span class="tag-req">Obligatoria</span>
+                    }
+                  </div>
+                  <span class="skill-level">Dominio: {{ sk.required_level || 'General' }}</span>
+                </div>
+              }
+            </div>
+          </article>
+        }
+
+      </main>
+
+      <!-- ── Columna Lateral: Resumen de Condiciones ──────────────────────── -->
+      <aside class="sidebar-column">
+        <div class="sidebar-card">
+          <h3 class="sidebar-title">Resumen de la Oferta</h3>
+
+          <div class="summary-list">
+            <!-- Modalidad -->
+            <div class="summary-item">
+              <span class="summary-label">Modalidad</span>
+              <span class="summary-value highlight">{{ obtenerModalidadTexto(vacante.work_modality) }}</span>
+            </div>
+
+            <!-- Tipo de Contrato -->
+            <div class="summary-item">
+              <span class="summary-label">Tipo de Contrato</span>
+              <span class="summary-value">{{ obtenerTipoEmpleoTexto(vacante.employment_type) }}</span>
+            </div>
+
+            <!-- Seniority -->
+            <div class="summary-item">
+              <span class="summary-label">Seniority / Nivel</span>
+              <span class="summary-value">{{ obtenerSeniorityTexto(vacante.seniority_level) }}</span>
+            </div>
+
+            <!-- Salario -->
+            <div class="summary-item">
+              <span class="summary-label">Compensación Salarial</span>
+              @if (vacante.salary_visible && (vacante.salary_min || vacante.salary_max)) {
+                <span class="summary-value salary-highlight">
+                  {{ vacante.currency }} {{ vacante.salary_min | number:'1.0-0' }} - {{ vacante.salary_max | number:'1.0-0' }}
+                </span>
+              } @else {
+                <span class="summary-value text-muted">Confidencial</span>
+              }
+            </div>
+
+            <!-- Formación Mínima -->
+            <div class="summary-item">
+              <span class="summary-label">Nivel Académico</span>
+              <span class="summary-value">{{ obtenerNivelEducativoTexto(vacante.minimum_education_level) }}</span>
+            </div>
+
+            <!-- Experiencia Mínima -->
+            <div class="summary-item">
+              <span class="summary-label">Experiencia Mínima</span>
+              <span class="summary-value">
+                {{ vacante.required_experience_years || 0 }} {{ (vacante.required_experience_years === 1) ? 'año' : 'años' }}
+              </span>
+            </div>
+
+            <!-- Vacantes disponibles -->
+            <div class="summary-item">
+              <span class="summary-label">Vacantes Disponibles</span>
+              <span class="summary-value">{{ vacante.positions_count }}</span>
+            </div>
+
+            <!-- Ubicación -->
+            <div class="summary-item">
+              <span class="summary-label">Ubicación</span>
+              <span class="summary-value">
+                {{ vacante.city }}@if (vacante.location_text) { • {{ vacante.location_text }} }
+              </span>
+            </div>
+
+            <!-- Cierre de postulaciones -->
+            @if (vacante.closes_at) {
+              <div class="summary-item">
+                <span class="summary-label">Fecha Límite</span>
+                <span class="summary-value text-warning">{{ vacante.closes_at | date:'mediumDate' }}</span>
+              </div>
+            }
+          </div>
+
+          <!-- Botones de Acción en el Sidebar -->
+          <div class="sidebar-actions">
+            @if (isCandidato) {
+              <button type="button" class="btn btn--primary btn--full" (click)="postular()">
+                <svg viewBox="0 0 20 20" fill="currentColor" class="icon-sm" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" />
+                </svg>
+                <span>Postularme a esta vacante</span>
+              </button>
+            }
+
+            @if (isEmpresa) {
+              <a routerLink="/vacantes/mis-vacantes" class="btn btn--outline btn--full">
+                <span>Volver al panel</span>
+              </a>
+            }
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  }
+
+</div>
