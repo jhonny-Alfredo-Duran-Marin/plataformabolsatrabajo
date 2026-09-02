@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../core/models/sesion.dart';
-import '../vacantes/vacantes_screen.dart';
+import '../perfil/egresado_panel_screen.dart';
 import 'login_screen.dart';
 
-/// Pantalla mínima post-login: confirma visualmente que la sesión real
-/// (token + rol) llegó del backend. Placeholder hasta HU-35 (búsqueda
-/// móvil) y el resto de features móviles de Sprint 4.
+/// Punto de entrada post-login: si el usuario es egresado, muestra su
+/// panel real (perfil + accesos). Para el resto de roles (empresa,
+/// moderador, admin) todavía no hay pantallas móviles dedicadas
+/// (Sprint 4 según el roadmap), así que se muestra una vista informativa.
 class HomeScreen extends StatelessWidget {
   final Sesion sesion;
 
@@ -29,6 +30,9 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (sesion.rol == 'candidate') {
+      return EgresadoPanelScreen(sesion: sesion);
+    }
     return Scaffold(
       appBar: AppBar(
         title: const Text('EGRESA'),
@@ -69,26 +73,13 @@ class HomeScreen extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 24),
-              if (sesion.rol == 'candidate')
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.work_outline),
-                  label: const Text('Ver vacantes disponibles'),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => VacantesScreen(accessToken: sesion.accessToken),
-                      ),
-                    );
-                  },
-                )
-              else
-                const Text(
-                  'El resto de las pantallas móviles (postulación, '
-                  'notificaciones push) están planificadas para el '
-                  'Sprint 4 según el roadmap del proyecto.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey),
-                ),
+              const Text(
+                'Las pantallas móviles para este rol todavía están '
+                'planificadas para el Sprint 4 según el roadmap del '
+                'proyecto.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey),
+              ),
             ],
           ),
         ),
