@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'features/auth/login_screen.dart';
+
 void main() {
   runApp(const EgresaApp());
 }
@@ -11,10 +13,9 @@ class EgresaApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'EGRESA',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
-      home: const Scaffold(
-        body: Center(child: Text('EGRESA — en construcción')),
-      ),
+      home: const LoginScreen(),
     );
   }
 }
