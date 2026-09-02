@@ -8,6 +8,7 @@ import {
   VacanteCambioEstadoRequest,
   VacanteCreateRequest,
   VacanteFiltros,
+  VacanteModeracionRequest,
   VacantePaginadaResponse,
   VacanteUpdateRequest,
 } from '../models/vacante.models';
@@ -129,6 +130,34 @@ export class VacanteService {
         this._handleError(error, 'Error al eliminar la vacante')
       )
     );
+  }
+
+  // ─── Moderación institucional (HU-12) ────────────────────────────────────
+
+  /** Lista las vacantes pendientes de revisión (solo admin/moderador). */
+  listarPendientesRevision(page = 1, pageSize = 10): Observable<VacantePaginadaResponse> {
+    const params = new HttpParams().set('page', String(page)).set('page_size', String(pageSize));
+    return this.http
+      .get<VacantePaginadaResponse>(`${environment.apiUrl}/validacion/vacantes/pendientes`, {
+        headers: this._headers(),
+        params,
+      })
+      .pipe(
+        catchError((error: HttpErrorResponse) =>
+          this._handleError(error, 'Error al cargar las vacantes pendientes de revisión')
+        )
+      );
+  }
+
+  /** Aprueba o rechaza (con motivo) una vacante pendiente de revisión. */
+  moderarVacante(id: string, data: VacanteModeracionRequest): Observable<Vacante> {
+    return this.http
+      .post<Vacante>(`${environment.apiUrl}/validacion/vacantes/${id}/decision`, data, {
+        headers: this._headers(),
+      })
+      .pipe(
+        catchError((error: HttpErrorResponse) => this._handleError(error, 'Error al moderar la vacante'))
+      );
   }
 
   // ─── Catálogos de Apoyo para Formularios ─────────────────────────────────

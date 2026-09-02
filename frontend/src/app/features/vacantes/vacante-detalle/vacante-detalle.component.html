@@ -87,22 +87,26 @@
         </article>
 
         <!-- Responsabilidades -->
-        @if (vacante.responsibilities) {
+        @if (vacante.responsibilities_json && vacante.responsibilities_json.length > 0) {
           <article class="content-card">
             <h2 class="section-title">Responsabilidades Principales</h2>
-            <div class="prose-text whitespace-preline">
-              {{ vacante.responsibilities }}
-            </div>
+            <ul class="prose-text">
+              @for (item of vacante.responsibilities_json; track item) {
+                <li>{{ item }}</li>
+              }
+            </ul>
           </article>
         }
 
         <!-- Requisitos Adicionales -->
-        @if (vacante.requirements) {
+        @if (vacante.requirements_json && vacante.requirements_json.length > 0) {
           <article class="content-card">
             <h2 class="section-title">Requisitos y Competencias</h2>
-            <div class="prose-text whitespace-preline">
-              {{ vacante.requirements }}
-            </div>
+            <ul class="prose-text">
+              @for (item of vacante.requirements_json; track item) {
+                <li>{{ item }}</li>
+              }
+            </ul>
           </article>
         }
 
@@ -112,14 +116,14 @@
             <h2 class="section-title">Habilidades Técnicas y Competencias (Skills)</h2>
             <div class="skills-grid">
               @for (sk of vacante.skills; track sk.skill_id) {
-                <div class="skill-badge-card" [class.is-required]="sk.is_required">
+                <div class="skill-badge-card" [class.is-required]="sk.importance === 'required'">
                   <div class="skill-main">
                     <span class="skill-name">{{ sk.skill_name || 'Habilidad' }}</span>
-                    @if (sk.is_required) {
+                    @if (sk.importance === 'required') {
                       <span class="tag-req">Obligatoria</span>
                     }
                   </div>
-                  <span class="skill-level">Dominio: {{ sk.required_level || 'General' }}</span>
+                  <span class="skill-level">Dominio: {{ sk.min_proficiency || 'General' }}</span>
                 </div>
               }
             </div>
@@ -167,36 +171,34 @@
             <!-- Formación Mínima -->
             <div class="summary-item">
               <span class="summary-label">Nivel Académico</span>
-              <span class="summary-value">{{ obtenerNivelEducativoTexto(vacante.minimum_education_level) }}</span>
+              <span class="summary-value">{{ obtenerNivelEducativoTexto(vacante.min_education_level) }}</span>
             </div>
 
             <!-- Experiencia Mínima -->
             <div class="summary-item">
               <span class="summary-label">Experiencia Mínima</span>
               <span class="summary-value">
-                {{ vacante.required_experience_years || 0 }} {{ (vacante.required_experience_years === 1) ? 'año' : 'años' }}
+                {{ vacante.min_years_experience || 0 }} {{ (vacante.min_years_experience === 1) ? 'año' : 'años' }}
               </span>
             </div>
 
             <!-- Vacantes disponibles -->
             <div class="summary-item">
               <span class="summary-label">Vacantes Disponibles</span>
-              <span class="summary-value">{{ vacante.positions_count }}</span>
+              <span class="summary-value">{{ vacante.positions_available }}</span>
             </div>
 
             <!-- Ubicación -->
             <div class="summary-item">
               <span class="summary-label">Ubicación</span>
-              <span class="summary-value">
-                {{ vacante.city }}@if (vacante.location_text) { • {{ vacante.location_text }} }
-              </span>
+              <span class="summary-value">{{ vacante.city }}</span>
             </div>
 
             <!-- Cierre de postulaciones -->
-            @if (vacante.closes_at) {
+            @if (vacante.application_deadline) {
               <div class="summary-item">
                 <span class="summary-label">Fecha Límite</span>
-                <span class="summary-value text-warning">{{ vacante.closes_at | date:'mediumDate' }}</span>
+                <span class="summary-value text-warning">{{ vacante.application_deadline | date:'mediumDate' }}</span>
               </div>
             }
           </div>

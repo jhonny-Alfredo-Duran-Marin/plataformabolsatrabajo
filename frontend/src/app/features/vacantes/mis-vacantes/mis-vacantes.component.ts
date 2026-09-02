@@ -148,9 +148,12 @@ export class MisVacantesComponent implements OnInit {
       case 'paused':
         return 'badge--paused';
       case 'closed':
+      case 'archived':
         return 'badge--closed';
       case 'rejected':
         return 'badge--rejected';
+      case 'pending_review':
+        return 'badge--pending';
       default:
         return 'badge--default';
     }
@@ -170,6 +173,8 @@ export class MisVacantesComponent implements OnInit {
         return 'Rechazada';
       case 'pending_review':
         return 'En Revisión';
+      case 'archived':
+        return 'Archivada';
       default:
         return estado;
     }

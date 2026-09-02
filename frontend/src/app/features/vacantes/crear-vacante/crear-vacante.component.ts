@@ -11,8 +11,8 @@ import { Router, RouterLink } from '@angular/router';
 import {
   EmploymentType,
   JobSkillItemRequest,
-  JobStatus,
   SeniorityLevel,
+  SkillImportance,
   SkillProficiencyLevel,
   VacanteCreateRequest,
   WorkModality,
@@ -26,8 +26,8 @@ import {
 interface HabilidadSeleccionada {
   skill_id: string;
   skill_name: string;
-  required_level: SkillProficiencyLevel;
-  is_required: boolean;
+  min_proficiency: SkillProficiencyLevel;
+  importance: SkillImportance;
   weight?: number;
 }
 
@@ -67,14 +67,14 @@ export class CrearVacanteComponent implements OnInit {
     { valor: 'mid', label: 'Semi Senior / Mid (2 - 5 años)' },
     { valor: 'senior', label: 'Senior (5+ años)' },
     { valor: 'lead', label: 'Líder Técnico / Lead' },
-    { valor: 'manager', label: 'Gerente / Manager' },
   ];
 
   readonly tiposEmpleo: { valor: EmploymentType; label: string }[] = [
     { valor: 'permanent', label: 'Tiempo Completo (Indefinido)' },
     { valor: 'temporary', label: 'Temporal' },
-    { valor: 'project', label: 'Por Proyecto' },
+    { valor: 'contract', label: 'Por Contrato' },
     { valor: 'internship', label: 'Pasantía' },
+    { valor: 'part_time', label: 'Medio Tiempo' },
     { valor: 'freelance', label: 'Freelance / Consultoría' },
   ];
 
@@ -107,23 +107,22 @@ export class CrearVacanteComponent implements OnInit {
     this.form = this.fb.group({
       title: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(200)]],
       description: ['', [Validators.required, Validators.minLength(10)]],
-      responsibilities: [''],
-      requirements: [''],
+      responsibilities_json: [''],
+      requirements_json: [''],
       category_id: [''],
       seniority_level: ['junior'],
       employment_type: ['permanent'],
       work_modality: ['onsite'],
-      minimum_education_level: ['undergraduate'],
-      required_experience_years: [0, [Validators.min(0)]],
+      min_education_level: ['undergraduate'],
+      min_years_experience: [0, [Validators.min(0)]],
       country_code: ['BO'],
       city: ['Santa Cruz de la Sierra', [Validators.required]],
-      location_text: [''],
       salary_min: [null, [Validators.min(0)]],
       salary_max: [null, [Validators.min(0)]],
       currency: ['BOB'],
       salary_visible: [true],
-      positions_count: [1, [Validators.required, Validators.min(1)]],
-      closes_at: [null],
+      positions_available: [1, [Validators.required, Validators.min(1)]],
+      application_deadline: [null],
     });
   }
 
@@ -167,8 +166,8 @@ export class CrearVacanteComponent implements OnInit {
     this.habilidadesSeleccionadas.push({
       skill_id: skillObj.id,
       skill_name: skillObj.nombre,
-      required_level: this.skillNivelSeleccionado,
-      is_required: this.skillEsRequerida,
+      min_proficiency: this.skillNivelSeleccionado,
+      importance: this.skillEsRequerida ? 'required' : 'preferred',
       weight: this.skillPeso !== null ? Number(this.skillPeso) : undefined,
     });
 
@@ -205,32 +204,37 @@ export class CrearVacanteComponent implements OnInit {
 
     const skillsDto: JobSkillItemRequest[] = this.habilidadesSeleccionadas.map((h) => ({
       skill_id: h.skill_id,
-      required_level: h.required_level,
-      is_required: h.is_required,
+      min_proficiency: h.min_proficiency,
+      importance: h.importance,
       weight: h.weight,
     }));
+
+    const aLineas = (texto: string | null | undefined): string[] | null => {
+      if (!texto) return null;
+      const lineas = texto.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+      return lineas.length > 0 ? lineas : null;
+    };
 
     const payload: VacanteCreateRequest = {
       title: formVal.title,
       description: formVal.description,
-      responsibilities: formVal.responsibilities || null,
-      requirements: formVal.requirements || null,
+      responsibilities_json: aLineas(formVal.responsibilities_json),
+      requirements_json: aLineas(formVal.requirements_json),
       category_id: formVal.category_id || null,
-      seniority_level: formVal.seniority_level || null,
-      employment_type: formVal.employment_type || null,
+      seniority_level: formVal.seniority_level,
+      employment_type: formVal.employment_type,
       work_modality: formVal.work_modality || 'onsite',
-      minimum_education_level: formVal.minimum_education_level || null,
-      required_experience_years: formVal.required_experience_years ? Number(formVal.required_experience_years) : 0,
+      min_education_level: formVal.min_education_level || null,
+      min_years_experience: formVal.min_years_experience ? Number(formVal.min_years_experience) : 0,
       country_code: formVal.country_code || 'BO',
-      city: formVal.city || null,
-      location_text: formVal.location_text || null,
+      city: formVal.city,
       salary_min: formVal.salary_min !== null ? Number(formVal.salary_min) : null,
       salary_max: formVal.salary_max !== null ? Number(formVal.salary_max) : null,
       currency: formVal.currency || 'BOB',
       salary_visible: !!formVal.salary_visible,
-      positions_count: formVal.positions_count ? Number(formVal.positions_count) : 1,
+      positions_available: formVal.positions_available ? Number(formVal.positions_available) : 1,
       status: comoBorrador ? 'draft' : 'published',
-      closes_at: formVal.closes_at ? new Date(formVal.closes_at).toISOString() : null,
+      application_deadline: formVal.application_deadline ? new Date(formVal.application_deadline).toISOString() : null,
       skills: skillsDto,
     };
 
@@ -240,6 +244,10 @@ export class CrearVacanteComponent implements OnInit {
         if (resp.status === 'draft' && !comoBorrador) {
           this.toast.warning(
             'Vacante guardada en borrador. Se publicará cuando tu empresa sea verificada por la UAGRM.'
+          );
+        } else if (resp.status === 'pending_review') {
+          this.toast.success(
+            'Vacante enviada a revisión institucional. Se publicará cuando un moderador la apruebe.'
           );
         } else {
           this.toast.success(
