@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/models/sesion.dart';
+import '../vacantes/vacantes_screen.dart';
 import 'login_screen.dart';
 
 /// Pantalla mínima post-login: confirma visualmente que la sesión real
@@ -68,13 +69,26 @@ class HomeScreen extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 24),
-              const Text(
-                'El resto de las pantallas móviles (búsqueda de vacantes, '
-                'postulación, notificaciones push) están planificadas para el '
-                'Sprint 4 según el roadmap del proyecto.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey),
-              ),
+              if (sesion.rol == 'candidate')
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.work_outline),
+                  label: const Text('Ver vacantes disponibles'),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => VacantesScreen(accessToken: sesion.accessToken),
+                      ),
+                    );
+                  },
+                )
+              else
+                const Text(
+                  'El resto de las pantallas móviles (postulación, '
+                  'notificaciones push) están planificadas para el '
+                  'Sprint 4 según el roadmap del proyecto.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey),
+                ),
             ],
           ),
         ),
