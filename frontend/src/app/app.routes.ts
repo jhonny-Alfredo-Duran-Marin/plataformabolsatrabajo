@@ -50,6 +50,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'moderacion-vacantes',
+        loadComponent: () =>
+          import('./features/admin/moderacion-vacantes/moderacion-vacantes.component').then(
+            (m) => m.ModeracionVacantesComponent,
+          ),
+      },
+      {
         path: 'bitacora',
         loadComponent: () => import('./features/admin/bitacora/bitacora.component').then((m) => m.BitacoraComponent),
       },
