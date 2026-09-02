@@ -1,0 +1,412 @@
+<div class="crear-vacante-container">
+  <!-- ══ Encabezado de Página ════════════════════════════════════════════════ -->
+  <header class="page-header">
+    <div class="header-nav">
+      <a routerLink="/vacantes/mis-vacantes" class="back-link">
+        <svg viewBox="0 0 20 20" fill="currentColor" class="icon" aria-hidden="true">
+          <path fill-rule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clip-rule="evenodd" />
+        </svg>
+        <span>Volver a Mis Vacantes</span>
+      </a>
+    </div>
+    <div class="header-titles">
+      <span class="badge-tag">Módulo Empresa</span>
+      <h1 class="title">Publicar Nueva Vacante</h1>
+      <p class="subtitle">
+        Define los requisitos, condiciones y habilidades para conectar con los mejores egresados y estudiantes de la UAGRM.
+      </p>
+    </div>
+  </header>
+
+  <!-- ══ Formulario Principal ════════════════════════════════════════════════ -->
+  <form [formGroup]="form" class="vacante-form">
+
+    <!-- ── Bloque 1: Información General del Puesto ───────────────────────── -->
+    <section class="form-card">
+      <div class="card-header">
+        <span class="step-num">1</span>
+        <div>
+          <h2>Información del Puesto</h2>
+          <p>Título, descripción general y clasificación de la oferta laboral.</p>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <!-- Título -->
+        <div class="form-group col-span-2" [class.has-error]="form.get('title')?.touched && form.get('title')?.invalid">
+          <label for="title">Título de la Vacante <span class="required">*</span></label>
+          <input
+            id="title"
+            type="text"
+            formControlName="title"
+            placeholder="Ej. Desarrollador Fullstack Junior, Analista Financiero..."
+          />
+          @if (form.get('title')?.touched && form.get('title')?.errors?.['required']) {
+            <span class="error-msg">El título de la vacante es obligatorio.</span>
+          }
+          @if (form.get('title')?.touched && form.get('title')?.errors?.['minlength']) {
+            <span class="error-msg">El título debe tener al menos 3 caracteres.</span>
+          }
+        </div>
+
+        <!-- Categoría -->
+        <div class="form-group">
+          <label for="category_id">Categoría / Área de Trabajo</label>
+          <select id="category_id" formControlName="category_id">
+            <option value="">Selecciona una categoría...</option>
+            @for (cat of categorias; track cat.id) {
+              <option [value]="cat.id">{{ cat.nombre }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Número de Posiciones -->
+        <div class="form-group">
+          <label for="positions_count">Vacantes Disponibles <span class="required">*</span></label>
+          <input
+            id="positions_count"
+            type="number"
+            min="1"
+            formControlName="positions_count"
+          />
+        </div>
+
+        <!-- Descripción General -->
+        <div class="form-group col-span-2" [class.has-error]="form.get('description')?.touched && form.get('description')?.invalid">
+          <label for="description">Descripción General del Puesto <span class="required">*</span></label>
+          <textarea
+            id="description"
+            rows="4"
+            formControlName="description"
+            placeholder="Describe el objetivo del puesto, el equipo de trabajo y el impacto de la posición..."
+          ></textarea>
+          @if (form.get('description')?.touched && form.get('description')?.errors?.['required']) {
+            <span class="error-msg">La descripción es obligatoria.</span>
+          }
+          @if (form.get('description')?.touched && form.get('description')?.errors?.['minlength']) {
+            <span class="error-msg">La descripción debe tener al menos 10 caracteres.</span>
+          }
+        </div>
+
+        <!-- Responsabilidades -->
+        <div class="form-group col-span-2">
+          <label for="responsibilities">Responsabilidades y Funciones Principales</label>
+          <textarea
+            id="responsibilities"
+            rows="3"
+            formControlName="responsibilities"
+            placeholder="• Desarrollo de componentes frontend&#10;• Integración con APIs REST&#10;• Participación en reuniones de diseño..."
+          ></textarea>
+        </div>
+
+        <!-- Requisitos Adicionales -->
+        <div class="form-group col-span-2">
+          <label for="requirements">Requisitos y Cualificaciones Deseables</label>
+          <textarea
+            id="requirements"
+            rows="3"
+            formControlName="requirements"
+            placeholder="• Capacidad de trabajo en equipo&#10;• Conocimiento de metodologías ágiles&#10;• Proactividad y orientación a resultados..."
+          ></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Bloque 2: Condiciones Laborales y Modalidad ─────────────────────── -->
+    <section class="form-card">
+      <div class="card-header">
+        <span class="step-num">2</span>
+        <div>
+          <h2>Condiciones Laborales</h2>
+          <p>Modalidad de trabajo, tipo de contrato y nivel de experiencia.</p>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <!-- Modalidad de Trabajo -->
+        <div class="form-group">
+          <label for="work_modality">Modalidad de Trabajo</label>
+          <select id="work_modality" formControlName="work_modality">
+            @for (m of modalidades; track m.valor) {
+              <option [value]="m.valor">{{ m.label }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Tipo de Contrato -->
+        <div class="form-group">
+          <label for="employment_type">Tipo de Contrato</label>
+          <select id="employment_type" formControlName="employment_type">
+            @for (t of tiposEmpleo; track t.valor) {
+              <option [value]="t.valor">{{ t.label }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Seniority / Nivel de Experiencia -->
+        <div class="form-group">
+          <label for="seniority_level">Nivel de Experiencia (Seniority)</label>
+          <select id="seniority_level" formControlName="seniority_level">
+            @for (s of nivelesSeniority; track s.valor) {
+              <option [value]="s.valor">{{ s.label }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Nivel Educativo Mínimo -->
+        <div class="form-group">
+          <label for="minimum_education_level">Nivel Educativo Mínimo</label>
+          <select id="minimum_education_level" formControlName="minimum_education_level">
+            @for (e of nivelesEducacion; track e.valor) {
+              <option [value]="e.valor">{{ e.label }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Años de Experiencia Requeridos -->
+        <div class="form-group">
+          <label for="required_experience_years">Años de Experiencia Mínima</label>
+          <input
+            id="required_experience_years"
+            type="number"
+            step="0.5"
+            min="0"
+            formControlName="required_experience_years"
+          />
+        </div>
+
+        <!-- Fecha Límite de Postulación -->
+        <div class="form-group">
+          <label for="closes_at">Cierre de Postulaciones (Opcional)</label>
+          <input id="closes_at" type="date" formControlName="closes_at" />
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Bloque 3: Ubicación ─────────────────────────────────────────────── -->
+    <section class="form-card">
+      <div class="card-header">
+        <span class="step-num">3</span>
+        <div>
+          <h2>Ubicación</h2>
+          <p>Lugar físico o sede asignada para la posición.</p>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="country_code">País</label>
+          <select id="country_code" formControlName="country_code">
+            <option value="BO">Bolivia</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="city">Ciudad <span class="required">*</span></label>
+          <input
+            id="city"
+            type="text"
+            formControlName="city"
+            placeholder="Ej. Santa Cruz de la Sierra, La Paz, Cochabamba..."
+          />
+        </div>
+
+        <div class="form-group col-span-2">
+          <label for="location_text">Dirección o Zona (Opcional)</label>
+          <input
+            id="location_text"
+            type="text"
+            formControlName="location_text"
+            placeholder="Ej. Equipetrol Norte, Av. San Martín #450"
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Bloque 4: Rango Salarial ────────────────────────────────────────── -->
+    <section class="form-card">
+      <div class="card-header">
+        <span class="step-num">4</span>
+        <div>
+          <h2>Compensación y Salario</h2>
+          <p>Rango salarial ofertado y preferencia de visibilidad.</p>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="currency">Moneda</label>
+          <select id="currency" formControlName="currency">
+            <option value="BOB">BOB (Bolivianos)</option>
+            <option value="USD">USD (Dólares)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="salary_min">Salario Mínimo</label>
+          <input
+            id="salary_min"
+            type="number"
+            step="100"
+            min="0"
+            formControlName="salary_min"
+            placeholder="Ej. 4500"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="salary_max">Salario Máximo</label>
+          <input
+            id="salary_max"
+            type="number"
+            step="100"
+            min="0"
+            formControlName="salary_max"
+            placeholder="Ej. 7000"
+          />
+        </div>
+
+        <div class="form-group col-span-2 checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" formControlName="salary_visible" />
+            <span class="checkbox-custom"></span>
+            <span class="checkbox-text">
+              <strong>Mostrar rango salarial a los candidatos</strong>
+              <small>Las vacantes con salario visible suelen recibir postulaciones más precisas.</small>
+            </span>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Bloque 5: Habilidades Requeridas ───────────────────────────────── -->
+    <section class="form-card">
+      <div class="card-header">
+        <span class="step-num">5</span>
+        <div>
+          <h2>Habilidades Requeridas (Skills)</h2>
+          <p>Habilidades técnicas y blandas para matching con candidatos.</p>
+        </div>
+      </div>
+
+      <!-- Barra para agregar habilidad -->
+      <div class="add-skill-box">
+        <div class="skill-input-grid">
+          <div class="form-group">
+            <label for="skill_select">Seleccionar Habilidad</label>
+            <select
+              id="skill_select"
+              [(ngModel)]="skillSeleccionadaId"
+              [ngModelOptions]="{ standalone: true }"
+            >
+              <option value="">Buscar habilidad en el catálogo...</option>
+              @for (sk of habilidadesCatalogo; track sk.id) {
+                <option [value]="sk.id">{{ sk.nombre }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="skill_level">Nivel Requerido</label>
+            <select
+              id="skill_level"
+              [(ngModel)]="skillNivelSeleccionado"
+              [ngModelOptions]="{ standalone: true }"
+            >
+              @for (nl of nivelesNivelHabilidad; track nl.valor) {
+                <option [value]="nl.valor">{{ nl.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group skill-checkbox-container">
+            <label class="checkbox-inline">
+              <input
+                type="checkbox"
+                [(ngModel)]="skillEsRequerida"
+                [ngModelOptions]="{ standalone: true }"
+              />
+              <span>Excluyente</span>
+            </label>
+          </div>
+
+          <div class="form-group skill-button-container">
+            <button
+              type="button"
+              class="btn-add-skill"
+              (click)="agregarHabilidad()"
+            >
+              <svg viewBox="0 0 20 20" fill="currentColor" class="icon-sm" aria-hidden="true">
+                <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+              </svg>
+              <span>Agregar</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lista de Habilidades Agregadas -->
+      <div class="skills-list">
+        @if (habilidadesSeleccionadas.length === 0) {
+          <div class="skills-empty">
+            <p>No has agregado habilidades aún. Agrega al menos 1 o 2 para optimizar el emparejamiento con egresados.</p>
+          </div>
+        } @else {
+          <div class="skills-grid">
+            @for (item of habilidadesSeleccionadas; track item.skill_id; let idx = $index) {
+              <div class="skill-chip" [class.is-required]="item.is_required">
+                <div class="skill-info">
+                  <span class="skill-title">{{ item.skill_name }}</span>
+                  <span class="skill-meta">
+                    Nivel {{ item.required_level }}
+                    @if (item.is_required) {
+                      <span class="tag-required">Obligatoria</span>
+                    }
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  class="btn-remove-skill"
+                  (click)="removerHabilidad(idx)"
+                  title="Eliminar habilidad"
+                >
+                  ✕
+                </button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- ── Botones de Acción ──────────────────────────────────────────────── -->
+    <div class="form-actions">
+      <button
+        type="button"
+        class="btn btn-outline"
+        [disabled]="guardando"
+        (click)="guardar(true)"
+      >
+        <span>Guardar como Borrador</span>
+      </button>
+
+      <button
+        type="button"
+        class="btn btn-primary"
+        [disabled]="guardando"
+        (click)="guardar(false)"
+      >
+        @if (guardando) {
+          <span class="spinner"></span>
+          <span>Procesando...</span>
+        } @else {
+          <svg viewBox="0 0 20 20" fill="currentColor" class="icon-sm" aria-hidden="true">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" />
+          </svg>
+          <span>Publicar Vacante</span>
+        }
+      </button>
+    </div>
+
+  </form>
+</div>

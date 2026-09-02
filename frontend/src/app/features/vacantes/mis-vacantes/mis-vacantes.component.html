@@ -1,0 +1,263 @@
+<div class="mis-vacantes-container">
+
+  <!-- ══ Encabezado ══════════════════════════════════════════════════════════ -->
+  <header class="page-header">
+    <div class="header-content">
+      <span class="badge-tag">Panel Empresa</span>
+      <h1 class="title">Gestión de Vacantes</h1>
+      <p class="subtitle">
+        Supervisa tus ofertas publicadas, administra postulaciones y actualiza las condiciones laborales de tu empresa.
+      </p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/vacantes/crear" class="btn btn--primary">
+        <svg viewBox="0 0 20 20" fill="currentColor" class="icon-sm" aria-hidden="true">
+          <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+        </svg>
+        <span>Publicar Nueva Vacante</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- ══ Pestañas de Filtro por Estado ═══════════════════════════════════════ -->
+  <nav class="tabs-nav">
+    @for (tab of pestaniasEstado; track tab.valor) {
+      <button
+        type="button"
+        class="tab-btn"
+        [class.active]="estadoFiltro === tab.valor"
+        (click)="cambiarFiltroEstado(tab.valor)"
+      >
+        <span>{{ tab.label }}</span>
+        @if (estadoFiltro === tab.valor && !cargando) {
+          <span class="tab-count">{{ totalItems }}</span>
+        }
+      </button>
+    }
+  </nav>
+
+  <!-- ══ Contenido / Listado ═════════════════════════════════════════════════ -->
+  <main class="vacantes-table-card">
+
+    @if (cargando) {
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Cargando vacantes...</p>
+      </div>
+    } @else if (vacantes.length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon">📁</div>
+        <h3>No se encontraron vacantes</h3>
+        <p>
+          @if (estadoFiltro) {
+            No tienes vacantes con el estado "{{ obtenerBadgeTexto(estadoFiltro) }}".
+          } @else {
+            Aún no has creado ninguna oferta laboral para tu empresa.
+          }
+        </p>
+        <a routerLink="/vacantes/crear" class="btn btn--outline">
+          <span>Crear mi primera vacante</span>
+        </a>
+      </div>
+    } @else {
+      <!-- Tabla de Vacantes -->
+      <div class="table-responsive">
+        <table class="vacantes-table">
+          <thead>
+            <tr>
+              <th>Puesto y Área</th>
+              <th>Modalidad</th>
+              <th>Salario</th>
+              <th>Estado</th>
+              <th>Fecha</th>
+              <th class="text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (vac of vacantes; track vac.id) {
+              <tr>
+                <!-- Título y Área -->
+                <td>
+                  <div class="job-info">
+                    <a [routerLink]="['/vacantes', vac.id]" class="job-title">{{ vac.title }}</a>
+                    <span class="job-meta">
+                      {{ vac.category_name || 'Sin categoría' }} • {{ vac.city || 'Santa Cruz' }}
+                    </span>
+                  </div>
+                </td>
+
+                <!-- Modalidad -->
+                <td>
+                  <span class="modality-tag">
+                    {{ obtenerModalidadTexto(vac.work_modality) }}
+                  </span>
+                </td>
+
+                <!-- Salario -->
+                <td>
+                  @if (vac.salary_visible && (vac.salary_min || vac.salary_max)) {
+                    <span class="salary-text">
+                      {{ vac.currency }} {{ vac.salary_min | number:'1.0-0' }} - {{ vac.salary_max | number:'1.0-0' }}
+                    </span>
+                  } @else {
+                    <span class="salary-hidden">Confidencial</span>
+                  }
+                </td>
+
+                <!-- Estado -->
+                <td>
+                  <span class="badge" [ngClass]="obtenerBadgeClase(vac.status)">
+                    {{ obtenerBadgeTexto(vac.status) }}
+                  </span>
+                </td>
+
+                <!-- Fecha -->
+                <td>
+                  <span class="date-text">
+                    {{ vac.created_at | date:'dd/MM/yyyy' }}
+                  </span>
+                </td>
+
+                <!-- Acciones -->
+                <td class="text-right">
+                  <div class="action-buttons">
+                    <!-- Ver Detalle -->
+                    <a
+                      [routerLink]="['/vacantes', vac.id]"
+                      class="btn-icon"
+                      title="Ver detalle público"
+                    >
+                      <svg viewBox="0 0 20 20" fill="currentColor" class="icon-sm" aria-hidden="true">
+                        <path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" />
+                        <path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 010-1.186A10.004 10.004 0 0110 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0110 17c-4.257 0-7.893-2.66-9.336-6.41zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                      </svg>
+                    </a>
+
+                    <!-- Acciones según Estado -->
+                    @if (vac.status === 'draft') {
+                      <button
+                        type="button"
+                        class="btn-state btn-state--publish"
+                        (click)="cambiarEstado(vac, 'published')"
+                        title="Publicar vacante ahora"
+                      >
+                        Publicar
+                      </button>
+                    } @else if (vac.status === 'published') {
+                      <button
+                        type="button"
+                        class="btn-state btn-state--pause"
+                        (click)="cambiarEstado(vac, 'paused')"
+                        title="Pausar recepción de postulaciones"
+                      >
+                        Pausar
+                      </button>
+                    } @else if (vac.status === 'paused') {
+                      <button
+                        type="button"
+                        class="btn-state btn-state--resume"
+                        (click)="cambiarEstado(vac, 'published')"
+                        title="Reactivar publicación"
+                      >
+                        Reactivar
+                      </button>
+                    }
+
+                    <!-- Cerrar (si está abierta o pausada) -->
+                    @if (vac.status === 'published' || vac.status === 'paused') {
+                      <button
+                        type="button"
+                        class="btn-state btn-state--close"
+                        (click)="cambiarEstado(vac, 'closed')"
+                        title="Cerrar vacante"
+                      >
+                        Cerrar
+                      </button>
+                    }
+
+                    <!-- Eliminar -->
+                    <button
+                      type="button"
+                      class="btn-icon btn-icon--danger"
+                      (click)="abrirModalEliminar(vac)"
+                      title="Eliminar vacante"
+                    >
+                      <svg viewBox="0 0 20 20" fill="currentColor" class="icon-sm" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clip-rule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ── Paginación ────────────────────────────────────────────────────── -->
+      @if (totalPaginas > 1) {
+        <footer class="pagination-footer">
+          <span class="pagination-info">
+            Página {{ paginaActual }} de {{ totalPaginas }} (Total: {{ totalItems }} vacantes)
+          </span>
+          <div class="pagination-controls">
+            <button
+              type="button"
+              class="page-btn"
+              [disabled]="paginaActual === 1"
+              (click)="cargarVacantes(paginaActual - 1)"
+            >
+              Anterior
+            </button>
+            <button
+              type="button"
+              class="page-btn"
+              [disabled]="paginaActual >= totalPaginas"
+              (click)="cargarVacantes(paginaActual + 1)"
+            >
+              Siguiente
+            </button>
+          </div>
+        </footer>
+      }
+    }
+
+  </main>
+
+  <!-- ══ Modal de Confirmación para Eliminar ════════════════════════════════ -->
+  @if (vacanteAEliminar) {
+    <div class="modal-overlay" (click)="cancelarEliminar()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-icon">⚠️</div>
+        <h3>¿Eliminar vacante?</h3>
+        <p>
+          ¿Estás seguro de que deseas eliminar permanentemente la vacante
+          <strong>"{{ vacanteAEliminar.title }}"</strong>? Esta acción no se puede deshacer.
+        </p>
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="btn btn--outline"
+            [disabled]="eliminando"
+            (click)="cancelarEliminar()"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            class="btn btn--danger"
+            [disabled]="eliminando"
+            (click)="confirmarEliminar()"
+          >
+            @if (eliminando) {
+              <span>Eliminando...</span>
+            } @else {
+              <span>Sí, eliminar</span>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>
