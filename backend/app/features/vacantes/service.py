@@ -24,6 +24,7 @@ from app.models.empresa import Company, CompanyMember
 from app.models.seguridad import AuditLog
 from app.models.vacante import JobPosting, JobSkill, JobStatus
 from app.security.dependencies import CurrentUser
+from app.shared.email_service import EmailService
 
 
 class VacanteService:
@@ -32,6 +33,7 @@ class VacanteService:
     def __init__(self, db: Session) -> None:
         self.db = db
         self.repo = VacanteRepository(db)
+        self.email_service = EmailService()
 
     # ─── Helpers Privados ───────────────────────────────────────────────────
 
@@ -47,7 +49,6 @@ class VacanteService:
         resultado = self.db.execute(stmt).first()
 
         if resultado is None:
-            # Búsqueda alternativa por si el usuario es owner directo sin fila activa en company_member
             stmt_alt = select(Company).join(CompanyMember, CompanyMember.company_id == Company.id).where(CompanyMember.user_id == usuario_id)
             comp = self.db.scalar(stmt_alt)
             if comp is None:
@@ -86,8 +87,8 @@ class VacanteService:
             JobSkillItemResponse(
                 skill_id=js.skill_id,
                 skill_name=js.skill.name if js.skill else None,
-                required_level=js.required_level,
-                is_required=js.is_required,
+                importance=js.importance,
+                min_proficiency=js.min_proficiency,
                 weight=js.weight,
             )
             for js in (vacante.skills or [])
@@ -103,31 +104,34 @@ class VacanteService:
             id=vacante.id,
             company_id=vacante.company_id,
             company_name=company_name,
-            created_by_member_id=vacante.created_by_member_id,
+            created_by=vacante.created_by,
             category_id=vacante.category_id,
             category_name=category_name,
             title=vacante.title,
             description=vacante.description,
-            responsibilities=vacante.responsibilities,
-            requirements=vacante.requirements,
+            responsibilities_json=vacante.responsibilities_json,
+            requirements_json=vacante.requirements_json,
+            benefits_json=vacante.benefits_json,
             seniority_level=vacante.seniority_level,
             employment_type=vacante.employment_type,
             work_modality=vacante.work_modality,
-            minimum_education_level=vacante.minimum_education_level,
-            required_experience_years=vacante.required_experience_years,
+            min_education_level=vacante.min_education_level,
+            min_years_experience=vacante.min_years_experience,
             country_code=vacante.country_code,
             city=vacante.city,
-            location_text=vacante.location_text,
             latitude=vacante.latitude,
             longitude=vacante.longitude,
             salary_min=vacante.salary_min,
             salary_max=vacante.salary_max,
             currency=vacante.currency,
             salary_visible=vacante.salary_visible,
-            positions_count=vacante.positions_count,
+            positions_available=vacante.positions_available,
             status=vacante.status,
+            rejection_reason=vacante.rejection_reason,
+            application_deadline=vacante.application_deadline,
             published_at=vacante.published_at,
-            closes_at=vacante.closes_at,
+            closed_at=vacante.closed_at,
+            view_count=vacante.view_count,
             created_at=vacante.created_at,
             updated_at=vacante.updated_at,
             skills=skills_dto,
@@ -142,50 +146,55 @@ class VacanteService:
         ip_address: str | None = None,
     ) -> VacanteResponse:
         """Crea una nueva vacante aplicando reglas de verificación de empresa."""
-        empresa, miembro = self._obtener_empresa_y_miembro_de_usuario(current_user.id_usuario)
+        empresa, _miembro = self._obtener_empresa_y_miembro_de_usuario(current_user.id_usuario)
 
-        # Regla de negocio: Si la empresa no está verificada, se fuerza el estado a DRAFT
+        # Regla de negocio: Si la empresa no está verificada, se fuerza el estado a DRAFT.
+        # Si está verificada y pide publicar, pasa a revisión institucional (HU-12): no se
+        # publica directo, salvo que quien crea sea un administrador de la plataforma.
         estado_final = payload.status.value
         published_at = None
 
         if empresa.verification_status != "verified":
             estado_final = JobStatus.DRAFT.value
         elif estado_final == JobStatus.PUBLISHED.value:
-            published_at = datetime.now()
+            if current_user.es_admin:
+                published_at = datetime.now()
+            else:
+                estado_final = JobStatus.PENDING_REVIEW.value
 
         vacante = JobPosting(
             company_id=empresa.id,
-            created_by_member_id=miembro.id if miembro else None,
+            created_by=current_user.id_usuario,
             category_id=payload.category_id,
             title=payload.title.strip(),
             description=payload.description.strip(),
-            responsibilities=payload.responsibilities.strip() if payload.responsibilities else None,
-            requirements=payload.requirements.strip() if payload.requirements else None,
-            seniority_level=payload.seniority_level.value if payload.seniority_level else None,
-            employment_type=payload.employment_type.value if payload.employment_type else None,
-            work_modality=payload.work_modality.value if payload.work_modality else None,
-            minimum_education_level=payload.minimum_education_level,
-            required_experience_years=payload.required_experience_years,
+            responsibilities_json=payload.responsibilities_json,
+            requirements_json=payload.requirements_json,
+            benefits_json=payload.benefits_json,
+            seniority_level=payload.seniority_level.value,
+            employment_type=payload.employment_type.value,
+            work_modality=payload.work_modality.value,
+            min_education_level=payload.min_education_level,
+            min_years_experience=payload.min_years_experience,
             country_code=payload.country_code,
-            city=payload.city.strip() if payload.city else None,
-            location_text=payload.location_text.strip() if payload.location_text else None,
+            city=payload.city.strip(),
             latitude=payload.latitude,
             longitude=payload.longitude,
             salary_min=payload.salary_min,
             salary_max=payload.salary_max,
             currency=payload.currency,
             salary_visible=payload.salary_visible,
-            positions_count=payload.positions_count,
+            positions_available=payload.positions_available,
             status=estado_final,
             published_at=published_at,
-            closes_at=payload.closes_at,
+            application_deadline=payload.application_deadline,
         )
 
         skills = [
             JobSkill(
                 skill_id=s.skill_id,
-                required_level=s.required_level.value if s.required_level else None,
-                is_required=s.is_required,
+                importance=s.importance.value if s.importance else None,
+                min_proficiency=s.min_proficiency.value if s.min_proficiency else None,
                 weight=s.weight,
             )
             for s in payload.skills
@@ -273,11 +282,9 @@ class VacanteService:
         if vacante is None:
             raise ResourceNotFoundException("La vacante solicitada no existe.")
 
-        # Si está publicada, cualquiera puede verla
         if vacante.status == JobStatus.PUBLISHED.value:
             return self._a_dto(vacante)
 
-        # Si no está publicada (borrador, pausada, cerrada), validar permisos de autor o admin
         if current_user is None:
             raise ForbiddenException("No tiene permisos para consultar esta vacante.")
 
@@ -302,23 +309,32 @@ class VacanteService:
         if vacante is None:
             raise ResourceNotFoundException("La vacante a editar no existe.")
 
-        empresa, _ = self._obtener_empresa_y_miembro_de_usuario(current_user.id_usuario)
-        if vacante.company_id != empresa.id and not current_user.es_admin:
-            raise ForbiddenException("No tiene permisos para modificar esta vacante.")
+        if current_user.es_admin:
+            empresa = vacante.company
+        else:
+            empresa, _ = self._obtener_empresa_y_miembro_de_usuario(current_user.id_usuario)
+            if vacante.company_id != empresa.id:
+                raise ForbiddenException("No tiene permisos para modificar esta vacante.")
 
         datos_dict = payload.model_dump(exclude_unset=True, exclude={"skills", "status"})
 
-        # Regla: Si se solicita publicar y la empresa no está verificada, rechazar
+        # Regla: Si se solicita publicar y la empresa no está verificada, rechazar.
+        # Si esta verificada y quien edita no es admin, pasa a revision (HU-12) en vez
+        # de publicarse directo.
         if payload.status is not None:
-            if payload.status == JobStatus.PUBLISHED and empresa.verification_status != "verified":
-                raise BusinessException(
-                    "No se puede publicar la vacante porque la empresa aún se encuentra en revisión institucional."
-                )
-            datos_dict["status"] = payload.status.value
-            if payload.status == JobStatus.PUBLISHED and vacante.published_at is None:
-                datos_dict["published_at"] = datetime.now()
+            nuevo_estado = payload.status.value
+            if payload.status == JobStatus.PUBLISHED:
+                if empresa.verification_status != "verified":
+                    raise BusinessException(
+                        "No se puede publicar la vacante porque la empresa aún se encuentra en revisión institucional."
+                    )
+                if current_user.es_admin:
+                    if vacante.published_at is None:
+                        datos_dict["published_at"] = datetime.now()
+                else:
+                    nuevo_estado = JobStatus.PENDING_REVIEW.value
+            datos_dict["status"] = nuevo_estado
 
-        # Transformar enums a strings en el diccionario
         for campo_enum in ("seniority_level", "employment_type", "work_modality"):
             if campo_enum in datos_dict and datos_dict[campo_enum] is not None:
                 datos_dict[campo_enum] = datos_dict[campo_enum].value
@@ -328,8 +344,8 @@ class VacanteService:
             nuevas_skills = [
                 JobSkill(
                     skill_id=s.skill_id,
-                    required_level=s.required_level.value if s.required_level else None,
-                    is_required=s.is_required,
+                    importance=s.importance.value if s.importance else None,
+                    min_proficiency=s.min_proficiency.value if s.min_proficiency else None,
                     weight=s.weight,
                 )
                 for s in payload.skills
@@ -355,33 +371,117 @@ class VacanteService:
         current_user: CurrentUser,
         ip_address: str | None = None,
     ) -> VacanteResponse:
-        """Transiciona el estado de la vacante (draft, published, paused, closed)."""
+        """Transiciona el estado de la vacante (draft, published, paused, closed, archived)."""
         vacante = self.repo.obtener_por_id(vacante_id)
         if vacante is None:
             raise ResourceNotFoundException("La vacante no existe.")
 
-        empresa, _ = self._obtener_empresa_y_miembro_de_usuario(current_user.id_usuario)
-        if vacante.company_id != empresa.id and not current_user.es_admin:
-            raise ForbiddenException("No tiene permisos para cambiar el estado de esta vacante.")
+        if current_user.es_admin:
+            empresa = vacante.company
+        else:
+            empresa, _ = self._obtener_empresa_y_miembro_de_usuario(current_user.id_usuario)
+            if vacante.company_id != empresa.id:
+                raise ForbiddenException("No tiene permisos para cambiar el estado de esta vacante.")
 
-        # Regla: Si se intenta publicar y la empresa no está verificada, rechazar
-        if payload.status == JobStatus.PUBLISHED and empresa.verification_status != "verified":
-            raise BusinessException(
-                "No se puede publicar la vacante. La empresa debe estar verificada por la UAGRM."
-            )
+        # Regla: Si se intenta publicar y la empresa no está verificada, rechazar.
+        # Si esta verificada y quien pide el cambio no es admin, pasa a revision (HU-12).
+        nuevo_estado = payload.status.value
+        if payload.status == JobStatus.PUBLISHED:
+            if empresa.verification_status != "verified":
+                raise BusinessException(
+                    "No se puede publicar la vacante. La empresa debe estar verificada por la UAGRM."
+                )
+            if not current_user.es_admin:
+                nuevo_estado = JobStatus.PENDING_REVIEW.value
 
-        vacante_modificada = self.repo.cambiar_estado(vacante, payload.status.value)
+        vacante_modificada = self.repo.cambiar_estado(vacante, nuevo_estado)
 
         self._registrar_auditoria(
             usuario_id=current_user.id_usuario,
             action="change_job_status",
             entity_id=vacante_id,
-            details={"nuevo_estado": payload.status.value},
+            details={"nuevo_estado": nuevo_estado},
             ip_address=ip_address,
         )
         self.db.commit()
 
         return self._a_dto(vacante_modificada)
+
+    # ─── Moderación institucional (HU-12) ───────────────────────────────────
+
+    def listar_pendientes_revision(
+        self,
+        page: int = 1,
+        page_size: int = 10,
+    ) -> VacantePaginadaResponse:
+        """Lista las vacantes en estado 'pending_review' para que un moderador las revise."""
+        items, total = self.repo.listar_por_estado(
+            JobStatus.PENDING_REVIEW.value, page=page, page_size=page_size
+        )
+        total_pages = math.ceil(total / page_size) if total > 0 else 1
+
+        return VacantePaginadaResponse(
+            items=[self._a_dto(v) for v in items],
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+        )
+
+    def moderar(
+        self,
+        vacante_id: uuid.UUID,
+        aprobado: bool,
+        motivo_rechazo: str | None,
+        current_user: CurrentUser,
+        ip_address: str | None = None,
+    ) -> VacanteResponse:
+        """Aprueba o rechaza una vacante pendiente de revisión (HU-12).
+
+        Al aprobar, la vacante pasa a 'published' y queda visible para los egresados.
+        Al rechazar, vuelve a 'rejected' con el motivo, y la empresa es notificada para
+        que pueda corregirla y reenviarla.
+        """
+        vacante = self.repo.obtener_por_id(vacante_id)
+        if vacante is None:
+            raise ResourceNotFoundException("La vacante a moderar no existe.")
+
+        if vacante.status != JobStatus.PENDING_REVIEW.value:
+            raise BusinessException(
+                f"Solo se pueden moderar vacantes en revisión (estado actual: '{vacante.status}')."
+            )
+
+        nuevo_estado = JobStatus.PUBLISHED.value if aprobado else JobStatus.REJECTED.value
+        motivo = None if aprobado else motivo_rechazo
+
+        vacante_moderada = self.repo.moderar(vacante, nuevo_estado, motivo)
+
+        destinatario = vacante.company.contact_email if vacante.company else None
+        if destinatario:
+            if aprobado:
+                self.email_service.enviar(
+                    destinatario,
+                    "Vacante aprobada",
+                    f"Tu vacante '{vacante.title}' fue aprobada y ya está publicada en la plataforma.",
+                )
+            else:
+                self.email_service.enviar(
+                    destinatario,
+                    "Vacante rechazada",
+                    f"Tu vacante '{vacante.title}' fue rechazada. Motivo: {motivo}. "
+                    "Podés corregirla y volver a enviarla a revisión.",
+                )
+
+        self._registrar_auditoria(
+            usuario_id=current_user.id_usuario,
+            action="moderate_job_posting",
+            entity_id=vacante_id,
+            details={"aprobado": aprobado, "motivo_rechazo": motivo},
+            ip_address=ip_address,
+        )
+        self.db.commit()
+
+        return self._a_dto(vacante_moderada)
 
     def eliminar_vacante(
         self,
@@ -394,9 +494,12 @@ class VacanteService:
         if vacante is None:
             raise ResourceNotFoundException("La vacante a eliminar no existe.")
 
-        empresa, _ = self._obtener_empresa_y_miembro_de_usuario(current_user.id_usuario)
-        if vacante.company_id != empresa.id and not current_user.es_admin:
-            raise ForbiddenException("No tiene permisos para eliminar esta vacante.")
+        if current_user.es_admin:
+            empresa = vacante.company
+        else:
+            empresa, _ = self._obtener_empresa_y_miembro_de_usuario(current_user.id_usuario)
+            if vacante.company_id != empresa.id:
+                raise ForbiddenException("No tiene permisos para eliminar esta vacante.")
 
         self.repo.eliminar(vacante)
 
