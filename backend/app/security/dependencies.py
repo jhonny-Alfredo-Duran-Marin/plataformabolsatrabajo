@@ -51,6 +51,22 @@ def get_current_user(
     return CurrentUser(id_usuario=id_usuario, rol=str(payload.get("rol", "")), roles=roles)
 
 
+def get_current_user_optional(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
+) -> CurrentUser | None:
+    if credentials is None:
+        return None
+    try:
+        payload = decode_token(credentials.credentials)
+        if payload.get("type") != "access":
+            return None
+        id_usuario = uuid.UUID(str(payload.get("sub")))
+        roles = [str(r) for r in payload.get("roles", [])] or [str(payload.get("rol", ""))]
+        return CurrentUser(id_usuario=id_usuario, rol=str(payload.get("rol", "")), roles=roles)
+    except Exception:
+        return None
+
+
 def require_roles(*roles_permitidos: str):
     """Dependencia de autorización por rol, verificada en el servidor (RNF-06)."""
 

@@ -28,6 +28,7 @@ export class AdminLayout {
     { ruta: '/admin/validacion-egresados', icono: '✓', etiqueta: 'Validación de egresados', exacta: false },
     { ruta: '/admin/empresas', icono: '🏢', etiqueta: 'Gestión de empresas', exacta: false },
     { ruta: '/admin/bitacora', icono: '☰', etiqueta: 'Bitácora del sistema', exacta: false },
+    { ruta: '/vacantes', icono: '💼', etiqueta: 'Bolsa de vacantes', exacta: false },
   ];
 
   cerrarSesion(): void {

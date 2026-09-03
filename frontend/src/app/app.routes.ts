@@ -7,6 +7,21 @@ export const routes: Routes = [
     pathMatch: 'full',
   },
   {
+    path: 'login',
+    redirectTo: 'auth/login',
+    pathMatch: 'full',
+  },
+  {
+    path: 'registro-empresa',
+    redirectTo: 'auth/registro-empresa',
+    pathMatch: 'full',
+  },
+  {
+    path: 'registro',
+    redirectTo: 'auth/registro',
+    pathMatch: 'full',
+  },
+  {
     path: 'auth/login',
     loadComponent: () => import('./features/auth/login/login').then((m) => m.Login),
   },
@@ -66,5 +81,21 @@ export const routes: Routes = [
     path: 'perfil/profesional',
     loadComponent: () =>
       import('./features/perfil/profesional/profesional.component').then((m) => m.ProfesionalComponent),
+  },
+  {
+    path: 'vacantes',
+    loadComponent: () =>
+      import('./features/vacantes/busqueda-vacantes/busqueda-vacantes.component').then(
+        (m) => m.BusquedaVacantesComponent,
+      ),
+  },
+  {
+    path: 'empleos',
+    redirectTo: 'vacantes',
+    pathMatch: 'full',
+  },
+  {
+    path: '**',
+    redirectTo: 'auth/login',
   },
 ];

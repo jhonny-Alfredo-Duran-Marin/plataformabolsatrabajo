@@ -23,7 +23,7 @@ services:
       - db
     environment:
       ENVIRONMENT: local
-      DATABASE_URL: postgresql+psycopg://postgres:${DB_PASSWORD:-postgres}@db:5432/egresa
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://postgres:${DB_PASSWORD:-postgres}@db:5432/egresa}
       JWT_SECRET: ${JWT_SECRET:-change-me-min-32-characters-please}
       CORS_ALLOWED_ORIGINS: ${CORS_ORIGINS:-["http://localhost:4200","http://localhost"]}
       TZ: America/La_Paz

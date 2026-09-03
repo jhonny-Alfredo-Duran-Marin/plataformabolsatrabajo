@@ -1,0 +1,389 @@
+<div class="vacantes-page">
+  <!-- Header / Hero de Búsqueda -->
+  <header class="vacantes-hero">
+    <div class="hero-content">
+      <div class="badge-tag">Oportunidades Laborales UAGRM</div>
+      <h1>Encuentra tu próximo empleo profesional</h1>
+      <p class="hero-subtitle">
+        Conéctate con empresas líderes que buscan egresados y talento universitario verificado.
+      </p>
+
+      <!-- Barra de Búsqueda Principal -->
+      <div class="search-bar-container">
+        <div class="search-input-wrapper">
+          <span class="search-icon">🔍</span>
+          <input type="text" [(ngModel)]="filtroTexto" (keyup.enter)="ejecutarBusqueda()"
+            placeholder="Buscar por cargo, palabra clave o tecnología (ej. Desarrollador, Contador, Python)..." />
+          @if (filtroTexto) {
+          <button class="btn-clear-search" (click)="filtroTexto = ''; ejecutarBusqueda()" title="Borrar">✕</button>
+          }
+        </div>
+        <button class="btn-search" (click)="ejecutarBusqueda()">
+          Buscar Ofertas
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contenedor Principal con Sidebar y Resultados -->
+  <main class="vacantes-main">
+    <div class="vacantes-container">
+
+      <!-- SIDEBAR DE FILTROS -->
+      <aside class="filters-sidebar">
+        <div class="filters-header">
+          <h3>Filtros de Búsqueda</h3>
+          @if (tieneFiltrosActivos()) {
+          <button class="btn-reset-filters" (click)="limpiarFiltros()">Limpiar todo</button>
+          }
+        </div>
+
+        <!-- Filtro: Modalidad -->
+        <div class="filter-group">
+          <label class="filter-label">Modalidad de Trabajo</label>
+          <select [(ngModel)]="filtroModalidad" (change)="ejecutarBusqueda()" class="filter-select">
+            <option value="">Todas las modalidades</option>
+            @for (mod of filtrosDisponibles?.modalidades || []; track mod) {
+            <option [value]="mod">{{ getModalidadLabel(mod) }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Filtro: Tipo de Jornada -->
+        <div class="filter-group">
+          <label class="filter-label">Tipo de Jornada</label>
+          <select [(ngModel)]="filtroJornada" (change)="ejecutarBusqueda()" class="filter-select">
+            <option value="">Todas las jornadas</option>
+            @for (jornada of filtrosDisponibles?.jornadas || []; track jornada) {
+            <option [value]="jornada">{{ getJornadaLabel(jornada) }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Filtro: Ciudad -->
+        <div class="filter-group">
+          <label class="filter-label">Ciudad</label>
+          <select [(ngModel)]="filtroCiudad" (change)="ejecutarBusqueda()" class="filter-select">
+            <option value="">Todas las ciudades</option>
+            @for (ciudad of filtrosDisponibles?.ciudades || []; track ciudad) {
+            <option [value]="ciudad">{{ ciudad }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Filtro: Carrera / Área de Estudio -->
+        <div class="filter-group">
+          <label class="filter-label">Carrera / Área Académica</label>
+          <select [(ngModel)]="filtroCarreraId" (change)="ejecutarBusqueda()" class="filter-select">
+            <option value="">Todas las carreras</option>
+            @for (carrera of filtrosDisponibles?.carreras || []; track carrera.id) {
+            <option [value]="carrera.id">{{ carrera.name }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Filtro: Categoría de Empleo -->
+        <div class="filter-group">
+          <label class="filter-label">Área / Categoría</label>
+          <select [(ngModel)]="filtroCategoriaId" (change)="ejecutarBusqueda()" class="filter-select">
+            <option value="">Todas las categorías</option>
+            @for (cat of filtrosDisponibles?.categorias || []; track cat.id) {
+            <option [value]="cat.id">{{ cat.name }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Filtro: Nivel de Experiencia (Seniority) -->
+        <div class="filter-group">
+          <label class="filter-label">Nivel de Experiencia</label>
+          <select [(ngModel)]="filtroSeniority" (change)="ejecutarBusqueda()" class="filter-select">
+            <option value="">Todos los niveles</option>
+            @for (sen of filtrosDisponibles?.niveles_experiencia || []; track sen) {
+            <option [value]="sen">{{ getSeniorityLabel(sen) }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Filtro: Rango Salarial (Bs) -->
+        <div class="filter-group">
+          <label class="filter-label">Rango Salarial (Bs.)</label>
+          <div class="salary-inputs">
+            <input type="number" placeholder="Mínimo" [(ngModel)]="filtroSalarioMin" (change)="ejecutarBusqueda()"
+              class="salary-input" />
+            <span class="salary-separator">-</span>
+            <input type="number" placeholder="Máximo" [(ngModel)]="filtroSalarioMax" (change)="ejecutarBusqueda()"
+              class="salary-input" />
+          </div>
+        </div>
+      </aside>
+
+      <!-- LISTA DE RESULTADOS -->
+      <section class="results-section">
+        <!-- Barra de control de resultados -->
+        <div class="results-header">
+          <div class="results-count">
+            <strong>{{ totalVacantes }}</strong> {{ totalVacantes === 1 ? 'vacante disponible' : 'vacantes disponibles'
+            }}
+          </div>
+
+          <div class="results-ordering">
+            <label for="ordenarPor">Ordenar por:</label>
+            <select id="ordenarPor" [(ngModel)]="filtroOrdenarPor" (change)="ejecutarBusqueda()" class="order-select">
+              <option value="fecha">Más recientes primero</option>
+              @if (auth.estaAutenticado()) {
+              <option value="afinidad">⚡ Mayor afinidad con mi perfil</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        @if (isLoading) {
+        <div class="loading-container">
+          <div class="spinner"></div>
+          <p>Buscando ofertas de empleo...</p>
+        </div>
+        }
+
+        <!-- Error State -->
+        @if (errorMessage && !isLoading) {
+        <div class="error-card">
+          <p>{{ errorMessage }}</p>
+          <button class="btn-retry" (click)="ejecutarBusqueda()">Reintentar</button>
+        </div>
+        }
+
+        <!-- Lista de Tarjetas de Vacantes -->
+        @if (!isLoading && !errorMessage && vacantes.length > 0) {
+        <div class="vacantes-list">
+          @for (vacante of vacantes; track vacante.id) {
+          <article class="vacante-card" (click)="verDetalle(vacante.id)">
+            <div class="card-top">
+              <div class="company-avatar">
+                {{ (vacante.company.trade_name || vacante.company.legal_name || 'E').charAt(0).toUpperCase() }}
+              </div>
+              <div class="card-titles">
+                <span class="company-name">{{ vacante.company.trade_name || vacante.company.legal_name }}</span>
+                <h2 class="vacante-title">{{ vacante.title }}</h2>
+                <div class="vacante-location">
+                  📍 {{ vacante.city }}
+                  @if (vacante.category_name) {
+                  • <span>{{ vacante.category_name }}</span>
+                  }
+                </div>
+              </div>
+
+              @if (vacante.afinidad_porcentaje !== null && vacante.afinidad_porcentaje !== undefined) {
+              <div class="affinity-badge" [class.high-affinity]="vacante.afinidad_porcentaje >= 70">
+                ⚡ {{ vacante.afinidad_porcentaje }}% Afinidad
+              </div>
+              }
+            </div>
+
+            <!-- Badges de Atributos -->
+            <div class="card-badges">
+              <span class="badge badge-modality" [attr.data-modality]="vacante.work_modality">
+                {{ getModalidadLabel(vacante.work_modality) }}
+              </span>
+              <span class="badge badge-employment">
+                {{ getJornadaLabel(vacante.employment_type) }}
+              </span>
+              <span class="badge badge-seniority">
+                {{ getSeniorityLabel(vacante.seniority_level) }}
+              </span>
+              @if (vacante.salary_visible && (vacante.salary_min || vacante.salary_max)) {
+              <span class="badge badge-salary">
+                💰 {{ vacante.salary_min ? (vacante.salary_min | currency:'Bs. ':'symbol':'1.0-0') : '' }}
+                {{ vacante.salary_min && vacante.salary_max ? ' - ' : '' }}
+                {{ vacante.salary_max ? (vacante.salary_max | currency:'Bs. ':'symbol':'1.0-0') : '' }}
+              </span>
+              }
+            </div>
+
+            <!-- Resumen de Requisitos / Skills -->
+            @if (vacante.skills.length > 0 || vacante.education_preferences.length > 0) {
+            <div class="card-tags">
+              @for (carrera of vacante.education_preferences.slice(0, 2); track carrera.field_of_study_id) {
+              <span class="tag tag-carrera">🎓 {{ carrera.name }}</span>
+              }
+              @for (skill of vacante.skills.slice(0, 3); track skill.skill_id) {
+              <span class="tag tag-skill">✦ {{ skill.name }}</span>
+              }
+              @if (vacante.skills.length > 3) {
+              <span class="tag tag-more">+{{ vacante.skills.length - 3 }} skills</span>
+              }
+            </div>
+            }
+
+            <!-- Footer de la Tarjeta -->
+            <div class="card-footer">
+              <span class="time-ago">
+                Publicada {{ vacante.published_at ? (vacante.published_at | date:'dd/MM/yyyy') : 'recientemente' }}
+              </span>
+              <button class="btn-view-detail">
+                Ver Detalles →
+              </button>
+            </div>
+          </article>
+          }
+        </div>
+        }
+
+        <!-- Empty State -->
+        @if (!isLoading && !errorMessage && vacantes.length === 0) {
+        <div class="empty-state">
+          <div class="empty-icon">🔎</div>
+          <h3>No se encontraron vacantes con los filtros seleccionados</h3>
+          <p>Intenta buscando con palabras clave más generales o limpia algunos filtros de la barra lateral.</p>
+          <button class="btn-primary" (click)="limpiarFiltros()">Restablecer Filtros</button>
+        </div>
+        }
+      </section>
+    </div>
+  </main>
+
+  <!-- MODAL DE DETALLE DE VACANTE -->
+  @if (showModalDetalle) {
+  <div class="modal-backdrop" (click)="cerrarModalDetalle()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+
+      <!-- Header del Modal -->
+      <div class="modal-header">
+        <div class="modal-company-info">
+          <div class="company-avatar large">
+            {{ (vacanteSeleccionada?.company?.trade_name || vacanteSeleccionada?.company?.legal_name ||
+            'E').charAt(0).toUpperCase() }}
+          </div>
+          <div>
+            <span class="company-name">{{ vacanteSeleccionada?.company?.trade_name ||
+              vacanteSeleccionada?.company?.legal_name }}</span>
+            <h2>{{ vacanteSeleccionada?.title }}</h2>
+            <div class="vacante-location">
+              📍 {{ vacanteSeleccionada?.city }} • {{ getModalidadLabel(vacanteSeleccionada?.work_modality || '') }} •
+              {{ getJornadaLabel(vacanteSeleccionada?.employment_type || '') }}
+            </div>
+          </div>
+        </div>
+        <button class="btn-close-modal" (click)="cerrarModalDetalle()">✕</button>
+      </div>
+
+      <!-- Body del Modal -->
+      <div class="modal-body">
+        @if (isLoadingDetalle) {
+        <div class="loading-container">
+          <div class="spinner"></div>
+          <p>Cargando información completa...</p>
+        </div>
+        }
+
+        @if (vacanteSeleccionada && !isLoadingDetalle) {
+        <!-- Afinidad y Salario Highlight -->
+        <div class="highlight-banner">
+          @if (vacanteSeleccionada.afinidad_porcentaje !== null && vacanteSeleccionada.afinidad_porcentaje !==
+          undefined) {
+          <div class="affinity-pill">
+            ⚡ Tu nivel de afinidad con esta vacante es del <strong>{{ vacanteSeleccionada.afinidad_porcentaje
+              }}%</strong>
+          </div>
+          }
+          @if (vacanteSeleccionada.salary_visible && (vacanteSeleccionada.salary_min || vacanteSeleccionada.salary_max))
+          {
+          <div class="salary-pill">
+            Rango Salarial: <strong>{{ vacanteSeleccionada.salary_min ? (vacanteSeleccionada.salary_min | currency:'Bs.
+              ':'symbol':'1.0-0') : '' }} - {{ vacanteSeleccionada.salary_max ? (vacanteSeleccionada.salary_max |
+              currency:'Bs. ':'symbol':'1.0-0') : '' }}</strong>
+          </div>
+          }
+        </div>
+
+        <!-- Descripción -->
+        <div class="detail-section">
+          <h3>Descripción del Puesto</h3>
+          <p class="description-text">{{ vacanteSeleccionada.description }}</p>
+        </div>
+
+        <!-- Responsabilidades -->
+        @if (vacanteSeleccionada.responsibilities.length > 0) {
+        <div class="detail-section">
+          <h3>Responsabilidades Principales</h3>
+          <ul class="bullet-list">
+            @for (resp of vacanteSeleccionada.responsibilities; track resp) {
+            <li>{{ resp }}</li>
+            }
+          </ul>
+        </div>
+        }
+
+        <!-- Requisitos -->
+        @if (vacanteSeleccionada.requirements.length > 0) {
+        <div class="detail-section">
+          <h3>Requisitos del Perfil</h3>
+          <ul class="bullet-list">
+            @for (req of vacanteSeleccionada.requirements; track req) {
+            <li>{{ req }}</li>
+            }
+          </ul>
+        </div>
+        }
+
+        <!-- Carreras y Habilidades -->
+        <div class="detail-section">
+          <h3>Carreras y Competencias Requeridas</h3>
+          <div class="tags-container">
+            @for (carrera of vacanteSeleccionada.education_preferences; track carrera.field_of_study_id) {
+            <span class="tag tag-carrera large">🎓 {{ carrera.name }} ({{ carrera.is_required ? 'Requerida' :
+              'Preferente' }})</span>
+            }
+            @for (skill of vacanteSeleccionada.skills; track skill.skill_id) {
+            <span class="tag tag-skill large">✦ {{ skill.name }} ({{ skill.importance === 'required' ? 'Obligatoria' :
+              'Deseable' }})</span>
+            }
+          </div>
+        </div>
+
+        <!-- Beneficios -->
+        @if (vacanteSeleccionada.benefits.length > 0) {
+        <div class="detail-section">
+          <h3>Beneficios Ofrecidos</h3>
+          <ul class="bullet-list benefits">
+            @for (ben of vacanteSeleccionada.benefits; track ben) {
+            <li>✓ {{ ben }}</li>
+            }
+          </ul>
+        </div>
+        }
+
+        <!-- Acerca de la Empresa -->
+        @if (vacanteSeleccionada.company.description) {
+        <div class="detail-section company-box">
+          <h3>Acerca de {{ vacanteSeleccionada.company.trade_name || vacanteSeleccionada.company.legal_name }}</h3>
+          <p>{{ vacanteSeleccionada.company.description }}</p>
+          @if (vacanteSeleccionada.company.website) {
+          <a [href]="vacanteSeleccionada.company.website" target="_blank" rel="noopener" class="company-link">
+            🌐 Visitar sitio web de la empresa
+          </a>
+          }
+        </div>
+        }
+        }
+      </div>
+
+      <!-- Footer del Modal con Acción de Postulación -->
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="cerrarModalDetalle()">Cerrar</button>
+        <button class="btn-primary large" (click)="postularse()">
+          ✉ Postularme a esta vacante
+        </button>
+      </div>
+
+    </div>
+  </div>
+  }
+
+  <!-- Toast Feedback -->
+  @if (toastMessage) {
+  <div class="toast-notification">
+    {{ toastMessage }}
+  </div>
+  }
+</div>

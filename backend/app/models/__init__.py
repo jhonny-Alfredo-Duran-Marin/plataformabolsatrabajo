@@ -14,6 +14,7 @@ from app.models.candidato import (
 )
 from app.models.catalogo import FieldOfStudy, JobCategory, Language, Skill
 from app.models.empresa import Company, CompanyMember, CompanyVerification, Sector
+from app.models.oferta import JobEducationPreference, JobPosting, JobSkill
 from app.models.seguridad import AuditLog, LoginAttempt
 from app.models.usuario import AppUser, Role, UserRole
 
@@ -30,6 +31,9 @@ __all__ = [
     "CompanyVerification",
     "FieldOfStudy",
     "JobCategory",
+    "JobEducationPreference",
+    "JobPosting",
+    "JobSkill",
     "Language",
     "LoginAttempt",
     "Role",
