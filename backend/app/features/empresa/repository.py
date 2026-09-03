@@ -1,7 +1,7 @@
 import uuid
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.empresa import Company, CompanyMember, CompanyVerification
 
@@ -32,13 +32,14 @@ class EmpresaRepository:
     def listar_pendientes(self) -> list[Company]:
         stmt = (
             select(Company)
+            .options(selectinload(Company.sector))
             .where(Company.verification_status == "pending")
             .order_by(Company.created_at.desc())
         )
         return list(self.db.scalars(stmt))
 
     def listar_todas(self, incluir_inactivas: bool = False) -> list[Company]:
-        stmt = select(Company).order_by(Company.created_at.desc())
+        stmt = select(Company).options(selectinload(Company.sector)).order_by(Company.created_at.desc())
         if not incluir_inactivas:
             stmt = stmt.where(Company.account_status != "suspended")
         return list(self.db.scalars(stmt))
@@ -75,3 +76,27 @@ class EmpresaRepository:
             .limit(1)
         )
         return self.db.scalar(stmt)
+
+    def ultimos_motivos_rechazo(self, company_ids: list[uuid.UUID]) -> dict[uuid.UUID, str]:
+        """Versión batch de ultimo_motivo_rechazo: una sola query para todas las
+        empresas en vez de una por empresa (evita N+1 al listar)."""
+        if not company_ids:
+            return {}
+        rn = func.row_number().over(
+            partition_by=CompanyVerification.company_id,
+            order_by=CompanyVerification.created_at.desc(),
+        ).label("rn")
+        subq = (
+            select(
+                CompanyVerification.company_id,
+                CompanyVerification.rejection_reason,
+                rn,
+            )
+            .where(
+                CompanyVerification.company_id.in_(company_ids),
+                CompanyVerification.rejection_reason.is_not(None),
+            )
+            .subquery()
+        )
+        stmt = select(subq.c.company_id, subq.c.rejection_reason).where(subq.c.rn == 1)
+        return {row.company_id: row.rejection_reason for row in self.db.execute(stmt)}
