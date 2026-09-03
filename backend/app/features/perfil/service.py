@@ -254,7 +254,14 @@ class EgresadoService:
         return self._a_dto(perfil)
 
     def listar_pendientes_validacion(self) -> list[PerfilEgresadoResponse]:
-        return [self._a_dto(perfil) for perfil in self.repo.listar_pendientes_validacion()]
+        perfiles = self.repo.listar_pendientes_validacion()
+        ids = [perfil.id for perfil in perfiles]
+        cantidad_habilidades = self.repo.cantidad_habilidades_de(ids)
+        educacion_principal = self.repo.educacion_principal_de(ids)
+        return [
+            self._dto_desde_datos(perfil, cantidad_habilidades.get(perfil.id, 0), educacion_principal.get(perfil.id))
+            for perfil in perfiles
+        ]
 
     def validar(self, perfil_id: uuid.UUID | str, aprobado: bool, motivo_rechazo: str | None) -> PerfilEgresadoResponse:
         perfil = self.repo.obtener_por_id(perfil_id)
@@ -489,9 +496,17 @@ class EgresadoService:
         return bytes(pdf.output()), nombre_archivo
 
     def _a_dto(self, perfil: CandidateProfile) -> PerfilEgresadoResponse:
-        secciones = _secciones_de(perfil)
         cantidad_habilidades = len(self.repo.listar_habilidades(perfil.id))
         educacion_principal = self.repo.obtener_educacion_principal(perfil.id)
+        return self._dto_desde_datos(perfil, cantidad_habilidades, educacion_principal)
+
+    def _dto_desde_datos(
+        self,
+        perfil: CandidateProfile,
+        cantidad_habilidades: int,
+        educacion_principal: CandidateEducation | None,
+    ) -> PerfilEgresadoResponse:
+        secciones = _secciones_de(perfil)
 
         carrera_id = educacion_principal.field_of_study_id if educacion_principal else None
         anio_egreso = (
