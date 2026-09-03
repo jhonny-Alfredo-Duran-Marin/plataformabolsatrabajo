@@ -75,20 +75,21 @@
         </div>
         <div class="card-grid">
           <div class="stat-card stat-card--blue">
-            <span class="stat-card__num">0</span>
+            <span class="stat-card__num">{{ vacantesPublicadas }}</span>
             <span class="stat-card__label">Vacantes publicadas</span>
+          </div>
+          <div class="stat-card stat-card--orange">
+            <span class="stat-card__num">{{ vacantesEnRevision }}</span>
+            <span class="stat-card__label">En revisión institucional</span>
           </div>
           <div class="stat-card stat-card--purple">
             <span class="stat-card__num">0</span>
             <span class="stat-card__label">Postulantes recibidos</span>
           </div>
-          <div class="stat-card stat-card--green">
-            <span class="stat-card__num">0</span>
-            <span class="stat-card__label">Entrevistas programadas</span>
-          </div>
         </div>
         <div class="action-area">
           <a routerLink="/vacantes/crear" class="btn btn--primary">Publicar vacante</a>
+          <a routerLink="/vacantes/mis-vacantes" class="btn btn--outline">Ver estado de mis vacantes</a>
         </div>
       </section>
     }
