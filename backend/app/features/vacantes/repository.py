@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import delete, func, or_, select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.models.vacante import JobPosting, JobSkill, JobStatus
 
@@ -15,10 +15,19 @@ class VacanteRepository:
         self.db = db
 
     def _query_base_con_relaciones(self):
-        """Retorna la consulta base precargando todas las relaciones necesarias."""
+        """Retorna la consulta base precargando todas las relaciones necesarias,
+        minimizando los round-trips contra la Supabase remota (que domina el tiempo
+        de respuesta por sobre el volumen de datos en listados chicos).
+
+        company/category son muchos-a-uno: se cargan con joinedload (un solo JOIN,
+        sin costo extra de round-trip). skills es uno-a-muchos y estas queries usan
+        LIMIT/OFFSET para paginar: joinedload ahí corrompería la paginación (el
+        LIMIT se aplicaría sobre las filas ya multiplicadas por el JOIN), así que
+        se mantiene selectinload para esa relación.
+        """
         return select(JobPosting).options(
-            selectinload(JobPosting.company),
-            selectinload(JobPosting.category),
+            joinedload(JobPosting.company),
+            joinedload(JobPosting.category),
             selectinload(JobPosting.skills).selectinload(JobSkill.skill),
         )
 
@@ -38,7 +47,7 @@ class VacanteRepository:
     def obtener_por_id(self, vacante_id: uuid.UUID) -> JobPosting | None:
         """Obtiene una vacante por su ID con todas sus relaciones cargadas."""
         stmt = self._query_base_con_relaciones().where(JobPosting.id == vacante_id)
-        return self.db.scalar(stmt)
+        return self.db.execute(stmt).unique().scalar_one_or_none()
 
     def listar_por_empresa(
         self,
@@ -59,7 +68,7 @@ class VacanteRepository:
         offset = (max(page, 1) - 1) * page_size
 
         stmt = stmt.order_by(JobPosting.created_at.desc()).offset(offset).limit(page_size)
-        items = list(self.db.scalars(stmt))
+        items = list(self.db.execute(stmt).unique().scalars())
 
         return items, total
 
@@ -120,7 +129,7 @@ class VacanteRepository:
 
         stmt = stmt.order_by(JobPosting.published_at.desc().nullslast(), JobPosting.created_at.desc())
         stmt = stmt.offset(offset).limit(page_size)
-        items = list(self.db.scalars(stmt))
+        items = list(self.db.execute(stmt).unique().scalars())
 
         return items, total
 
@@ -138,7 +147,7 @@ class VacanteRepository:
         offset = (max(page, 1) - 1) * page_size
 
         stmt = stmt.order_by(JobPosting.created_at.asc()).offset(offset).limit(page_size)
-        items = list(self.db.scalars(stmt))
+        items = list(self.db.execute(stmt).unique().scalars())
 
         return items, total
 
