@@ -65,7 +65,34 @@ flutter run
 
 ### Todo junto con Docker Compose
 
-Ver [infra/README.md](infra/README.md).
+Levanta backend, frontend y base de datos con un solo comando, sin tener que correr `uvicorn`/`ng serve` cada vez.
+
+```bash
+cd infra/docker
+cp .env.example .env
+```
+
+Editá `infra/docker/.env` y agregá una línea con el mismo `DATABASE_URL` que tenés en `backend/.env`, para que el backend en Docker use la Supabase compartida (con los datos de prueba ya cargados) en vez de un Postgres local vacío:
+
+```
+DATABASE_URL=postgresql+psycopg://...   # copiá el valor real de backend/.env
+```
+
+```bash
+docker compose up -d --build
+```
+
+Abrí 👉 http://localhost — el backend queda en http://localhost:8000.
+
+| Comando | Qué hace |
+|---|---|
+| `docker compose up -d --build` | Construye y levanta todo (primera vez o tras cambiar código) |
+| `docker compose up -d` | Levanta sin reconstruir (siguientes veces) |
+| `docker compose down` | Para y elimina los contenedores |
+| `docker compose logs -f` | Ver logs en vivo |
+| `docker compose ps` | Ver estado de los contenedores |
+
+Más detalle en [infra/README.md](infra/README.md).
 
 ## Flujo de trabajo en Git
 
