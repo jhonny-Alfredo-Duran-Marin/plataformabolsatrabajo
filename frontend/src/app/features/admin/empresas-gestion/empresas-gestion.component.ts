@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Empresa } from '../../../core/models/empresa.models';
@@ -14,6 +14,7 @@ import { EmpresaService } from '../../../core/services/empresa.service';
 })
 export class EmpresasGestionComponent implements OnInit {
   private readonly empresaService = inject(EmpresaService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   empresas: Empresa[] = [];
   isLoading = false;
@@ -41,11 +42,13 @@ export class EmpresasGestionComponent implements OnInit {
       next: (data) => {
         this.empresas = data;
         this.isLoading = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isLoading = false;
         this.errorMessage =
           'No se pudieron cargar las empresas. Verifica la conexión con el servidor.';
+        this.cdr.markForCheck();
       },
     });
   }
@@ -82,10 +85,12 @@ export class EmpresasGestionComponent implements OnInit {
           this.showToast(
             `Notificaciones ${nuevoValor ? 'activadas' : 'desactivadas'} para "${empresa.razon_social}".`
           );
+          this.cdr.markForCheck();
         },
         error: () => {
           input.checked = !nuevoValor; // revertir en caso de error
           this.showToast('Error al actualizar permisos de notificación.', true);
+          this.cdr.markForCheck();
         },
       });
   }
@@ -102,10 +107,12 @@ export class EmpresasGestionComponent implements OnInit {
           this.showToast(
             `Postulaciones ${nuevoValor ? 'habilitadas' : 'inhabilitadas'} para "${empresa.razon_social}".`
           );
+          this.cdr.markForCheck();
         },
         error: () => {
           input.checked = !nuevoValor;
           this.showToast('Error al actualizar permisos de postulación.', true);
+          this.cdr.markForCheck();
         },
       });
   }
@@ -136,10 +143,12 @@ export class EmpresasGestionComponent implements OnInit {
           this.empresas[index] = updated;
         }
         this.showToast(`Empresa "${razon}" dada de baja lógicamente (historial conservado).`);
+        this.cdr.markForCheck();
       },
       error: () => {
         this.isProcessingAction = false;
         this.showToast('Error al dar de baja la empresa.', true);
+        this.cdr.markForCheck();
       },
     });
   }
@@ -152,9 +161,11 @@ export class EmpresasGestionComponent implements OnInit {
           this.empresas[index] = updated;
         }
         this.showToast(`Empresa "${empresa.razon_social}" reactivada con éxito.`);
+        this.cdr.markForCheck();
       },
       error: () => {
         this.showToast('Error al reactivar la empresa.', true);
+        this.cdr.markForCheck();
       },
     });
   }

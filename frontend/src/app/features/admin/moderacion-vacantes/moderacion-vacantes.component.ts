@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Vacante } from '../../../core/models/vacante.models';
@@ -19,6 +19,7 @@ import { VacanteService } from '../../../core/services/vacante.service';
 })
 export class ModeracionVacantesComponent implements OnInit {
   private readonly vacanteService = inject(VacanteService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   vacantes: Vacante[] = [];
   isLoading = false;
@@ -51,10 +52,12 @@ export class ModeracionVacantesComponent implements OnInit {
         this.total = data.total;
         this.totalPages = data.total_pages;
         this.isLoading = false;
+        this.cdr.markForCheck();
       },
       error: () => {
         this.isLoading = false;
         this.errorMessage = 'No se pudieron cargar las vacantes pendientes de revisión.';
+        this.cdr.markForCheck();
       },
     });
   }
@@ -72,10 +75,12 @@ export class ModeracionVacantesComponent implements OnInit {
         this.isProcessingAction = false;
         this._quitarDeLista(vacante.id);
         this.showToast(`Vacante "${vacante.title}" aprobada y publicada.`);
+        this.cdr.markForCheck();
       },
       error: () => {
         this.isProcessingAction = false;
         this.showToast('Error al aprobar la vacante.', true);
+        this.cdr.markForCheck();
       },
     });
   }
@@ -110,10 +115,12 @@ export class ModeracionVacantesComponent implements OnInit {
           this.cerrarModalRechazo();
           this._quitarDeLista(vacante.id);
           this.showToast(`Vacante "${vacante.title}" rechazada. Se notificó a la empresa.`);
+          this.cdr.markForCheck();
         },
         error: () => {
           this.isProcessingAction = false;
           this.showToast('Error al rechazar la vacante.', true);
+          this.cdr.markForCheck();
         },
       });
   }
