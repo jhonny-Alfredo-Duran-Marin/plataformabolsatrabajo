@@ -1,6 +1,6 @@
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, shareReplay } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../features/auth/auth.service';
 import {
@@ -73,11 +73,18 @@ export class VacanteService {
     });
   }
 
-  /** Obtiene las opciones de catálogo dinámicas para los filtros */
+  private filtrosCache$: Observable<FiltrosDisponibles> | null = null;
+
+  /** Obtiene las opciones de catálogo dinámicas para los filtros con caché en memoria */
   obtenerFiltrosDisponibles(): Observable<FiltrosDisponibles> {
-    return this.http.get<FiltrosDisponibles>(`${this.apiUrl}/filtros`, {
-      headers: this.headers(),
-    });
+    if (!this.filtrosCache$) {
+      this.filtrosCache$ = this.http
+        .get<FiltrosDisponibles>(`${this.apiUrl}/filtros`, {
+          headers: this.headers(),
+        })
+        .pipe(shareReplay(1));
+    }
+    return this.filtrosCache$;
   }
 
   /** Obtiene el detalle completo de una vacante */

@@ -1,3 +1,4 @@
+import time
 import uuid
 from decimal import Decimal
 from sqlalchemy import distinct, func, or_, select, update
@@ -5,6 +6,11 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.models.catalogo import FieldOfStudy, JobCategory
 from app.models.oferta import JobEducationPreference, JobPosting, JobSkill
+
+# Caché en memoria para catálogos y filtros dinámicos (5 minutos TTL)
+_FILTROS_CACHE: dict | None = None
+_FILTROS_CACHE_TIME: float = 0.0
+_CACHE_TTL_SECONDS: float = 300.0
 
 
 class VacanteRepository:
@@ -137,8 +143,12 @@ class VacanteRepository:
         self.db.commit()
 
     def obtener_filtros_disponibles(self) -> dict:
-        """Obtiene las opciones disponibles para los filtros de búsqueda."""
-        base_published = select(JobPosting).where(JobPosting.status == "published")
+        """Obtiene las opciones disponibles para los filtros de búsqueda con caché."""
+        global _FILTROS_CACHE, _FILTROS_CACHE_TIME
+
+        ahora = time.time()
+        if _FILTROS_CACHE is not None and (ahora - _FILTROS_CACHE_TIME) < _CACHE_TTL_SECONDS:
+            return _FILTROS_CACHE
 
         ciudades = list(
             self.db.scalars(
@@ -172,7 +182,6 @@ class VacanteRepository:
             )
         )
 
-        # Categorías y Carreras
         categorias = list(
             self.db.scalars(
                 select(JobCategory).where(JobCategory.is_active.is_(True)).order_by(JobCategory.name)
@@ -195,7 +204,7 @@ class VacanteRepository:
         salario_min = salarios[0] if salarios else None
         salario_max = salarios[1] if salarios else None
 
-        return {
+        resultado = {
             "ciudades": [c for c in ciudades if c],
             "modalidades": [m for m in modalidades if m],
             "jornadas": [j for j in jornadas if j],
@@ -205,4 +214,8 @@ class VacanteRepository:
             "salario_min_disponible": salario_min,
             "salario_max_disponible": salario_max,
         }
+
+        _FILTROS_CACHE = resultado
+        _FILTROS_CACHE_TIME = ahora
+        return resultado
 
