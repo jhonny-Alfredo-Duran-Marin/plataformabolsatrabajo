@@ -54,7 +54,7 @@
           <div class="input-wrapper">
             <span class="input-icon">🔒</span>
             <input
-              type="password"
+              [type]="mostrarPassword() ? 'text' : 'password'"
               id="password"
               name="password"
               placeholder="Mínimo 8 caracteres"
@@ -62,7 +62,12 @@
               (ngModelChange)="password.set($event)"
               autocomplete="current-password"
             />
-            <span class="input-icon-right">👁</span>
+            <button
+              type="button"
+              class="input-icon-right input-icon-right--btn"
+              (click)="toggleMostrarPassword()"
+              [attr.aria-label]="mostrarPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            >{{ mostrarPassword() ? '🙈' : '👁' }}</button>
           </div>
         </div>
 

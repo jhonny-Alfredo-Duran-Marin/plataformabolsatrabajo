@@ -19,6 +19,11 @@ export class Login {
   readonly password = signal('');
   readonly cargando = signal(false);
   readonly error = signal('');
+  readonly mostrarPassword = signal(false);
+
+  toggleMostrarPassword(): void {
+    this.mostrarPassword.update((v) => !v);
+  }
 
   ingresar(): void {
     if (this.cargando()) return;
