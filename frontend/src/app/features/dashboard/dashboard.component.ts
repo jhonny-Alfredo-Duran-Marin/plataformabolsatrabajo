@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
@@ -14,6 +14,7 @@ import { VacanteService } from '../../core/services/vacante.service';
 export class DashboardComponent implements OnInit {
   auth = inject(AuthService);
   private readonly vacanteService = inject(VacanteService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   role = computed(() => this.auth.rol() || '—');
   isAdmin = computed(() => this.auth.rol() === 'platform_admin' || this.auth.rol() === 'moderator');
@@ -26,10 +27,16 @@ export class DashboardComponent implements OnInit {
   ngOnInit(): void {
     if (this.isEmpresa()) {
       this.vacanteService.listarMisVacantes({ estado: 'published', page: 1, page_size: 1 }).subscribe({
-        next: (data) => (this.vacantesPublicadas = data.total),
+        next: (data) => {
+          this.vacantesPublicadas = data.total;
+          this.cdr.markForCheck();
+        },
       });
       this.vacanteService.listarMisVacantes({ estado: 'pending_review', page: 1, page_size: 1 }).subscribe({
-        next: (data) => (this.vacantesEnRevision = data.total),
+        next: (data) => {
+          this.vacantesEnRevision = data.total;
+          this.cdr.markForCheck();
+        },
       });
     }
   }
