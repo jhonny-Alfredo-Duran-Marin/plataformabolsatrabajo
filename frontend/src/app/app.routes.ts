@@ -67,11 +67,25 @@ export const routes: Routes = [
         path: 'bitacora',
         loadComponent: () => import('./features/admin/bitacora/bitacora.component').then((m) => m.BitacoraComponent),
       },
+      {
+        path: 'seleccion',
+        loadComponent: () =>
+          import('./features/seleccion/tablero-seleccion/tablero-seleccion.component').then(
+            (m) => m.TableroSeleccionComponent,
+          ),
+      },
     ],
   },
   {
     path: 'dashboard',
     loadComponent: () => import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+  },
+  {
+    path: 'seleccion',
+    loadComponent: () =>
+      import('./features/seleccion/tablero-seleccion/tablero-seleccion.component').then(
+        (m) => m.TableroSeleccionComponent,
+      ),
   },
   {
     path: 'perfil/visibilidad',

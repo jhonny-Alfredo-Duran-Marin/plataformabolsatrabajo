@@ -1,0 +1,440 @@
+<div class="seleccion-page">
+
+  <!-- Barra Superior de Control de la Vacante -->
+  <header class="pipeline-header">
+    <div class="header-left">
+      <div class="brand-tag">Módulo de Reclutamiento y Selección</div>
+      <h1>Pipeline del Proceso de Selección</h1>
+      <p class="subtitle">Gestiona las fases de evaluación, avance de candidatos y notas internas por vacante.</p>
+    </div>
+
+    <div class="header-actions">
+      <div class="vacancy-selector-box">
+        <label for="selectVacante">Oferta de Empleo:</label>
+        <select id="selectVacante" [(ngModel)]="vacanteSeleccionadaId" (change)="onCambiarVacante()"
+          class="vacancy-select">
+          @for (vac of vacantes; track vac.id) {
+          <option [value]="vac.id">{{ vac.title }} ({{ vac.company.trade_name || vac.company.legal_name }})</option>
+          }
+        </select>
+      </div>
+
+      <button class="btn-config-stages" (click)="abrirModalConfigEtapas()">
+        ⚙ Configurar Etapas
+      </button>
+    </div>
+  </header>
+
+  <!-- Métricas Rápidas -->
+  @if (tablero) {
+  <div class="pipeline-summary-bar">
+    <div class="summary-item">
+      <span class="label">Puesto:</span>
+      <span class="value">{{ tablero.job_title }}</span>
+    </div>
+    <div class="summary-item">
+      <span class="label">Empresa:</span>
+      <span class="value">{{ tablero.company_name }}</span>
+    </div>
+    <div class="summary-item">
+      <span class="label">Total Postulantes:</span>
+      <span class="value badge-count">{{ tablero.total_candidatos }}</span>
+    </div>
+    <div class="summary-item">
+      <span class="label">Etapas Activas:</span>
+      <span class="value">{{ tablero.columnas.length }}</span>
+    </div>
+  </div>
+  }
+
+  <!-- TABLERO KANBAN DE ETAPAS -->
+  <main class="pipeline-board-container">
+    @if (isLoading) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Cargando etapas y candidatos...</p>
+    </div>
+    }
+
+    @if (errorMessage && !isLoading) {
+    <div class="error-banner">
+      <p>{{ errorMessage }}</p>
+      <button class="btn-retry" (click)="onCambiarVacante()">Reintentar</button>
+    </div>
+    }
+
+    @if (!isLoading && !errorMessage && tablero) {
+    <div class="kanban-board">
+      @for (col of tablero.columnas; track col.stage.id) {
+      <div class="kanban-column" [class.terminal-col]="col.stage.is_terminal">
+
+        <!-- Encabezado de la Columna / Etapa -->
+        <div class="column-header">
+          <div class="stage-info">
+            <span class="stage-number">{{ col.stage.stage_number }}</span>
+            <h3 class="stage-title">{{ col.stage.name }}</h3>
+          </div>
+          <div class="stage-badges">
+            <span class="candidates-count">{{ col.candidatos.length }}</span>
+            @if (col.stage.is_terminal) {
+            <span class="badge-terminal" title="Etapa final de contratación">✓ Final</span>
+            }
+          </div>
+        </div>
+
+        <!-- Lista de Tarjetas de Candidatos en esta Etapa -->
+        <div class="column-cards">
+          @for (candidato of col.candidatos; track candidato.application_id) {
+          <div class="candidate-card">
+
+            <div class="card-top">
+              <div class="candidate-avatar">
+                {{ candidato.first_name.charAt(0).toUpperCase() }}
+              </div>
+              <div class="candidate-info">
+                <h4 class="candidate-name">{{ candidato.first_name }} {{ candidato.last_name }}</h4>
+                <p class="candidate-headline">{{ candidato.professional_headline || 'Egresado UAGRM' }}</p>
+                <span class="applied-date">Postuló el {{ candidato.applied_at | date:'dd/MM/yyyy' }}</span>
+              </div>
+            </div>
+
+            <!-- Badges / Indicadores -->
+            <div class="card-meta">
+              @if (candidato.city) {
+              <span class="meta-tag">📍 {{ candidato.city }}</span>
+              }
+              <button class="btn-meta-notes" (click)="abrirFichaCandidato(candidato, 'notas')">
+                💬 {{ candidato.notas_count }} {{ candidato.notas_count === 1 ? 'nota' : 'notas' }}
+              </button>
+            </div>
+
+            <!-- Botones de Acción Rápida -->
+            <div class="card-actions">
+              <button class="btn-action btn-move" (click)="abrirModalMover(candidato)" title="Avanzar a otra etapa">
+                ➔ Mover
+              </button>
+              <button class="btn-action btn-discard" (click)="abrirModalDescartar(candidato)"
+                title="Descartar candidato">
+                ✕ Descartar
+              </button>
+              <button class="btn-action btn-details" (click)="abrirFichaCandidato(candidato, 'info')"
+                title="Ver ficha completa">
+                👁 Ficha
+              </button>
+            </div>
+
+          </div>
+          }
+
+          @if (col.candidatos.length === 0) {
+          <div class="empty-column">
+            <span>Sin candidatos en esta etapa</span>
+          </div>
+          }
+        </div>
+
+      </div>
+      }
+    </div>
+
+    <!-- SECCIÓN DE CANDIDATOS DESCARTADOS -->
+    @if (tablero.candidatos_descartados.length > 0) {
+    <section class="discarded-section">
+      <div class="discarded-header">
+        <h3>⛔ Candidatos Descartados ({{ tablero.candidatos_descartados.length }})</h3>
+        <span class="rule-hint">Regla: Los candidatos descartados no pueden avanzar en este proceso.</span>
+      </div>
+
+      <div class="discarded-grid">
+        @for (desc of tablero.candidatos_descartados; track desc.application_id) {
+        <div class="discarded-card">
+          <div class="desc-info">
+            <strong>{{ desc.first_name }} {{ desc.last_name }}</strong>
+            <span>{{ desc.professional_headline || 'Egresado' }} • Postuló: {{ desc.applied_at | date:'dd/MM/yyyy'
+              }}</span>
+          </div>
+          <div class="desc-actions">
+            <span class="badge-rejected">Descartado</span>
+            <button class="btn-history-small" (click)="abrirFichaCandidato(desc, 'historial')">
+              Ver Historial
+            </button>
+          </div>
+        </div>
+        }
+      </div>
+    </section>
+    }
+    }
+  </main>
+
+  <!-- MODAL 1: MOVER CANDIDATO DE ETAPA -->
+  @if (showModalMover && candidatoAMover) {
+  <div class="modal-backdrop" (click)="showModalMover = false">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Avanzar de Etapa</h3>
+        <button class="btn-close" (click)="showModalMover = false">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <p class="modal-subtitle">
+          Mover a <strong>{{ candidatoAMover.first_name }} {{ candidatoAMover.last_name }}</strong> en el proceso de
+          selección.
+        </p>
+
+        <div class="form-group">
+          <label>Etapa de Destino:</label>
+          <select [(ngModel)]="etapaDestinoId" class="modal-select">
+            @for (col of tablero?.columnas || []; track col.stage.id) {
+            <option [value]="col.stage.id">
+              Etapa {{ col.stage.stage_number }}: {{ col.stage.name }} {{ col.stage.is_terminal ? '(Final)' : '' }}
+            </option>
+            }
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Observación / Justificación del Avance (Opcional):</label>
+          <textarea [(ngModel)]="observacionMovimiento"
+            placeholder="Ej: Aprobó exitosamente la entrevista técnica con puntaje destacado..." rows="3"
+            class="modal-textarea"></textarea>
+        </div>
+
+        <div class="info-alert">
+          ℹ El sistema registrará la auditoría en el historial y enviará una notificación automática al egresado.
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="showModalMover = false">Cancelar</button>
+        <button class="btn-primary" [disabled]="isSubmittingMover" (click)="confirmarMoverCandidato()">
+          {{ isSubmittingMover ? 'Guardando...' : 'Confirmar Avance' }}
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- MODAL 2: DESCARTAR CANDIDATO -->
+  @if (showModalDescartar && candidatoADescartar) {
+  <div class="modal-backdrop" (click)="showModalDescartar = false">
+    <div class="modal-card danger-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Descartar Candidato</h3>
+        <button class="btn-close" (click)="showModalDescartar = false">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <p class="modal-subtitle">
+          ¿Estás seguro de descartar a <strong>{{ candidatoADescartar.first_name }} {{ candidatoADescartar.last_name
+            }}</strong>?
+        </p>
+
+        <div class="form-group">
+          <label>Motivo del Descarte (Opcional):</label>
+          <textarea [(ngModel)]="motivoDescarte"
+            placeholder="Ej: No cumple con los años requeridos de experiencia en el área..." rows="3"
+            class="modal-textarea"></textarea>
+        </div>
+
+        <div class="warning-alert">
+          ⚠️ <strong>Regla de negocio:</strong> Una vez descartado, el candidato no podrá volver a avanzar en este
+          proceso de selección.
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="showModalDescartar = false">Cancelar</button>
+        <button class="btn-danger" [disabled]="isSubmittingDescartar" (click)="confirmarDescartarCandidato()">
+          {{ isSubmittingDescartar ? 'Descartando...' : 'Descartar Candidato' }}
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- MODAL 3: CONFIGURAR ETAPAS DEL PROCESO -->
+  @if (showModalConfigEtapas) {
+  <div class="modal-backdrop" (click)="showModalConfigEtapas = false">
+    <div class="modal-card large" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Configurar Etapas del Proceso de Selección</h3>
+        <button class="btn-close" (click)="showModalConfigEtapas = false">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <p class="modal-subtitle">
+          Define y ordena las fases por las que pasarán los candidatos en esta vacante.
+        </p>
+
+        <div class="stages-config-list">
+          @for (etapa of etapasEditables; track $index) {
+          <div class="stage-edit-row">
+            <span class="stage-num-badge">{{ etapa.stage_number }}</span>
+            <input type="text" [(ngModel)]="etapa.name" placeholder="Nombre de la etapa (ej. Entrevista RRHH)"
+              class="input-stage-name" />
+            <input type="text" [(ngModel)]="etapa.description" placeholder="Descripción breve..."
+              class="input-stage-desc" />
+            <label class="checkbox-terminal">
+              <input type="checkbox" [(ngModel)]="etapa.is_terminal" />
+              ¿Etapa Final?
+            </label>
+            <button class="btn-remove-stage" (click)="eliminarEtapa($index)" title="Eliminar etapa">🗑</button>
+          </div>
+          }
+        </div>
+
+        <button class="btn-add-stage" (click)="agregarNuevaEtapa()">
+          + Agregar Otra Etapa
+        </button>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="showModalConfigEtapas = false">Cancelar</button>
+        <button class="btn-primary" [disabled]="isSubmittingEtapas" (click)="guardarConfiguracionEtapas()">
+          {{ isSubmittingEtapas ? 'Guardando...' : 'Guardar Configuración' }}
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- MODAL 4: FICHA DEL CANDIDATO, HISTORIAL Y NOTAS INTERNAS -->
+  @if (showModalFicha && candidatoFicha) {
+  <div class="modal-backdrop" (click)="showModalFicha = false">
+    <div class="modal-card large" (click)="$event.stopPropagation()">
+
+      <div class="modal-header">
+        <div class="candidate-header-profile">
+          <div class="candidate-avatar large">
+            {{ candidatoFicha.first_name.charAt(0).toUpperCase() }}
+          </div>
+          <div>
+            <h3>{{ candidatoFicha.first_name }} {{ candidatoFicha.last_name }}</h3>
+            <p>{{ candidatoFicha.professional_headline || 'Egresado UAGRM' }} • Estado: <strong>{{
+                candidatoFicha.current_status }}</strong></p>
+          </div>
+        </div>
+        <button class="btn-close" (click)="showModalFicha = false">✕</button>
+      </div>
+
+      <!-- Pestañas de la Ficha -->
+      <div class="ficha-tabs">
+        <button class="tab-btn" [class.active]="tabActivaFicha === 'info'" (click)="tabActivaFicha = 'info'">
+          📋 Información
+        </button>
+        <button class="tab-btn" [class.active]="tabActivaFicha === 'historial'" (click)="tabActivaFicha = 'historial'">
+          🕒 Historial de Etapas ({{ historialCandidato.length }})
+        </button>
+        <button class="tab-btn" [class.active]="tabActivaFicha === 'notas'" (click)="tabActivaFicha = 'notas'">
+          🔒 Notas Internas ({{ notasCandidato.length }})
+        </button>
+      </div>
+
+      <div class="modal-body">
+        @if (isLoadingFicha) {
+        <div class="loading-state">
+          <div class="spinner"></div>
+        </div>
+        }
+
+        @if (!isLoadingFicha) {
+        <!-- TAB 1: INFORMACIÓN GENERAL -->
+        @if (tabActivaFicha === 'info') {
+        <div class="ficha-info-panel">
+          <div class="info-grid">
+            <div><strong>Email:</strong> {{ candidatoFicha.email || 'No especificado' }}</div>
+            <div><strong>Teléfono:</strong> {{ candidatoFicha.phone || 'No especificado' }}</div>
+            <div><strong>Ciudad:</strong> {{ candidatoFicha.city || 'Santa Cruz' }}</div>
+            <div><strong>Fecha de Postulación:</strong> {{ candidatoFicha.applied_at | date:'dd/MM/yyyy HH:mm' }}</div>
+          </div>
+
+          @if (candidatoFicha.cover_letter) {
+          <div class="cover-letter-box">
+            <h4>Carta de Presentación:</h4>
+            <p>{{ candidatoFicha.cover_letter }}</p>
+          </div>
+          }
+        </div>
+        }
+
+        <!-- TAB 2: HISTORIAL DE AUDITORÍA -->
+        @if (tabActivaFicha === 'historial') {
+        <div class="timeline-container">
+          @for (hist of historialCandidato; track hist.id) {
+          <div class="timeline-item">
+            <div class="timeline-dot" [class.passed]="hist.result === 'passed'"
+              [class.rejected]="hist.result === 'rejected'"></div>
+            <div class="timeline-content">
+              <div class="timeline-header">
+                <strong>{{ hist.stage_name }}</strong>
+                <span class="timeline-date">{{ hist.entered_at | date:'dd/MM/yyyy HH:mm' }}</span>
+              </div>
+              <p class="timeline-user">Registrado por: <em>{{ hist.changed_by_name || 'Sistema' }}</em></p>
+              @if (hist.notes) {
+              <p class="timeline-notes">📝 "{{ hist.notes }}"</p>
+              }
+            </div>
+          </div>
+          }
+
+          @if (historialCandidato.length === 0) {
+          <p class="text-muted">No se registran transiciones de etapa previas.</p>
+          }
+        </div>
+        }
+
+        <!-- TAB 3: NOTAS INTERNAS PRIVADAS -->
+        @if (tabActivaFicha === 'notas') {
+        <div class="notas-panel">
+
+          <!-- Formulario Nueva Nota -->
+          <div class="add-note-box">
+            <label>Agregar Observación Privada:</label>
+            <textarea [(ngModel)]="nuevaNotaTexto"
+              placeholder="Escribe comentarios de la entrevista, evaluación o impresiones del equipo..." rows="3"
+              class="note-textarea"></textarea>
+            <button class="btn-save-note" [disabled]="isSubmittingNota || !nuevaNotaTexto.trim()"
+              (click)="guardarNotaInterna()">
+              {{ isSubmittingNota ? 'Guardando...' : 'Guardar Nota Interna' }}
+            </button>
+          </div>
+
+          <!-- Lista de Notas Existentes -->
+          <div class="notes-list">
+            @for (nota of notasCandidato; track nota.id) {
+            <div class="note-card">
+              <div class="note-header">
+                <span class="note-author">👤 {{ nota.author_name }}</span>
+                <span class="note-time">{{ nota.created_at | date:'dd/MM/yyyy HH:mm' }}</span>
+              </div>
+              <p class="note-body">{{ nota.content }}</p>
+            </div>
+            }
+
+            @if (notasCandidato.length === 0) {
+            <p class="empty-notes-hint">Aún no hay observaciones internas registradas para este postulante.</p>
+            }
+          </div>
+
+        </div>
+        }
+        }
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="showModalFicha = false">Cerrar Ficha</button>
+      </div>
+
+    </div>
+  </div>
+  }
+
+  <!-- Toast -->
+  @if (toastMessage) {
+  <div class="toast-notification">
+    {{ toastMessage }}
+  </div>
+  }
+
+</div>

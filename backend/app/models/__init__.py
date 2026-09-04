@@ -16,10 +16,20 @@ from app.models.catalogo import FieldOfStudy, JobCategory, Language, Skill
 from app.models.empresa import Company, CompanyMember, CompanyVerification, Sector
 from app.models.oferta import JobEducationPreference, JobPosting, JobSkill
 from app.models.seguridad import AuditLog, LoginAttempt
+from app.models.seleccion import (
+    Application,
+    ApplicationNote,
+    ApplicationStageHistory,
+    JobSelectionStage,
+    Notification,
+)
 from app.models.usuario import AppUser, Role, UserRole
 
 __all__ = [
     "AppUser",
+    "Application",
+    "ApplicationNote",
+    "ApplicationStageHistory",
     "AuditLog",
     "CandidateEducation",
     "CandidateLanguage",
@@ -33,9 +43,11 @@ __all__ = [
     "JobCategory",
     "JobEducationPreference",
     "JobPosting",
+    "JobSelectionStage",
     "JobSkill",
     "Language",
     "LoginAttempt",
+    "Notification",
     "Role",
     "Sector",
     "Skill",
