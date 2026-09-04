@@ -5,8 +5,8 @@ import { AuthService } from '../../auth/auth.service';
 
 interface ItemMenu {
   ruta: string;
-  icono: string;
   etiqueta: string;
+  tipoIcono: 'dashboard' | 'roles' | 'validacion' | 'empresas' | 'bitacora';
   exacta: boolean;
 }
 
@@ -23,11 +23,11 @@ export class AdminLayout {
   readonly correoInicial = (this.auth.correo() || 'A').charAt(0).toUpperCase();
 
   readonly itemsMenu: ItemMenu[] = [
-    { ruta: '/admin', icono: '▦', etiqueta: 'Dashboard', exacta: true },
-    { ruta: '/admin/roles', icono: '◉', etiqueta: 'Gestión de roles', exacta: false },
-    { ruta: '/admin/validacion-egresados', icono: '✓', etiqueta: 'Validación de egresados', exacta: false },
-    { ruta: '/admin/empresas', icono: '🏢', etiqueta: 'Gestión de empresas', exacta: false },
-    { ruta: '/admin/bitacora', icono: '☰', etiqueta: 'Bitácora del sistema', exacta: false },
+    { ruta: '/admin', tipoIcono: 'dashboard', etiqueta: 'Dashboard', exacta: true },
+    { ruta: '/admin/roles', tipoIcono: 'roles', etiqueta: 'Gestión de roles', exacta: false },
+    { ruta: '/admin/validacion-egresados', tipoIcono: 'validacion', etiqueta: 'Validación de egresados', exacta: false },
+    { ruta: '/admin/empresas', tipoIcono: 'empresas', etiqueta: 'Gestión de empresas', exacta: false },
+    { ruta: '/admin/bitacora', tipoIcono: 'bitacora', etiqueta: 'Bitácora del sistema', exacta: false },
   ];
 
   cerrarSesion(): void {

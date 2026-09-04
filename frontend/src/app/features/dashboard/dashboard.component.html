@@ -9,17 +9,20 @@
           <path d="M18 24L24 18L30 24L24 30L18 24Z" fill="url(#g1)"/>
           <defs>
             <linearGradient id="g1" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
-              <stop stop-color="#667eea"/><stop offset="1" stop-color="#764ba2"/>
+              <stop stop-color="#1e3a8a"/><stop offset="1" stop-color="#2563eb"/>
             </linearGradient>
           </defs>
         </svg>
       </div>
-      <span class="topbar__name">EGRESA</span>
+      <div class="brand-text-box">
+        <span class="topbar__name">EGRESA</span>
+        <span class="topbar__subname">UAGRM · FICCT</span>
+      </div>
     </div>
 
     <div class="topbar__actions">
       <span class="role-badge role-badge--{{ role().toLowerCase() }}">{{ role() }}</span>
-      <button id="btn-logout" class="btn-logout" (click)="auth.cerrarSesion()">
+      <button id="btn-logout" class="btn-logout" (click)="auth.cerrarSesion()" title="Cerrar sesión">
         <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
           <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h6a1 1 0 010 2H5v12h5a1 1 0 010 2H4a1 1 0 01-1-1V3zm12.293 4.293a1 1 0 011.414 0l2 2a1 1 0 010 1.414l-2 2a1 1 0 01-1.414-1.414L16.586 11H9a1 1 0 110-2h7.586l-1.293-1.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
         </svg>
@@ -35,31 +38,80 @@
     @if (isEgresado()) {
       <section class="dashboard-panel fade-in">
         <div class="panel-header">
-          <span class="panel-header__emoji">🎓</span>
+          <div class="panel-header__icon-box">
+            <svg class="panel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 14l9-5-9-5-9 5 9 5z"/>
+              <path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
+            </svg>
+          </div>
           <div>
-            <h1 class="panel-header__title">¡Bienvenido a EGRESA!</h1>
-            <p class="panel-header__sub">Panel de Egresado y Estudiante — Gestiona tu perfil y postúlate a vacantes disponibles.</p>
+            <div class="module-indicator">PORTAL DEL EGRESADO Y ESTUDIANTE</div>
+            <h1 class="panel-header__title">Panel de Control</h1>
+            <p class="panel-header__sub">Gestiona tu perfil profesional, supervisa tus postulaciones y consulta oportunidades laborales de la UAGRM.</p>
           </div>
         </div>
-        <div class="card-grid">
-          <a routerLink="/postulaciones" class="stat-card stat-card--blue" style="text-decoration: none; cursor: pointer;">
-            <span class="stat-card__num">📋</span>
-            <span class="stat-card__label">Mis Postulaciones</span>
-          </a>
-          <div class="stat-card stat-card--purple">
-            <span class="stat-card__num">0%</span>
-            <span class="stat-card__label">Perfil completado</span>
+
+        <!-- Módulos organizados según especificación -->
+        <div class="modules-container">
+
+          <!-- Módulo 5.1.5: Postulación y Seguimiento -->
+          <div class="module-card">
+            <div class="module-card__header">
+              <span class="module-tag">Módulo 5.1.5</span>
+              <h2 class="module-title">Postulación y Seguimiento</h2>
+            </div>
+            <p class="module-desc">Supervisa en tiempo real el avance de cada una de tus solicitudes, etapas e historial de cambios.</p>
+            <div class="module-actions">
+              <a routerLink="/postulaciones" class="btn btn--primary">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                </svg>
+                <span>Mis Postulaciones y Etapas (HU-15)</span>
+              </a>
+            </div>
           </div>
-          <div class="stat-card stat-card--green">
-            <span class="stat-card__num">0</span>
-            <span class="stat-card__label">Entrevistas pendientes</span>
+
+          <!-- Módulo 5.1.3: Perfil Profesional y Currículum -->
+          <div class="module-card">
+            <div class="module-card__header">
+              <span class="module-tag">Módulo 5.1.3</span>
+              <h2 class="module-title">Perfil Profesional y Currículum</h2>
+            </div>
+            <p class="module-desc">Mantén actualizada tu formación académica, experiencia, habilidades y controla la privacidad de tus datos.</p>
+            <div class="module-actions">
+              <a routerLink="/perfil/profesional" class="btn btn--outline">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+                <span>Mi Perfil Profesional</span>
+              </a>
+              <a routerLink="/perfil/visibilidad" class="btn btn--outline">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+                <span>Visibilidad y Privacidad</span>
+              </a>
+            </div>
           </div>
-        </div>
-        <div class="action-area">
-          <a routerLink="/postulaciones" class="btn btn--primary">📋 Seguimiento de Postulaciones</a>
-          <a routerLink="/vacantes" class="btn btn--outline">Explorar vacantes</a>
-          <a routerLink="/perfil/profesional" class="btn btn--outline">Ver mi perfil</a>
-          <a routerLink="/perfil/visibilidad" class="btn btn--outline">Visibilidad del perfil</a>
+
+          <!-- Módulo 5.1.4: Búsqueda y Gestión de Vacantes -->
+          <div class="module-card">
+            <div class="module-card__header">
+              <span class="module-tag">Módulo 5.1.4</span>
+              <h2 class="module-title">Búsqueda de Vacantes</h2>
+            </div>
+            <p class="module-desc">Explora las ofertas laborales publicadas por empresas aliadas autorizadas por la universidad.</p>
+            <div class="module-actions">
+              <a routerLink="/vacantes" class="btn btn--outline">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                <span>Explorar Vacantes</span>
+              </a>
+            </div>
+          </div>
+
         </div>
       </section>
     }
@@ -68,61 +120,122 @@
     @if (isEmpresa()) {
       <section class="dashboard-panel fade-in">
         <div class="panel-header">
-          <span class="panel-header__emoji">🏢</span>
+          <div class="panel-header__icon-box panel-header__icon-box--purple">
+            <svg class="panel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+            </svg>
+          </div>
           <div>
-            <h1 class="panel-header__title">¡Bienvenido a EGRESA!</h1>
-            <p class="panel-header__sub">Panel de Empresa — Gestiona tus vacantes y revisa candidatos calificados.</p>
+            <div class="module-indicator">PORTAL EMPRESARIAL</div>
+            <h1 class="panel-header__title">Panel de Reclutamiento</h1>
+            <p class="panel-header__sub">Gestiona convocatorias, evalúa candidatos y administra el embudo de selección de tu organización.</p>
           </div>
         </div>
-        <div class="card-grid">
-          <a routerLink="/seleccion" class="stat-card stat-card--blue" style="text-decoration: none; cursor: pointer;">
-            <span class="stat-card__num">📊</span>
-            <span class="stat-card__label">Proceso de Selección</span>
-          </a>
-          <div class="stat-card stat-card--purple">
-            <span class="stat-card__num">0</span>
-            <span class="stat-card__label">Postulantes recibidos</span>
+
+        <div class="modules-container">
+
+          <!-- Módulo 5.1.6: Proceso de Selección -->
+          <div class="module-card module-card--highlight">
+            <div class="module-card__header">
+              <span class="module-tag module-tag--primary">Módulo 5.1.6</span>
+              <h2 class="module-title">Proceso de Selección & Pipeline</h2>
+            </div>
+            <p class="module-desc">Configura las etapas por vacante, revisa postulantes en el tablero Kanban, avanza candidatos o regístrales notas internas.</p>
+            <div class="module-actions">
+              <a routerLink="/seleccion" class="btn btn--primary">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/>
+                </svg>
+                <span>Gestionar Candidatos y Etapas (HU-17)</span>
+              </a>
+            </div>
           </div>
-          <div class="stat-card stat-card--green">
-            <span class="stat-card__num">0</span>
-            <span class="stat-card__label">Entrevistas programadas</span>
+
+          <!-- Módulo 5.1.4: Gestión de Vacantes -->
+          <div class="module-card">
+            <div class="module-card__header">
+              <span class="module-tag">Módulo 5.1.4</span>
+              <h2 class="module-title">Gestión de Vacantes</h2>
+            </div>
+            <p class="module-desc">Crea nuevas ofertas laborales dirigidas a titulados de la universidad con requisitos y condiciones claras.</p>
+            <div class="module-actions">
+              <a routerLink="/vacantes/crear" class="btn btn--outline">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                </svg>
+                <span>Publicar Vacante (HU-10)</span>
+              </a>
+            </div>
           </div>
-        </div>
-        <div class="action-area">
-          <a routerLink="/vacantes/crear" class="btn btn--primary">Publicar vacante</a>
-          <a routerLink="/seleccion" class="btn btn--outline">📊 Gestionar Candidatos</a>
+
         </div>
       </section>
     }
-
 
     <!-- Panel de Administrador -->
     @if (isAdmin()) {
       <section class="dashboard-panel fade-in">
         <div class="panel-header">
-          <span class="panel-header__emoji">⚙️</span>
+          <div class="panel-header__icon-box panel-header__icon-box--red">
+            <svg class="panel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+            </svg>
+          </div>
           <div>
-            <h1 class="panel-header__title">¡Bienvenido a EGRESA!</h1>
-            <p class="panel-header__sub">Panel de Administración — Supervisión institucional de la plataforma EGRESA – UAGRM.</p>
+            <div class="module-indicator">ADMINISTRACIÓN UNIVERSITARIA</div>
+            <h1 class="panel-header__title">Supervisión Institucional</h1>
+            <p class="panel-header__sub">Validación de títulos, autorización de empresas y control de seguridad del sistema.</p>
           </div>
         </div>
-        <div class="card-grid">
-          <div class="stat-card stat-card--blue">
-            <span class="stat-card__num">0</span>
-            <span class="stat-card__label">Egresados pendientes</span>
+
+        <div class="modules-container">
+
+          <!-- Módulo 5.1.2: Validación Institucional -->
+          <div class="module-card">
+            <div class="module-card__header">
+              <span class="module-tag">Módulo 5.1.2</span>
+              <h2 class="module-title">Validación Institucional</h2>
+            </div>
+            <p class="module-desc">Contrasta egresados con los registros académicos de la universidad y autoriza empresas para publicar vacantes.</p>
+            <div class="module-actions">
+              <a routerLink="/admin/validacion-egresados" class="btn btn--primary">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>Validar Egresados (HU-04)</span>
+              </a>
+              <a routerLink="/admin/empresas" class="btn btn--outline">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                </svg>
+                <span>Gestión de Empresas (HU-06)</span>
+              </a>
+            </div>
           </div>
-          <div class="stat-card stat-card--purple">
-            <span class="stat-card__num">0</span>
-            <span class="stat-card__label">Empresas por validar</span>
+
+          <!-- Módulo 5.1.1: Usuarios, Roles y Seguridad -->
+          <div class="module-card">
+            <div class="module-card__header">
+              <span class="module-tag">Módulo 5.1.1</span>
+              <h2 class="module-title">Usuarios, Roles y Seguridad</h2>
+            </div>
+            <p class="module-desc">Controla los roles de acceso a la plataforma y supervisa la bitácora de operaciones críticas.</p>
+            <div class="module-actions">
+              <a routerLink="/admin/roles" class="btn btn--outline">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                </svg>
+                <span>Gestión de Roles (HU-03)</span>
+              </a>
+              <a routerLink="/admin/bitacora" class="btn btn--outline">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <span>Bitácora del Sistema (HU-37)</span>
+              </a>
+            </div>
           </div>
-          <div class="stat-card stat-card--orange">
-            <span class="stat-card__num">0</span>
-            <span class="stat-card__label">Denuncias activas</span>
-          </div>
-        </div>
-        <div class="action-area">
-          <a routerLink="/admin/validacion-egresados" class="btn btn--primary">Validar egresados</a>
-          <a routerLink="/admin/bitacora" class="btn btn--outline">Ver bitácora</a>
+
         </div>
       </section>
     }
