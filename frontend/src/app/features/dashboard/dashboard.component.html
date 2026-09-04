@@ -42,10 +42,10 @@
           </div>
         </div>
         <div class="card-grid">
-          <div class="stat-card stat-card--blue">
-            <span class="stat-card__num">0</span>
-            <span class="stat-card__label">Postulaciones activas</span>
-          </div>
+          <a routerLink="/postulaciones" class="stat-card stat-card--blue" style="text-decoration: none; cursor: pointer;">
+            <span class="stat-card__num">📋</span>
+            <span class="stat-card__label">Mis Postulaciones</span>
+          </a>
           <div class="stat-card stat-card--purple">
             <span class="stat-card__num">0%</span>
             <span class="stat-card__label">Perfil completado</span>
@@ -56,7 +56,8 @@
           </div>
         </div>
         <div class="action-area">
-          <a routerLink="/vacantes" class="btn btn--primary">Explorar vacantes</a>
+          <a routerLink="/postulaciones" class="btn btn--primary">📋 Seguimiento de Postulaciones</a>
+          <a routerLink="/vacantes" class="btn btn--outline">Explorar vacantes</a>
           <a routerLink="/perfil/profesional" class="btn btn--outline">Ver mi perfil</a>
           <a routerLink="/perfil/visibilidad" class="btn btn--outline">Visibilidad del perfil</a>
         </div>
@@ -74,10 +75,10 @@
           </div>
         </div>
         <div class="card-grid">
-          <div class="stat-card stat-card--blue">
-            <span class="stat-card__num">0</span>
-            <span class="stat-card__label">Vacantes publicadas</span>
-          </div>
+          <a routerLink="/seleccion" class="stat-card stat-card--blue" style="text-decoration: none; cursor: pointer;">
+            <span class="stat-card__num">📊</span>
+            <span class="stat-card__label">Proceso de Selección</span>
+          </a>
           <div class="stat-card stat-card--purple">
             <span class="stat-card__num">0</span>
             <span class="stat-card__label">Postulantes recibidos</span>
@@ -89,9 +90,11 @@
         </div>
         <div class="action-area">
           <a routerLink="/vacantes/crear" class="btn btn--primary">Publicar vacante</a>
+          <a routerLink="/seleccion" class="btn btn--outline">📊 Gestionar Candidatos</a>
         </div>
       </section>
     }
+
 
     <!-- Panel de Administrador -->
     @if (isAdmin()) {

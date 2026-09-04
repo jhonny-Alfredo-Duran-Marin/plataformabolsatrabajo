@@ -59,6 +59,13 @@ export const routes: Routes = [
     loadComponent: () => import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
   },
   {
+    path: 'postulaciones',
+    loadComponent: () =>
+      import('./features/postulaciones/mis-postulaciones/mis-postulaciones.component').then(
+        (m) => m.MisPostulacionesComponent,
+      ),
+  },
+  {
     path: 'perfil/visibilidad',
     loadComponent: () => import('./features/perfil/visibilidad/visibilidad.component').then((m) => m.VisibilidadComponent),
   },
@@ -66,5 +73,12 @@ export const routes: Routes = [
     path: 'perfil/profesional',
     loadComponent: () =>
       import('./features/perfil/profesional/profesional.component').then((m) => m.ProfesionalComponent),
+  },
+  {
+    path: 'seleccion',
+    loadComponent: () =>
+      import('./features/seleccion/pipeline-seleccion/pipeline-seleccion.component').then(
+        (m) => m.PipelineSeleccionComponent,
+      ),
   },
 ];

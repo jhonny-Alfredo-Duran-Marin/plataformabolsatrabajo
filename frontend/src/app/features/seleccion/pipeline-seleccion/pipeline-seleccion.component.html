@@ -1,0 +1,400 @@
+<div class="pipeline-page">
+
+  <!-- ===== HEADER ===== -->
+  <header class="page-header">
+    <div class="header-left">
+      <a routerLink="/dashboard" class="btn-back">← Volver</a>
+      <div>
+        <h1 class="page-title">Proceso de Selección</h1>
+        <p class="page-subtitle">Gestiona etapas, avanza y descarta candidatos</p>
+      </div>
+    </div>
+    @if (vacanteSeleccionadaId()) {
+      <button class="btn btn-outline" (click)="abrirModalEtapas()">
+        ⚙️ Configurar Etapas
+      </button>
+    }
+  </header>
+
+  <!-- ===== ERROR GLOBAL ===== -->
+  @if (error()) {
+    <div class="alert-error">{{ error() }}</div>
+  }
+
+  <!-- ===== SELECTOR DE VACANTE ===== -->
+  <section class="vacantes-section">
+    <h2 class="section-title">Seleccionar Vacante</h2>
+    @if (cargandoVacantes()) {
+      <div class="skeleton-row"></div>
+    } @else if (vacantes().length === 0) {
+      <p class="empty-msg">No tienes vacantes activas para gestionar.</p>
+    } @else {
+      <div class="vacantes-grid">
+        @for (v of vacantes(); track v.id) {
+          <button
+            class="vacante-card"
+            [class.active]="vacanteSeleccionadaId() === v.id"
+            (click)="seleccionarVacante(v.id)"
+          >
+            <span class="vacante-titulo">{{ v.titulo }}</span>
+            <span class="vacante-meta">{{ v.modalidad_label }} · {{ v.tipo_empleo_label }}</span>
+            <div class="vacante-badges">
+              <span class="badge blue">{{ v.total_postulantes }} postulantes</span>
+              <span class="badge green">{{ v.total_activos }} activos</span>
+              @if (v.total_descartados > 0) {
+                <span class="badge red">{{ v.total_descartados }} descartados</span>
+              }
+            </div>
+          </button>
+        }
+      </div>
+    }
+  </section>
+
+  <!-- ===== PIPELINE ===== -->
+  @if (vacanteSeleccionadaId()) {
+    @if (cargandoPipeline()) {
+      <div class="pipeline-loading">
+        <div class="spinner"></div>
+        <p>Cargando pipeline...</p>
+      </div>
+    } @else if (pipeline()) {
+      <!-- Métricas de vacante -->
+      <div class="pipeline-metrics">
+        <div class="metric-card">
+          <span class="metric-num">{{ vacanteActual()?.total_postulantes }}</span>
+          <span class="metric-label">Total postulantes</span>
+        </div>
+        <div class="metric-card green">
+          <span class="metric-num">{{ vacanteActual()?.total_activos }}</span>
+          <span class="metric-label">En proceso</span>
+        </div>
+        <div class="metric-card red">
+          <span class="metric-num">{{ vacanteActual()?.total_descartados }}</span>
+          <span class="metric-label">Descartados</span>
+        </div>
+        <div class="metric-card purple">
+          <span class="metric-num">{{ vacanteActual()?.total_contratados }}</span>
+          <span class="metric-label">Contratados</span>
+        </div>
+      </div>
+
+      <!-- Sin etapas configuradas -->
+      @if (etapas().length === 0) {
+        <div class="empty-pipeline">
+          <div class="empty-icon">📋</div>
+          <h3>Sin etapas de proceso configuradas</h3>
+          <p>Configura las etapas del proceso de selección para organizar a tus candidatos.</p>
+          <button class="btn btn-primary" (click)="abrirModalEtapas()">⚙️ Configurar Etapas</button>
+        </div>
+      } @else {
+        <!-- Tablero Kanban -->
+        <div class="kanban-board">
+
+          <!-- Candidatos sin asignar -->
+          @if ((candidatosPorEtapa()['__sin_etapa__'] ?? []).length > 0) {
+            <div class="kanban-col col-pending">
+              <div class="col-header">
+                <span class="col-title">📥 Sin Asignar</span>
+                <span class="col-count">{{ (candidatosPorEtapa()['__sin_etapa__'] ?? []).length }}</span>
+              </div>
+              <div class="col-cards">
+                @for (c of candidatosPorEtapa()['__sin_etapa__']; track c.postulacion_id) {
+                  <ng-container *ngTemplateOutlet="cardCandidato; context: { $implicit: c }"></ng-container>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Una columna por etapa -->
+          @for (etapa of etapas(); track etapa.id) {
+            <div class="kanban-col">
+              <div class="col-header">
+                <span class="col-title">{{ etapa.name }}</span>
+                <span class="col-count">{{ (candidatosPorEtapa()[etapa.id] ?? []).length }}</span>
+              </div>
+              <div class="col-cards">
+                @for (c of (candidatosPorEtapa()[etapa.id] ?? []); track c.postulacion_id) {
+                  <ng-container *ngTemplateOutlet="cardCandidato; context: { $implicit: c }"></ng-container>
+                }
+                @if ((candidatosPorEtapa()[etapa.id] ?? []).length === 0) {
+                  <div class="col-empty">Sin candidatos</div>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Descartados -->
+          @if ((candidatosPorEtapa()['__descartados__'] ?? []).length > 0) {
+            <div class="kanban-col col-rejected">
+              <div class="col-header">
+                <span class="col-title">❌ No Seleccionados</span>
+                <span class="col-count">{{ (candidatosPorEtapa()['__descartados__'] ?? []).length }}</span>
+              </div>
+              <div class="col-cards">
+                @for (c of candidatosPorEtapa()['__descartados__']; track c.postulacion_id) {
+                  <ng-container *ngTemplateOutlet="cardCandidato; context: { $implicit: c }"></ng-container>
+                }
+              </div>
+            </div>
+          }
+
+        </div>
+      }
+    }
+  }
+
+</div>
+
+<!-- ===== TEMPLATE: TARJETA CANDIDATO ===== -->
+<ng-template #cardCandidato let-c>
+  <div class="candidate-card" [class.rejected]="c.estado === 'rejected' || c.estado === 'withdrawn'">
+    <div class="card-top">
+      <div class="avatar">{{ initials(c.candidato_nombre) }}</div>
+      <div class="card-info">
+        <span class="cand-nombre">{{ c.candidato_nombre }}</span>
+        @if (c.candidato_titular) {
+          <span class="cand-titular">{{ c.candidato_titular }}</span>
+        }
+        @if (c.candidato_carrera) {
+          <span class="cand-carrera">🎓 {{ c.candidato_carrera }}</span>
+        }
+        @if (c.candidato_ciudad) {
+          <span class="cand-ciudad">📍 {{ c.candidato_ciudad }}</span>
+        }
+      </div>
+    </div>
+
+    <div class="card-meta">
+      <span class="estado-badge" [attr.data-color]="c.estado_color">{{ c.estado_label }}</span>
+      <span class="fecha">{{ formatFecha(c.fecha_postulacion) }}</span>
+    </div>
+
+    @if (c.total_notas > 0) {
+      <div class="notas-badge">💬 {{ c.total_notas }} nota(s) interna(s)</div>
+    }
+
+    <div class="card-actions">
+      @if (c.puede_avanzar) {
+        <button class="btn-action advance" (click)="abrirModalAvanzar(c)" title="Avanzar de etapa">
+          ▶ Avanzar
+        </button>
+      }
+      @if (c.puede_descartar) {
+        <button class="btn-action reject" (click)="abrirModalDescartar(c)" title="Descartar candidato">
+          ✕ Descartar
+        </button>
+      }
+      <button class="btn-action notes" (click)="abrirModalNotas(c)" title="Ver/agregar notas internas">
+        📝 Notas
+      </button>
+    </div>
+  </div>
+</ng-template>
+
+<!-- ===== MODAL: CONFIGURAR ETAPAS ===== -->
+@if (mostrarModalEtapas()) {
+  <div class="modal-backdrop" (click)="cerrarModalEtapas()">
+    <div class="modal-panel modal-large" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>⚙️ Configurar Etapas del Proceso</h2>
+        <button class="modal-close" (click)="cerrarModalEtapas()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">Define las etapas del proceso de selección para esta vacante. Puedes reordenarlas, editarlas o eliminarlas.</p>
+
+        @if (errorEtapas()) {
+          <div class="alert-error">{{ errorEtapas() }}</div>
+        }
+
+        <div class="etapas-list">
+          @for (etapa of etapasEditor(); track trackByIdx($index); let idx = $index) {
+            <div class="etapa-row">
+              <span class="etapa-num">{{ idx + 1 }}</span>
+              <div class="etapa-fields">
+                <input
+                  type="text"
+                  class="input-field"
+                  placeholder="Nombre de la etapa (ej. Entrevista Técnica)"
+                  [ngModel]="etapa.name"
+                  (ngModelChange)="etapa.name = $event"
+                />
+                <input
+                  type="text"
+                  class="input-field input-sm"
+                  placeholder="Descripción (opcional)"
+                  [ngModel]="etapa.description ?? ''"
+                  (ngModelChange)="etapa.description = $event"
+                />
+                <label class="checkbox-label">
+                  <input type="checkbox" [ngModel]="etapa.is_terminal" (ngModelChange)="etapa.is_terminal = $event" />
+                  Etapa terminal (fin del proceso)
+                </label>
+              </div>
+              <div class="etapa-controls">
+                <button class="btn-icon" (click)="moverEtapa(idx, -1)" [disabled]="idx === 0" title="Subir">↑</button>
+                <button class="btn-icon" (click)="moverEtapa(idx, 1)" [disabled]="idx === etapasEditor().length - 1" title="Bajar">↓</button>
+                <button class="btn-icon danger" (click)="eliminarEtapa(idx)" title="Eliminar">🗑</button>
+              </div>
+            </div>
+          }
+        </div>
+
+        <button class="btn btn-outline mt-2" (click)="agregarEtapa()">+ Agregar Etapa</button>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" (click)="cerrarModalEtapas()">Cancelar</button>
+        <button class="btn btn-primary" (click)="guardarEtapas()" [disabled]="guardandoEtapas()">
+          {{ guardandoEtapas() ? 'Guardando...' : 'Guardar Etapas' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ===== MODAL: AVANZAR ETAPA ===== -->
+@if (mostrarModalAvanzar()) {
+  <div class="modal-backdrop" (click)="cerrarModalAvanzar()">
+    <div class="modal-panel" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>▶ Avanzar Candidato de Etapa</h2>
+        <button class="modal-close" (click)="cerrarModalAvanzar()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="candidato-info-box">
+          <strong>{{ candidatoActivo()?.candidato_nombre }}</strong>
+          <span>{{ candidatoActivo()?.candidato_carrera }}</span>
+          <span class="badge blue">{{ candidatoActivo()?.etapa_actual_nombre ?? 'Sin etapa' }}</span>
+        </div>
+
+        @if (errorAvance()) {
+          <div class="alert-error">{{ errorAvance() }}</div>
+        }
+
+        <label class="field-label">Etapa de Destino *</label>
+        <select class="select-field" [ngModel]="etapaDestinoId()" (ngModelChange)="etapaDestinoId.set($event)">
+          <option value="">-- Seleccione la etapa --</option>
+          @for (etapa of etapasParaAvanzar(); track etapa.id) {
+            <option [value]="etapa.id">{{ etapa.stage_number }}. {{ etapa.name }}</option>
+          }
+        </select>
+
+        <label class="field-label mt-2">Observación (opcional)</label>
+        <textarea
+          class="textarea-field"
+          rows="3"
+          placeholder="Notas sobre el avance de etapa..."
+          [ngModel]="observacionAvance()"
+          (ngModelChange)="observacionAvance.set($event)"
+        ></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" (click)="cerrarModalAvanzar()">Cancelar</button>
+        <button class="btn btn-primary" (click)="confirmarAvance()" [disabled]="procesandoAvance() || !etapaDestinoId()">
+          {{ procesandoAvance() ? 'Procesando...' : 'Confirmar Avance' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ===== MODAL: DESCARTAR CANDIDATO ===== -->
+@if (mostrarModalDescartar()) {
+  <div class="modal-backdrop" (click)="cerrarModalDescartar()">
+    <div class="modal-panel" (click)="$event.stopPropagation()">
+      <div class="modal-header danger-header">
+        <h2>⚠️ Descartar Candidato</h2>
+        <button class="modal-close" (click)="cerrarModalDescartar()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="warning-box">
+          <p><strong>¿Estás seguro que deseas descartar a {{ candidatoActivo()?.candidato_nombre }}?</strong></p>
+          <p class="warning-text">Esta acción bloqueará al candidato de avanzar nuevamente en este proceso. El candidato recibirá una notificación.</p>
+        </div>
+
+        @if (errorDescarte()) {
+          <div class="alert-error">{{ errorDescarte() }}</div>
+        }
+
+        <label class="field-label">Motivo del descarte (opcional)</label>
+        <textarea
+          class="textarea-field"
+          rows="3"
+          placeholder="Indique el motivo del descarte..."
+          [ngModel]="motivoDescarte()"
+          (ngModelChange)="motivoDescarte.set($event)"
+        ></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" (click)="cerrarModalDescartar()">Cancelar</button>
+        <button class="btn btn-danger" (click)="confirmarDescarte()" [disabled]="procesandoDescarte()">
+          {{ procesandoDescarte() ? 'Procesando...' : 'Confirmar Descarte' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ===== MODAL: NOTAS INTERNAS ===== -->
+@if (mostrarModalNotas()) {
+  <div class="modal-backdrop" (click)="cerrarModalNotas()">
+    <div class="modal-panel modal-large" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>📝 Notas Internas del Equipo</h2>
+        <button class="modal-close" (click)="cerrarModalNotas()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="candidato-info-box">
+          <strong>{{ candidatoActivo()?.candidato_nombre }}</strong>
+          <span class="badge" [attr.data-color]="candidatoActivo()?.estado_color">{{ candidatoActivo()?.estado_label }}</span>
+        </div>
+
+        <div class="notas-privadas-aviso">
+          🔒 Las notas internas son visibles únicamente para el equipo de reclutamiento de la empresa.
+        </div>
+
+        <!-- Nueva nota -->
+        <div class="nueva-nota-box">
+          <textarea
+            class="textarea-field"
+            rows="3"
+            placeholder="Escribe una observación interna..."
+            [ngModel]="nuevaNota()"
+            (ngModelChange)="nuevaNota.set($event)"
+          ></textarea>
+          @if (errorNotas()) {
+            <div class="alert-error">{{ errorNotas() }}</div>
+          }
+          <button class="btn btn-primary mt-1" (click)="enviarNota()" [disabled]="guardandoNota() || !nuevaNota().trim()">
+            {{ guardandoNota() ? 'Enviando...' : '💬 Agregar Nota' }}
+          </button>
+        </div>
+
+        <!-- Lista de notas -->
+        <div class="notas-list">
+          @if (cargandoNotas()) {
+            <div class="loading-notas">Cargando notas...</div>
+          } @else if (notas().length === 0) {
+            <p class="empty-notas">Aún no hay notas internas para este candidato.</p>
+          } @else {
+            @for (nota of notas(); track nota.id) {
+              <div class="nota-item">
+                <div class="nota-header">
+                  <strong class="nota-autor">{{ nota.autor_nombre }}</strong>
+                  @if (nota.autor_cargo) {
+                    <span class="nota-cargo">· {{ nota.autor_cargo }}</span>
+                  }
+                  <span class="nota-fecha">{{ formatHora(nota.created_at) }}</span>
+                </div>
+                <p class="nota-content">{{ nota.content }}</p>
+              </div>
+            }
+          }
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" (click)="cerrarModalNotas()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+}

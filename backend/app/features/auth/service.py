@@ -99,6 +99,43 @@ class AuthService:
             sector = self.db.scalar(select(Sector).where(func.lower(Sector.name) == data.sector.lower()))
             sector_id = sector.id if sector else None
 
+        # Mapear tamaño a los valores permitidos por el constraint ck_comp_size:
+        # ('startup', 'small', 'medium', 'large', 'corporation')
+        _TAMANIO_MAP: dict[str, str] = {
+            "startup": "startup",
+            "micro": "startup",
+            "1-10": "startup",
+            "1 - 10": "startup",
+            "pequeña": "small",
+            "pequena": "small",
+            "small": "small",
+            "11-50": "small",
+            "11 - 50": "small",
+            "mediana": "medium",
+            "medium": "medium",
+            "51-200": "medium",
+            "51 - 200": "medium",
+            "grande": "large",
+            "large": "large",
+            "+200": "large",
+            "200+": "large",
+            "corporacion": "corporation",
+            "corporación": "corporation",
+            "corporation": "corporation",
+        }
+        company_size = None
+        if data.tamanio:
+            raw = data.tamanio.strip().lower()
+            for key, val in _TAMANIO_MAP.items():
+                if key in raw:
+                    company_size = val
+                    break
+            if company_size is None and raw in ("startup", "small", "medium", "large", "corporation"):
+                company_size = raw
+            elif company_size is None:
+                company_size = "small"
+
+
         usuario = AppUser(
             email=data.correo.strip().lower(),
             password_hash=hash_password(data.password),
@@ -111,7 +148,7 @@ class AuthService:
             legal_name=data.razon_social,
             tax_id=data.nit,
             sector_id=sector_id,
-            company_size=data.tamanio,
+            company_size=company_size,
             description=data.descripcion,
             website=data.sitio_web,
             phone=data.telefono,
