@@ -16,6 +16,8 @@ from app.models.catalogo import FieldOfStudy, JobCategory, Language, Skill
 from app.models.empresa import Company, CompanyMember, CompanyVerification, Sector
 from app.models.seguridad import AuditLog, LoginAttempt
 from app.models.usuario import AppUser, Role, UserRole
+from app.models.vacante import JobPosting, ScreeningQuestion, ScreeningOption
+from app.models.postulacion import Application, ApplicationAnswer
 
 __all__ = [
     "AppUser",
@@ -37,4 +39,9 @@ __all__ = [
     "Skill",
     "UserRole",
     "WorkExperience",
+    "JobPosting",
+    "ScreeningQuestion",
+    "ScreeningOption",
+    "Application",
+    "ApplicationAnswer"
 ]

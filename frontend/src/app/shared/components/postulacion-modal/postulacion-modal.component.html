@@ -1,0 +1,70 @@
+<div class="modal-backdrop">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Postularse a Vacante</h2>
+      <button type="button" class="close-btn" (click)="cerrar()">×</button>
+    </div>
+
+    <div class="modal-body">
+      @if (mostrarAdvertencia) {
+        <div class="alert alert-warning">
+          <strong>Atención:</strong> Tu perfil está completado al {{ perfilPorcentaje }}%. 
+          Te recomendamos completar al menos el 60% para aumentar tus posibilidades, pero puedes continuar si lo deseas.
+        </div>
+      }
+
+      @if (isLoading) {
+        <div class="loading-state">
+          Cargando preguntas...
+        </div>
+      }
+
+      @if (!isLoading && preguntas.length > 0) {
+        <div class="preguntas-container">
+          <h3>Preguntas de Filtro</h3>
+          <p class="text-muted">La empresa solicita que respondas las siguientes preguntas antes de postularte.</p>
+          
+          @for (q of preguntas; track q.id) {
+            <div class="form-group">
+              <label>
+                {{ q.question_text }}
+                @if (q.is_required) { <span class="required">*</span> }
+              </label>
+
+              @if (q.question_type === 'text') {
+                <textarea class="form-control" [(ngModel)]="respuestas[q.id].answer_text" rows="3"></textarea>
+              }
+
+              @if (q.question_type === 'number') {
+                <input type="number" class="form-control" [(ngModel)]="respuestas[q.id].answer_number">
+              }
+
+              @if (q.question_type === 'choice') {
+                <select class="form-control" [(ngModel)]="respuestas[q.id].selected_option_id">
+                  <option value="">Selecciona una opción...</option>
+                  @for (opt of q.options; track opt.id) {
+                    <option [value]="opt.id">{{ opt.option_text }}</option>
+                  }
+                </select>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      @if (!isLoading && preguntas.length === 0) {
+        <div class="no-preguntas">
+          <p>Estás a un paso de postularte a esta vacante. Revisa que tu perfil esté actualizado antes de confirmar.</p>
+        </div>
+      }
+
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline" (click)="cerrar()" [disabled]="isSubmitting">Cancelar</button>
+      <button type="button" class="btn btn-primary" (click)="confirmarPostulacion()" [disabled]="isSubmitting || isLoading">
+        {{ isSubmitting ? 'Enviando...' : 'Postular' }}
+      </button>
+    </div>
+  </div>
+</div>

@@ -43,11 +43,11 @@
         </div>
         <div class="card-grid">
           <div class="stat-card stat-card--blue">
-            <span class="stat-card__num">0</span>
+            <span class="stat-card__num">{{ postulacionesActivasCount() }}</span>
             <span class="stat-card__label">Postulaciones activas</span>
           </div>
           <div class="stat-card stat-card--purple">
-            <span class="stat-card__num">0%</span>
+            <span class="stat-card__num">{{ perfilPorcentaje() }}%</span>
             <span class="stat-card__label">Perfil completado</span>
           </div>
           <div class="stat-card stat-card--green">
@@ -60,6 +60,20 @@
           <a routerLink="/perfil/profesional" class="btn btn--outline">Ver mi perfil</a>
           <a routerLink="/perfil/visibilidad" class="btn btn--outline">Visibilidad del perfil</a>
         </div>
+
+        @if (postulaciones().length > 0) {
+          <div class="recent-applications" style="margin-top: 2rem;">
+            <h3>Mis Postulaciones Recientes</h3>
+            <ul style="list-style: none; padding: 0;">
+              @for (app of postulaciones().slice(0, 5); track app.id) {
+                <li style="padding: 1rem; border: 1px solid #eee; border-radius: 8px; margin-bottom: 1rem;">
+                  <strong>{{ app.job_title }}</strong> en {{ app.company_name }} <br>
+                  <span style="font-size: 0.9em; color: #666;">Estado: {{ app.current_status }} - Fecha: {{ app.applied_at | date }}</span>
+                </li>
+              }
+            </ul>
+          </div>
+        }
       </section>
     }
 
