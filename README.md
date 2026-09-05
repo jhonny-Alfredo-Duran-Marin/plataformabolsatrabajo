@@ -188,10 +188,17 @@ cd backend
 python -m scripts.crear_usuarios_demo
 ```
 
-Las credenciales demo que crea ese script se comparten por un canal privado
-del equipo (no en este README) — pide la lista a quien lo ejecutó.
+### Credenciales de prueba
+
+| Rol | Correo | Contraseña |
+|---|---|---|
+| Administrador de plataforma | `admin@uagrm.bo` | `Admin1234!` |
+| Empresa (TECNOVA, verificada) | `rrhh@tecnova.bo` | `empresa1234` |
+| Egresado / Candidato | `egresado.prueba@uagrm.bo` | `Egresado1234!` |
+
+Si alguna deja de funcionar (alguien del equipo pudo haberla cambiado probando), se resetea corriendo el script de arriba o pidiendo que se actualice manualmente — avisen en el grupo antes de cambiarlas para no romper la sesión de otro compañero.
 
 Con el backend (`uvicorn app.main:app --reload`) y el frontend (`ng serve`)
-corriendo, inicia sesión en http://localhost:4200. Los usuarios
-platform_admin/moderator son redirigidos al panel de bitácora; los demás,
-a su perfil.
+corriendo, inicia sesión en http://localhost:4200 (o http://localhost si
+usás Docker Compose). Los usuarios platform_admin/moderator son
+redirigidos al panel `/admin`; empresa y egresado, a su dashboard.
