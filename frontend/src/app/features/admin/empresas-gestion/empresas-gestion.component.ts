@@ -30,6 +30,10 @@ export class EmpresasGestionComponent implements OnInit {
   empresaParaDesactivar: Empresa | null = null;
   isProcessingAction = false;
 
+  // Motivo de rechazo por empresa pendiente (HU-06)
+  motivosRechazo: Record<string, string> = {};
+  isDecidiendo: Record<string, boolean> = {};
+
   ngOnInit(): void {
     this.cargarEmpresas();
   }
@@ -112,6 +116,47 @@ export class EmpresasGestionComponent implements OnInit {
         error: () => {
           input.checked = !nuevoValor;
           this.showToast('Error al actualizar permisos de postulación.', true);
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  aprobar(empresa: Empresa): void {
+    this.decidir(empresa, true);
+  }
+
+  rechazar(empresa: Empresa): void {
+    const motivo = (this.motivosRechazo[empresa.id] ?? '').trim();
+    if (!motivo) {
+      this.showToast('Indica el motivo del rechazo antes de continuar.', true);
+      return;
+    }
+    this.decidir(empresa, false, motivo);
+  }
+
+  private decidir(empresa: Empresa, aprobado: boolean, motivoRechazo?: string): void {
+    this.isDecidiendo[empresa.id] = true;
+
+    this.empresaService
+      .decidir(empresa.id, { aprobado, motivo_rechazo: motivoRechazo ?? null })
+      .subscribe({
+        next: (updated) => {
+          this.isDecidiendo[empresa.id] = false;
+          const index = this.empresas.findIndex((e) => e.id === empresa.id);
+          if (index !== -1) {
+            this.empresas[index] = updated;
+          }
+          delete this.motivosRechazo[empresa.id];
+          this.showToast(
+            aprobado
+              ? `Empresa "${empresa.razon_social}" verificada con éxito.`
+              : `Empresa "${empresa.razon_social}" rechazada.`
+          );
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.isDecidiendo[empresa.id] = false;
+          this.showToast('No se pudo registrar la decisión.', true);
           this.cdr.markForCheck();
         },
       });

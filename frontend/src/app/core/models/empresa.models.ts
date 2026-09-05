@@ -30,3 +30,8 @@ export interface ConfiguracionEmpresaRequest {
   postulaciones_activas?: boolean;
 }
 
+export interface DecisionEmpresaRequest {
+  aprobado: boolean;
+  motivo_rechazo?: string | null;
+}
+
