@@ -5,6 +5,8 @@ import '../../core/models/sesion.dart';
 import '../../core/services/perfil_service.dart';
 import '../auth/login_screen.dart';
 import '../vacantes/vacantes_screen.dart';
+import 'editar_perfil_screen.dart';
+import 'mi_cv_screen.dart';
 
 /// Panel principal del egresado: muestra su perfil real (GET /perfiles/me)
 /// y accesos a las funcionalidades disponibles, en vez de una pantalla
@@ -40,6 +42,22 @@ class _EgresadoPanelScreenState extends State<EgresadoPanelScreen> {
       appBar: AppBar(
         title: const Text('Mi panel'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_outlined),
+            tooltip: 'Editar perfil',
+            onPressed: () async {
+              final perfilActual = await _futuroPerfil;
+              if (!context.mounted) return;
+              final actualizado = await Navigator.of(context).push<PerfilEgresado>(
+                MaterialPageRoute(
+                  builder: (_) => EditarPerfilScreen(accessToken: widget.sesion.accessToken, perfil: perfilActual),
+                ),
+              );
+              if (actualizado != null) {
+                setState(() => _futuroPerfil = Future.value(actualizado));
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Cerrar sesión',
@@ -84,6 +102,8 @@ class _EgresadoPanelScreenState extends State<EgresadoPanelScreen> {
                 _tarjetaPerfil(context, perfil),
                 const SizedBox(height: 20),
                 Text('Accesos', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                _accesoMiCv(context),
                 const SizedBox(height: 12),
                 _accesoVacantes(context),
               ],
@@ -184,6 +204,24 @@ class _EgresadoPanelScreenState extends State<EgresadoPanelScreen> {
       backgroundColor: color,
       visualDensity: VisualDensity.compact,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
+
+  Widget _accesoMiCv(BuildContext context) {
+    return Card(
+      child: ListTile(
+        leading: const Icon(Icons.description_outlined),
+        title: const Text('Mi CV'),
+        subtitle: const Text('Formación, experiencia, idiomas, certificaciones y habilidades'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => MiCvScreen(accessToken: widget.sesion.accessToken),
+            ),
+          );
+        },
+      ),
     );
   }
 

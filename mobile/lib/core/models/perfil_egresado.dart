@@ -7,6 +7,10 @@ class PerfilEgresado {
   final String? resumenProfesional;
   final String estadoValidacion;
   final int porcentajeCompletitud;
+  final String? telefono;
+  final String? disponibilidad;
+  final int? anioEgreso;
+  final String? matricula;
 
   const PerfilEgresado({
     required this.nombres,
@@ -16,6 +20,10 @@ class PerfilEgresado {
     required this.resumenProfesional,
     required this.estadoValidacion,
     required this.porcentajeCompletitud,
+    this.telefono,
+    this.disponibilidad,
+    this.anioEgreso,
+    this.matricula,
   });
 
   factory PerfilEgresado.fromJson(Map<String, dynamic> json) {
@@ -27,6 +35,10 @@ class PerfilEgresado {
       resumenProfesional: json['resumen_profesional'] as String?,
       estadoValidacion: json['estado_validacion'] as String? ?? 'PENDIENTE',
       porcentajeCompletitud: json['porcentaje_completitud'] as int? ?? 0,
+      telefono: json['telefono'] as String?,
+      disponibilidad: json['disponibilidad'] as String?,
+      anioEgreso: json['anio_egreso'] as int?,
+      matricula: json['matricula'] as String?,
     );
   }
 
