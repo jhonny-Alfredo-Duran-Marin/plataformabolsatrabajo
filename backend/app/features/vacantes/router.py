@@ -8,15 +8,18 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.features.vacantes.schema import (
+    FiltrosDisponiblesResponse,
     VacanteCambioEstadoRequest,
     VacanteCreateRequest,
+    VacanteDetalleBusquedaResponse,
     VacantePaginadaResponse,
     VacanteResponse,
     VacanteUpdateRequest,
+    VacantesBuscadasResponse,
 )
 from app.features.vacantes.service import VacanteService
 from app.models.vacante import ScreeningOption, ScreeningQuestion
-from app.security.dependencies import CurrentUser, get_current_user, require_roles
+from app.security.dependencies import CurrentUser, get_current_user, get_current_user_optional, require_roles
 
 router = APIRouter(prefix="/vacantes", tags=["vacantes"])
 
@@ -108,6 +111,75 @@ def listar_vacantes_publicas(
         page=page,
         page_size=page_size,
     )
+
+
+@router.get(
+    "/buscar",
+    response_model=VacantesBuscadasResponse,
+    summary="Búsqueda avanzada de vacantes con afinidad (HU-13)",
+    description=(
+        "Busca y filtra vacantes publicadas y vigentes, con filtros por carrera, categoría, ciudad, "
+        "modalidad, jornada, seniority y rango salarial. Si el solicitante está autenticado como "
+        "egresado, calcula un porcentaje de afinidad según su carrera y habilidades registradas."
+    ),
+)
+def buscar_vacantes(
+    q: str | None = Query(None, description="Búsqueda por palabra clave en título o descripción"),
+    carrera_id: uuid.UUID | None = Query(None, description="Filtro por carrera o campo de estudio"),
+    categoria_id: uuid.UUID | None = Query(None, description="Filtro por categoría de empleo"),
+    ciudad: str | None = Query(None, description="Filtro por ciudad"),
+    modalidad: str | None = Query(None, description="Filtro por modalidad (onsite, remote, hybrid)"),
+    jornada: str | None = Query(None, description="Filtro por jornada (permanent, part_time, internship, etc.)"),
+    seniority: str | None = Query(None, description="Filtro por nivel de experiencia"),
+    salario_min: Decimal | None = Query(None, description="Rango salarial mínimo"),
+    salario_max: Decimal | None = Query(None, description="Rango salarial máximo"),
+    ordenar_por: str = Query("fecha", description="Criterio de ordenamiento: 'fecha' o 'afinidad'"),
+    limit: int = Query(20, ge=1, le=100, description="Cantidad de resultados por página"),
+    offset: int = Query(0, ge=0, description="Desplazamiento para paginación"),
+    current_user: CurrentUser | None = Depends(get_current_user_optional),
+    db: Session = Depends(get_db),
+):
+    usuario_id = current_user.id_usuario if current_user else None
+    return VacanteService(db).buscar_vacantes(
+        q=q,
+        carrera_id=carrera_id,
+        categoria_id=categoria_id,
+        ciudad=ciudad,
+        modalidad=modalidad,
+        jornada=jornada,
+        seniority=seniority,
+        salario_min=salario_min,
+        salario_max=salario_max,
+        ordenar_por=ordenar_por,
+        limit=limit,
+        offset=offset,
+        usuario_id=usuario_id,
+    )
+
+
+@router.get(
+    "/buscar/filtros",
+    response_model=FiltrosDisponiblesResponse,
+    summary="Opciones disponibles para los filtros de búsqueda (HU-13)",
+    description="Retorna ciudades, modalidades, jornadas, categorías, carreras y rango salarial vigentes entre las vacantes publicadas.",
+)
+def obtener_filtros_disponibles_busqueda(db: Session = Depends(get_db)):
+    return VacanteService(db).obtener_filtros_disponibles()
+
+
+@router.get(
+    "/buscar/{vacante_id}",
+    response_model=VacanteDetalleBusquedaResponse,
+    summary="Detalle enriquecido de una vacante para la búsqueda (HU-13)",
+    description="Como el detalle público, pero incluye afinidad calculada y datos de contacto de la empresa. Incrementa el contador de vistas.",
+)
+def obtener_detalle_busqueda_vacante(
+    vacante_id: uuid.UUID,
+    current_user: CurrentUser | None = Depends(get_current_user_optional),
+    db: Session = Depends(get_db),
+):
+    usuario_id = current_user.id_usuario if current_user else None
+    return VacanteService(db).obtener_detalle_busqueda(vacante_id, usuario_id=usuario_id)
 
 
 @router.get(

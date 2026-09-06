@@ -13,13 +13,21 @@ from app.common.exceptions import (
 )
 from app.features.vacantes.repository import VacanteRepository
 from app.features.vacantes.schema import (
+    CarreraEnVacanteResponse,
+    EmpresaEnVacanteResponse,
+    FiltrosDisponiblesResponse,
+    HabilidadEnVacanteResponse,
     JobSkillItemResponse,
     VacanteCambioEstadoRequest,
     VacanteCreateRequest,
+    VacanteDetalleBusquedaResponse,
     VacantePaginadaResponse,
     VacanteResponse,
+    VacanteResumenResponse,
+    VacantesBuscadasResponse,
     VacanteUpdateRequest,
 )
+from app.models.candidato import CandidateEducation, CandidateProfile, CandidateSkill
 from app.models.empresa import Company, CompanyMember
 from app.models.seguridad import AuditLog
 from app.models.vacante import JobPosting, JobSkill, JobStatus
@@ -513,3 +521,198 @@ class VacanteService:
         self.db.commit()
 
         return {"mensaje": "Vacante eliminada exitosamente."}
+
+    # ─── Búsqueda avanzada con afinidad — HU-13 ─────────────────────────────
+    # Vive bajo /vacantes/buscar (separado de listar_publicas/GET /vacantes)
+    # para no romper el contrato ya consumido por el listado web y la app móvil.
+
+    def buscar_vacantes(
+        self,
+        q: str | None = None,
+        carrera_id: uuid.UUID | None = None,
+        categoria_id: uuid.UUID | None = None,
+        ciudad: str | None = None,
+        modalidad: str | None = None,
+        jornada: str | None = None,
+        seniority: str | None = None,
+        salario_min: Decimal | None = None,
+        salario_max: Decimal | None = None,
+        ordenar_por: str = "fecha",
+        limit: int = 20,
+        offset: int = 0,
+        usuario_id: uuid.UUID | None = None,
+    ) -> VacantesBuscadasResponse:
+        """Busca vacantes con filtros combinados y calcula la afinidad con el perfil del egresado si está autenticado."""
+        items, total = self.repo.buscar_vacantes(
+            q=q,
+            carrera_id=carrera_id,
+            categoria_id=categoria_id,
+            ciudad=ciudad,
+            modalidad=modalidad,
+            jornada=jornada,
+            seniority=seniority,
+            salario_min=salario_min,
+            salario_max=salario_max,
+            solo_vigentes=True,
+            ordenar_por=ordenar_por if ordenar_por != "afinidad" else "fecha",
+            limit=limit,
+            offset=offset,
+        )
+
+        candidato_skills, candidato_carreras, es_candidato = self._perfil_afinidad_de(usuario_id)
+
+        vacantes_dto = []
+        for vacante in items:
+            afinidad = self._calcular_afinidad(vacante, candidato_skills, candidato_carreras) if es_candidato else None
+            vacantes_dto.append(self._mapear_a_resumen_busqueda(vacante, afinidad))
+
+        if ordenar_por == "afinidad" and es_candidato:
+            vacantes_dto.sort(key=lambda x: (x.afinidad_porcentaje or 0), reverse=True)
+
+        return VacantesBuscadasResponse(total=total, limit=limit, offset=offset, items=vacantes_dto)
+
+    def obtener_detalle_busqueda(
+        self, vacante_id: uuid.UUID, usuario_id: uuid.UUID | None = None
+    ) -> VacanteDetalleBusquedaResponse:
+        """Obtiene el detalle enriquecido (afinidad, contacto de empresa) de una vacante publicada."""
+        vacante = self.repo.obtener_por_id_con_afinidad(vacante_id)
+        if not vacante:
+            raise ResourceNotFoundException("La vacante solicitada no existe o no está disponible.")
+
+        self.repo.incrementar_vistas(vacante_id)
+
+        candidato_skills, candidato_carreras, es_candidato = self._perfil_afinidad_de(usuario_id)
+        afinidad = self._calcular_afinidad(vacante, candidato_skills, candidato_carreras) if es_candidato else None
+
+        resumen = self._mapear_a_resumen_busqueda(vacante, afinidad)
+        empresa = vacante.company
+
+        return VacanteDetalleBusquedaResponse(
+            **resumen.model_dump(),
+            responsibilities=vacante.responsibilities_json if isinstance(vacante.responsibilities_json, list) else [],
+            requirements=vacante.requirements_json if isinstance(vacante.requirements_json, list) else [],
+            benefits=vacante.benefits_json if isinstance(vacante.benefits_json, list) else [],
+            company_contact_email=empresa.contact_email if empresa else None,
+            company_phone=empresa.phone if empresa else None,
+            company_address=empresa.address if empresa else None,
+        )
+
+    def obtener_filtros_disponibles(self) -> FiltrosDisponiblesResponse:
+        """Obtiene las opciones disponibles para los filtros de búsqueda."""
+        return FiltrosDisponiblesResponse(**self.repo.obtener_filtros_disponibles())
+
+    def _perfil_afinidad_de(
+        self, usuario_id: uuid.UUID | None
+    ) -> tuple[set[uuid.UUID], set[uuid.UUID], bool]:
+        if not usuario_id:
+            return set(), set(), False
+
+        perfil = self.db.query(CandidateProfile).filter(CandidateProfile.user_id == usuario_id).one_or_none()
+        if not perfil:
+            return set(), set(), False
+
+        skills = {
+            cs.skill_id for cs in self.db.query(CandidateSkill).filter(CandidateSkill.candidate_id == perfil.id).all()
+        }
+        carreras = {
+            ce.field_of_study_id
+            for ce in self.db.query(CandidateEducation)
+            .filter(CandidateEducation.candidate_id == perfil.id, CandidateEducation.field_of_study_id.isnot(None))
+            .all()
+        }
+        return skills, carreras, True
+
+    def _calcular_afinidad(
+        self,
+        vacante: JobPosting,
+        candidato_skills: set[uuid.UUID],
+        candidato_carreras: set[uuid.UUID],
+    ) -> int:
+        """Calcula el porcentaje de afinidad (0-100%) entre el candidato y la vacante."""
+        score = 0
+        total_peso = 0
+
+        carreras_vacante = {ep.field_of_study_id for ep in vacante.education_preferences}
+        if carreras_vacante:
+            total_peso += 40
+            if candidato_carreras & carreras_vacante:
+                score += 40
+        else:
+            score += 20
+            total_peso += 20
+
+        skills_vacante = {js.skill_id for js in vacante.skills}
+        if skills_vacante:
+            total_peso += 60
+            coincidencias = len(candidato_skills & skills_vacante)
+            score += int((coincidencias / len(skills_vacante)) * 60)
+        else:
+            score += 30
+            total_peso += 30
+
+        if total_peso == 0:
+            return 50
+
+        return max(15, min(98, int((score / total_peso) * 100)))
+
+    def _mapear_a_resumen_busqueda(self, vacante: JobPosting, afinidad: int | None = None) -> VacanteResumenResponse:
+        empresa = vacante.company
+        empresa_dto = EmpresaEnVacanteResponse(
+            id=empresa.id,
+            legal_name=empresa.legal_name,
+            trade_name=empresa.trade_name,
+            city=empresa.city,
+            sector_name=empresa.sector.name if empresa.sector else None,
+            website=empresa.website,
+            description=empresa.description,
+        )
+
+        skills_dto = [
+            HabilidadEnVacanteResponse(
+                skill_id=js.skill_id,
+                name=js.skill.name if js.skill else "",
+                importance=js.importance or "required",
+                min_proficiency=js.min_proficiency,
+            )
+            for js in vacante.skills
+            if js.skill
+        ]
+
+        carreras_dto = [
+            CarreraEnVacanteResponse(
+                field_of_study_id=ep.field_of_study_id,
+                name=ep.field_of_study.name if ep.field_of_study else "",
+                education_level=ep.education_level,
+                is_required=ep.is_required,
+            )
+            for ep in vacante.education_preferences
+            if ep.field_of_study
+        ]
+
+        return VacanteResumenResponse(
+            id=vacante.id,
+            company=empresa_dto,
+            category_id=vacante.category_id,
+            category_name=vacante.category.name if vacante.category else None,
+            title=vacante.title,
+            description=vacante.description,
+            seniority_level=vacante.seniority_level,
+            employment_type=vacante.employment_type,
+            work_modality=vacante.work_modality,
+            country_code=vacante.country_code,
+            city=vacante.city,
+            salary_min=vacante.salary_min if vacante.salary_visible else None,
+            salary_max=vacante.salary_max if vacante.salary_visible else None,
+            currency=vacante.currency if vacante.salary_visible else None,
+            salary_visible=vacante.salary_visible,
+            positions_available=vacante.positions_available,
+            status=vacante.status,
+            min_education_level=vacante.min_education_level,
+            min_years_experience=vacante.min_years_experience,
+            application_deadline=vacante.application_deadline,
+            published_at=vacante.published_at,
+            view_count=vacante.view_count,
+            skills=skills_dto,
+            education_preferences=carreras_dto,
+            afinidad_porcentaje=afinidad,
+        )

@@ -51,6 +51,22 @@ def get_current_user(
     return CurrentUser(id_usuario=id_usuario, rol=str(payload.get("rol", "")), roles=roles)
 
 
+def get_current_user_optional(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
+) -> CurrentUser | None:
+    """Como get_current_user, pero retorna None en vez de fallar si no hay token.
+
+    Usado en endpoints públicos que enriquecen la respuesta cuando el usuario
+    está autenticado (p. ej. cálculo de afinidad en la búsqueda de vacantes, HU-13).
+    """
+    if credentials is None:
+        return None
+    try:
+        return get_current_user(credentials)
+    except UnauthorizedException:
+        return None
+
+
 def require_roles(*roles_permitidos: str):
     """Dependencia de autorización por rol, verificada en el servidor (RNF-06)."""
 

@@ -1,16 +1,20 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, catchError, throwError } from 'rxjs';
+import { Observable, catchError, shareReplay, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  FiltrosBusquedaVacantes,
+  FiltrosDisponibles,
   JobStatus,
   Vacante,
   VacanteCambioEstadoRequest,
   VacanteCreateRequest,
+  VacanteDetalle,
   VacanteFiltros,
   VacanteModeracionRequest,
   VacantePaginadaResponse,
   VacanteUpdateRequest,
+  VacantesPaginadas,
 } from '../models/vacante.models';
 import { ToastService } from './toast.service';
 
@@ -193,6 +197,55 @@ export class VacanteService {
         this._handleError(error, 'Error al cargar catálogo de ciudades')
       )
     );
+  }
+
+  // ─── Búsqueda avanzada con afinidad (HU-13) ──────────────────────────────
+  // Vive bajo /vacantes/buscar en el backend, separado del listado simple de
+  // arriba para no romper su contrato (usado también por la app móvil).
+
+  private filtrosCache$: Observable<FiltrosDisponibles> | null = null;
+
+  /** Busca vacantes aplicando filtros combinados, con cálculo de afinidad si hay sesión. */
+  buscarVacantes(filtros: FiltrosBusquedaVacantes = {}): Observable<VacantesPaginadas> {
+    let params = new HttpParams();
+
+    if (filtros.q && filtros.q.trim()) params = params.set('q', filtros.q.trim());
+    if (filtros.carrera_id) params = params.set('carrera_id', filtros.carrera_id);
+    if (filtros.categoria_id) params = params.set('categoria_id', filtros.categoria_id);
+    if (filtros.ciudad) params = params.set('ciudad', filtros.ciudad);
+    if (filtros.modalidad) params = params.set('modalidad', filtros.modalidad);
+    if (filtros.jornada) params = params.set('jornada', filtros.jornada);
+    if (filtros.seniority) params = params.set('seniority', filtros.seniority);
+    if (filtros.salario_min !== undefined && filtros.salario_min !== null) {
+      params = params.set('salario_min', String(filtros.salario_min));
+    }
+    if (filtros.salario_max !== undefined && filtros.salario_max !== null) {
+      params = params.set('salario_max', String(filtros.salario_max));
+    }
+    if (filtros.ordenar_por) params = params.set('ordenar_por', filtros.ordenar_por);
+    if (filtros.limit !== undefined) params = params.set('limit', String(filtros.limit));
+    if (filtros.offset !== undefined) params = params.set('offset', String(filtros.offset));
+
+    return this.http
+      .get<VacantesPaginadas>(`${this.apiUrl}/buscar`, { headers: this._headers(), params })
+      .pipe(catchError((error: HttpErrorResponse) => this._handleError(error, 'Error al buscar vacantes')));
+  }
+
+  /** Opciones de catálogo dinámicas para los filtros de búsqueda, con caché en memoria. */
+  obtenerFiltrosDisponibles(): Observable<FiltrosDisponibles> {
+    if (!this.filtrosCache$) {
+      this.filtrosCache$ = this.http
+        .get<FiltrosDisponibles>(`${this.apiUrl}/buscar/filtros`, { headers: this._headers() })
+        .pipe(shareReplay(1));
+    }
+    return this.filtrosCache$;
+  }
+
+  /** Detalle enriquecido (afinidad, contacto) de una vacante desde la búsqueda. */
+  obtenerDetalle(vacanteId: string): Observable<VacanteDetalle> {
+    return this.http
+      .get<VacanteDetalle>(`${this.apiUrl}/buscar/${vacanteId}`, { headers: this._headers() })
+      .pipe(catchError((error: HttpErrorResponse) => this._handleError(error, 'Error al obtener el detalle de la vacante')));
   }
 
   // ─── Utilidades Privadas ────────────────────────────────────────────────

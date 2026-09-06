@@ -1,11 +1,18 @@
+import time
 import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import delete, func, or_, select
+from sqlalchemy import delete, distinct, func, or_, select, update
 from sqlalchemy.orm import Session, joinedload, selectinload
 
-from app.models.vacante import JobPosting, JobSkill, JobStatus
+from app.models.catalogo import FieldOfStudy, JobCategory
+from app.models.vacante import JobEducationPreference, JobPosting, JobSkill, JobStatus
+
+# Caché en memoria para catálogos y filtros dinámicos de la búsqueda (5 minutos TTL) — HU-13
+_FILTROS_CACHE: dict | None = None
+_FILTROS_CACHE_TIME: float = 0.0
+_CACHE_TTL_SECONDS: float = 300.0
 
 
 class VacanteRepository:
@@ -209,3 +216,154 @@ class VacanteRepository:
         self.db.delete(vacante)
         self.db.flush()
         return True
+
+    # ─── Búsqueda avanzada con afinidad — HU-13 ─────────────────────────────
+
+    def buscar_vacantes(
+        self,
+        q: str | None = None,
+        carrera_id: uuid.UUID | None = None,
+        categoria_id: uuid.UUID | None = None,
+        ciudad: str | None = None,
+        modalidad: str | None = None,
+        jornada: str | None = None,
+        seniority: str | None = None,
+        salario_min: Decimal | None = None,
+        salario_max: Decimal | None = None,
+        solo_vigentes: bool = True,
+        ordenar_por: str = "fecha",
+        limit: int = 20,
+        offset: int = 0,
+    ) -> tuple[list[JobPosting], int]:
+        """Busca vacantes publicadas aplicando filtros combinados y paginación por límite/desplazamiento."""
+        stmt = select(JobPosting).where(JobPosting.status == JobStatus.PUBLISHED.value)
+
+        if solo_vigentes:
+            now = func.now()
+            stmt = stmt.where(
+                or_(
+                    JobPosting.application_deadline.is_(None),
+                    JobPosting.application_deadline >= now,
+                )
+            )
+
+        if q and q.strip():
+            palabra = f"%{q.strip()}%"
+            stmt = stmt.where(or_(JobPosting.title.ilike(palabra), JobPosting.description.ilike(palabra)))
+
+        if categoria_id:
+            stmt = stmt.where(JobPosting.category_id == categoria_id)
+
+        if ciudad and ciudad.strip():
+            stmt = stmt.where(JobPosting.city.ilike(ciudad.strip()))
+
+        if modalidad and modalidad.strip():
+            stmt = stmt.where(JobPosting.work_modality == modalidad.strip())
+
+        if jornada and jornada.strip():
+            stmt = stmt.where(JobPosting.employment_type == jornada.strip())
+
+        if seniority and seniority.strip():
+            stmt = stmt.where(JobPosting.seniority_level == seniority.strip())
+
+        if salario_min is not None:
+            stmt = stmt.where(or_(JobPosting.salary_max >= salario_min, JobPosting.salary_min >= salario_min))
+
+        if salario_max is not None:
+            stmt = stmt.where(or_(JobPosting.salary_min <= salario_max, JobPosting.salary_max <= salario_max))
+
+        if carrera_id:
+            stmt = stmt.join(
+                JobEducationPreference, JobEducationPreference.job_posting_id == JobPosting.id
+            ).where(JobEducationPreference.field_of_study_id == carrera_id)
+
+        subq = stmt.subquery()
+        total = self.db.scalar(select(func.count(distinct(subq.c.id)))) or 0
+
+        if ordenar_por == "fecha":
+            stmt = stmt.order_by(JobPosting.published_at.desc().nullslast(), JobPosting.created_at.desc())
+        else:
+            stmt = stmt.order_by(JobPosting.created_at.desc())
+
+        stmt = (
+            stmt.options(
+                joinedload(JobPosting.company),
+                joinedload(JobPosting.category),
+                selectinload(JobPosting.skills).joinedload(JobSkill.skill),
+                selectinload(JobPosting.education_preferences).joinedload(JobEducationPreference.field_of_study),
+            )
+            .limit(limit)
+            .offset(offset)
+        )
+
+        items = list(self.db.scalars(stmt).unique())
+        return items, total
+
+    def obtener_por_id_con_afinidad(self, vacante_id: uuid.UUID) -> JobPosting | None:
+        """Obtiene una vacante con las relaciones necesarias para calcular afinidad (skills + carreras)."""
+        stmt = (
+            select(JobPosting)
+            .where(JobPosting.id == vacante_id)
+            .options(
+                joinedload(JobPosting.company),
+                joinedload(JobPosting.category),
+                selectinload(JobPosting.skills).joinedload(JobSkill.skill),
+                selectinload(JobPosting.education_preferences).joinedload(JobEducationPreference.field_of_study),
+            )
+        )
+        return self.db.scalar(stmt)
+
+    def incrementar_vistas(self, vacante_id: uuid.UUID) -> None:
+        """Incrementa el contador de vistas de una vacante (usado por la búsqueda pública)."""
+        self.db.execute(
+            update(JobPosting).where(JobPosting.id == vacante_id).values(view_count=JobPosting.view_count + 1)
+        )
+        self.db.commit()
+
+    def obtener_filtros_disponibles(self) -> dict:
+        """Obtiene las opciones disponibles para los filtros de búsqueda, con caché en memoria."""
+        global _FILTROS_CACHE, _FILTROS_CACHE_TIME
+
+        ahora = time.time()
+        if _FILTROS_CACHE is not None and (ahora - _FILTROS_CACHE_TIME) < _CACHE_TTL_SECONDS:
+            return _FILTROS_CACHE
+
+        publicadas = JobPosting.status == JobStatus.PUBLISHED.value
+
+        ciudades = list(
+            self.db.scalars(
+                select(distinct(JobPosting.city)).where(publicadas, JobPosting.city.isnot(None)).order_by(JobPosting.city)
+            )
+        )
+        modalidades = list(
+            self.db.scalars(select(distinct(JobPosting.work_modality)).where(publicadas).order_by(JobPosting.work_modality))
+        )
+        jornadas = list(
+            self.db.scalars(select(distinct(JobPosting.employment_type)).where(publicadas).order_by(JobPosting.employment_type))
+        )
+        seniorities = list(
+            self.db.scalars(select(distinct(JobPosting.seniority_level)).where(publicadas).order_by(JobPosting.seniority_level))
+        )
+        categorias = list(self.db.scalars(select(JobCategory).where(JobCategory.is_active.is_(True)).order_by(JobCategory.name)))
+        carreras = list(self.db.scalars(select(FieldOfStudy).order_by(FieldOfStudy.name)))
+
+        salarios = self.db.execute(
+            select(func.min(JobPosting.salary_min), func.max(JobPosting.salary_max)).where(
+                publicadas, JobPosting.salary_visible.is_(True)
+            )
+        ).fetchone()
+
+        resultado = {
+            "ciudades": [c for c in ciudades if c],
+            "modalidades": [m for m in modalidades if m],
+            "jornadas": [j for j in jornadas if j],
+            "niveles_experiencia": [s for s in seniorities if s],
+            "categorias": [{"id": cat.id, "name": cat.name} for cat in categorias],
+            "carreras": [{"id": car.id, "name": car.name, "category": car.category} for car in carreras],
+            "salario_min_disponible": salarios[0] if salarios else None,
+            "salario_max_disponible": salarios[1] if salarios else None,
+        }
+
+        _FILTROS_CACHE = resultado
+        _FILTROS_CACHE_TIME = ahora
+        return resultado
