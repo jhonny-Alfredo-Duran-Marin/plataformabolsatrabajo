@@ -82,6 +82,24 @@ export const routes: Routes = [
     loadComponent: () => import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
   },
   {
+    path: 'postulaciones',
+    canActivate: [authGuard],
+    data: { roles: ['candidate'] },
+    loadComponent: () =>
+      import('./features/postulaciones/mis-postulaciones/mis-postulaciones.component').then(
+        (m) => m.MisPostulacionesComponent,
+      ),
+  },
+  {
+    path: 'seleccion',
+    canActivate: [authGuard],
+    data: { roles: ['empresa'] },
+    loadComponent: () =>
+      import('./features/seleccion/pipeline-seleccion/pipeline-seleccion.component').then(
+        (m) => m.PipelineSeleccionComponent,
+      ),
+  },
+  {
     path: 'perfil/visibilidad',
     loadComponent: () => import('./features/perfil/visibilidad/visibilidad.component').then((m) => m.VisibilidadComponent),
   },

@@ -26,3 +26,8 @@ class UnauthorizedException(AppException):
 
 class ConflictException(AppException):
     status_code = 409
+
+
+# Alias comunes para compatibilidad con el resto de los módulos
+NotFoundException = ResourceNotFoundException
+BadRequestException = BusinessException

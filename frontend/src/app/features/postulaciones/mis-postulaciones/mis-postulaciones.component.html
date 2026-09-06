@@ -1,0 +1,576 @@
+<div class="postulaciones-page">
+
+  <!-- ══ Topbar ════════════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <div class="topbar__left">
+      <a routerLink="/dashboard" class="btn-back" title="Volver al Dashboard">
+        <svg viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd"/>
+        </svg>
+        <span>Volver</span>
+      </a>
+      <div class="topbar__brand">
+        <div class="module-chip">MÓDULO 5.1.5 · POSTULACIÓN Y SEGUIMIENTO</div>
+        <h1 class="topbar__title">Seguimiento de Postulaciones</h1>
+        <p class="topbar__subtitle">Consulta el estado actual, las etapas del proceso y el historial de tus solicitudes laborales.</p>
+      </div>
+    </div>
+    <div class="topbar__actions">
+      <span class="badge-role">Egresado UAGRM</span>
+    </div>
+  </header>
+
+  <!-- ══ Contenido Principal ════════════════════════════════════════════════ -->
+  <main class="container">
+
+    <!-- Tarjetas de Resumen / Estadísticas -->
+    @if (resumen()) {
+      <section class="stats-grid">
+        <div class="stat-card stat-card--blue">
+          <div class="stat-card__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+            </svg>
+          </div>
+          <div class="stat-card__info">
+            <span class="stat-card__number">{{ resumen()?.total }}</span>
+            <span class="stat-card__label">Total Postulaciones</span>
+          </div>
+        </div>
+
+        <div class="stat-card stat-card--yellow">
+          <div class="stat-card__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div class="stat-card__info">
+            <span class="stat-card__number">{{ resumen()?.en_revision }}</span>
+            <span class="stat-card__label">En Revisión</span>
+          </div>
+        </div>
+
+        <div class="stat-card stat-card--purple">
+          <div class="stat-card__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          <div class="stat-card__info">
+            <span class="stat-card__number">{{ resumen()?.entrevistas_ofertas }}</span>
+            <span class="stat-card__label">Entrevistas y Ofertas</span>
+          </div>
+        </div>
+
+        <div class="stat-card stat-card--green">
+          <div class="stat-card__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div class="stat-card__info">
+            <span class="stat-card__number">{{ resumen()?.contratados }}</span>
+            <span class="stat-card__label">Contratado</span>
+          </div>
+        </div>
+      </section>
+    }
+
+    <!-- Barra de Filtros y Búsqueda -->
+    <section class="filter-panel">
+      <div class="filter-group filter-group--search">
+        <label for="input-busqueda">Buscar</label>
+        <div class="search-input-wrapper">
+          <svg class="search-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
+          </svg>
+          <input
+            id="input-busqueda"
+            type="text"
+            placeholder="Título de puesto, empresa..."
+            [(ngModel)]="busqueda"
+            (ngModelChange)="onFiltroChange()"
+          />
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label for="select-estado">Estado</label>
+        <select
+          id="select-estado"
+          [(ngModel)]="estadoSeleccionado"
+          (ngModelChange)="onFiltroChange()"
+        >
+          @for (op of opcionesEstados; track op.valor) {
+            <option [value]="op.valor">{{ op.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="fecha-desde">Fecha Desde</label>
+        <input
+          id="fecha-desde"
+          type="date"
+          [(ngModel)]="fechaDesde"
+          (ngModelChange)="onFiltroChange()"
+        />
+      </div>
+
+      <div class="filter-group">
+        <label for="fecha-hasta">Fecha Hasta</label>
+        <input
+          id="fecha-hasta"
+          type="date"
+          [(ngModel)]="fechaHasta"
+          (ngModelChange)="onFiltroChange()"
+        />
+      </div>
+
+      <div class="filter-actions">
+        <button class="btn btn--outline" (click)="limpiarFiltros()" title="Limpiar todos los filtros">
+          <svg viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/>
+          </svg>
+          <span>Limpiar</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Estado de Carga -->
+    @if (loading()) {
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Cargando tus postulaciones...</p>
+      </div>
+    } @else {
+
+      <!-- Lista de Postulaciones -->
+      @if (postulaciones().length > 0) {
+        <section class="postulaciones-list">
+          @for (post of postulaciones(); track post.id) {
+            <article class="post-card" (click)="abrirDetalle(post, 'seguimiento')">
+
+              <!-- Cabecera de la Tarjeta -->
+              <div class="post-card__header">
+                <div class="post-card__title-area">
+                  <h2 class="post-card__title">{{ post.job_titulo }}</h2>
+                  <div class="post-card__company">
+                    <span class="company-name">
+                      <svg class="icon-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                      </svg>
+                      {{ post.empresa_nombre }}
+                    </span>
+                    @if (post.empresa_ciudad) {
+                      <span class="company-city">
+                        <svg class="icon-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        {{ post.empresa_ciudad }}
+                      </span>
+                    }
+                  </div>
+                </div>
+
+                <div class="post-card__badge-area">
+                  <span class="badge" [ngClass]="getBadgeClass(post.estado_color)">
+                    ● {{ post.estado_label }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Metadatos de la Vacante -->
+              <div class="post-card__meta">
+                <span class="meta-tag">
+                  <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
+                  {{ post.tipo_empleo_label }}
+                </span>
+                <span class="meta-tag">
+                  <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
+                  {{ post.modalidad_label }}
+                </span>
+                @if (post.salario_visible && post.salario_min) {
+                  <span class="meta-tag meta-tag--salary">
+                    <svg class="icon-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="2" y="6" width="20" height="12" rx="2"/>
+                      <circle cx="12" cy="12" r="2"/>
+                    </svg>
+                    {{ post.salario_min | number:'1.0-0' }} - {{ post.salario_max | number:'1.0-0' }} {{ post.currency }}
+                  </span>
+                }
+                @if (post.etapa_actual_nombre) {
+                  <span class="meta-tag meta-tag--stage">
+                    <svg class="icon-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"/>
+                    </svg>
+                    Etapa: {{ post.etapa_actual_nombre }}
+                  </span>
+                }
+              </div>
+
+              <!-- Fechas Clave del Criterio de Aceptación -->
+              <div class="post-card__dates">
+                <div class="date-item">
+                  <span class="date-label">Fecha de Postulación:</span>
+                  <span class="date-value">{{ formatearFecha(post.fecha_postulacion) }}</span>
+                </div>
+                <div class="date-item">
+                  <span class="date-label">Último Cambio de Estado:</span>
+                  <span class="date-value date-value--highlight">{{ formatearFecha(post.fecha_ultimo_cambio) }}</span>
+                </div>
+              </div>
+
+              <!-- Barra de Acciones de la Tarjeta -->
+              <div class="post-card__actions" (click)="$event.stopPropagation()">
+                <button class="btn btn--primary btn--sm" (click)="abrirDetalle(post, 'seguimiento')">
+                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                  </svg>
+                  <span>Ver Seguimiento y Etapas</span>
+                </button>
+                <button class="btn btn--outline btn--sm" (click)="abrirDetalle(post, 'vacante')">
+                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                  </svg>
+                  <span>Ver Vacante</span>
+                </button>
+
+                @if (post.puede_retirar) {
+                  <button class="btn btn--danger-outline btn--sm" (click)="abrirModalRetirar(post, $event)">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                    </svg>
+                    <span>Retirar Postulación</span>
+                  </button>
+                }
+              </div>
+
+            </article>
+          }
+        </section>
+      } @else {
+        <!-- Estado Vacío -->
+        <div class="empty-state">
+          <div class="empty-state__icon-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+            </svg>
+          </div>
+          <h3 class="empty-state__title">No se encontraron postulaciones</h3>
+          <p class="empty-state__description">
+            @if (busqueda || estadoSeleccionado || fechaDesde || fechaHasta) {
+              No hay resultados que coincidan con los filtros aplicados. Intenta ajustarlos o limpiarlos.
+            } @else {
+              Aún no te has postulado a ninguna vacante. Explora las ofertas laborales vigentes y da el siguiente paso en tu carrera profesional.
+            }
+          </p>
+          @if (busqueda || estadoSeleccionado || fechaDesde || fechaHasta) {
+            <button class="btn btn--outline" (click)="limpiarFiltros()">Limpiar Filtros</button>
+          } @else {
+            <a routerLink="/vacantes" class="btn btn--primary">Explorar Vacantes</a>
+          }
+        </div>
+      }
+
+    }
+
+  </main>
+
+  <!-- ══ Modal de Detalle y Seguimiento ═════════════════════════════════════ -->
+  @if (modalDetalleAbierto()) {
+    <div class="modal-backdrop" (click)="cerrarModalDetalle()">
+      <div class="modal-container modal-container--large" (click)="$event.stopPropagation()">
+
+        <!-- Cabecera del Modal -->
+        <header class="modal-header">
+          <div>
+            <span class="modal-subtitle">Detalle de la Postulación</span>
+            <h2 class="modal-title">
+              {{ detalleSeleccionado()?.postulacion?.job_titulo || 'Cargando...' }}
+            </h2>
+          </div>
+          <button class="btn-close" (click)="cerrarModalDetalle()">✕</button>
+        </header>
+
+        @if (cargandoDetalle()) {
+          <div class="modal-body modal-body--loading">
+            <div class="spinner"></div>
+            <p>Cargando información del proceso...</p>
+          </div>
+        } @else if (detalleSeleccionado()) {
+
+          <!-- Pestañas de Navegación del Modal -->
+          <nav class="modal-tabs">
+            <button
+              class="tab-btn"
+              [class.tab-btn--active]="pestanaActiva() === 'seguimiento'"
+              (click)="pestanaActiva.set('seguimiento')"
+            >
+              <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+              </svg>
+              <span>Estado y Línea de Tiempo</span>
+            </button>
+            <button
+              class="tab-btn"
+              [class.tab-btn--active]="pestanaActiva() === 'vacante'"
+              (click)="pestanaActiva.set('vacante')"
+            >
+              <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+              </svg>
+              <span>Información de la Vacante</span>
+            </button>
+          </nav>
+
+          <!-- Cuerpo: Pestaña 1 - Seguimiento y Timeline -->
+          @if (pestanaActiva() === 'seguimiento') {
+            <div class="modal-body">
+
+              <!-- Resumen del Estado Actual -->
+              <div class="status-banner">
+                <div class="status-banner__left">
+                  <span class="badge badge--large" [ngClass]="getBadgeClass(detalleSeleccionado()!.postulacion.estado_color)">
+                    {{ detalleSeleccionado()!.postulacion.estado_label }}
+                  </span>
+                  <div class="status-banner__text">
+                    <span class="company-text">Empresa: <strong>{{ detalleSeleccionado()!.postulacion.empresa_nombre }}</strong></span>
+                    <span class="date-text">Última actualización: <strong>{{ formatearFechaHora(detalleSeleccionado()!.postulacion.fecha_ultimo_cambio) }}</strong></span>
+                  </div>
+                </div>
+
+                @if (detalleSeleccionado()!.postulacion.puede_retirar) {
+                  <button class="btn btn--danger-outline btn--sm" (click)="abrirModalRetirar(detalleSeleccionado()!.postulacion)">
+                    Retirar Postulación
+                  </button>
+                }
+              </div>
+
+              <!-- Stepper Visual de Proceso -->
+              <div class="stepper-section">
+                <h3 class="section-title">Etapas del Proceso de Selección</h3>
+                <div class="stepper">
+                  <div class="step" [attr.data-status]="getStepStatus(1, detalleSeleccionado()!.postulacion.estado)">
+                    <div class="step__circle">1</div>
+                    <span class="step__label">Postulación</span>
+                  </div>
+                  <div class="step__line"></div>
+
+                  <div class="step" [attr.data-status]="getStepStatus(2, detalleSeleccionado()!.postulacion.estado)">
+                    <div class="step__circle">2</div>
+                    <span class="step__label">Revisión de CV</span>
+                  </div>
+                  <div class="step__line"></div>
+
+                  <div class="step" [attr.data-status]="getStepStatus(3, detalleSeleccionado()!.postulacion.estado)">
+                    <div class="step__circle">3</div>
+                    <span class="step__label">Preselección</span>
+                  </div>
+                  <div class="step__line"></div>
+
+                  <div class="step" [attr.data-status]="getStepStatus(4, detalleSeleccionado()!.postulacion.estado)">
+                    <div class="step__circle">4</div>
+                    <span class="step__label">Entrevista</span>
+                  </div>
+                  <div class="step__line"></div>
+
+                  <div class="step" [attr.data-status]="getStepStatus(5, detalleSeleccionado()!.postulacion.estado)">
+                    <div class="step__circle">5</div>
+                    <span class="step__label">Pruebas</span>
+                  </div>
+                  <div class="step__line"></div>
+
+                  <div class="step" [attr.data-status]="getStepStatus(6, detalleSeleccionado()!.postulacion.estado)">
+                    <div class="step__circle">6</div>
+                    <span class="step__label">Oferta</span>
+                  </div>
+                  <div class="step__line"></div>
+
+                  <div class="step" [attr.data-status]="getStepStatus(7, detalleSeleccionado()!.postulacion.estado)">
+                    <div class="step__circle">7</div>
+                    <span class="step__label">Contratación</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Historial Cronológico Completo -->
+              <div class="timeline-section">
+                <h3 class="section-title">Historial de Cambios de Estado</h3>
+
+                <div class="timeline">
+                  @for (hist of detalleSeleccionado()!.historial_estados; track hist.id) {
+                    <div class="timeline-item">
+                      <div class="timeline-item__dot" [ngClass]="getBadgeClass(hist.hacia_estado_color)"></div>
+                      <div class="timeline-item__content">
+                        <div class="timeline-item__header">
+                          <span class="badge" [ngClass]="getBadgeClass(hist.hacia_estado_color)">
+                            {{ hist.hacia_estado_label }}
+                          </span>
+                          <time class="timeline-item__date">{{ formatearFechaHora(hist.fecha) }}</time>
+                        </div>
+                        @if (hist.desde_estado_label) {
+                          <p class="timeline-item__transition">
+                            Cambió de <em>{{ hist.desde_estado_label }}</em> a <strong>{{ hist.hacia_estado_label }}</strong>
+                          </p>
+                        }
+                        @if (hist.motivo) {
+                          <p class="timeline-item__note">
+                            <svg class="icon-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                            </svg>
+                            {{ hist.motivo }}
+                          </p>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+
+            </div>
+          }
+
+          <!-- Cuerpo: Pestaña 2 - Detalle de la Vacante -->
+          @if (pestanaActiva() === 'vacante') {
+            <div class="modal-body">
+              <section class="vacante-detail">
+
+                <!-- Header de la vacante -->
+                <div class="vacante-detail__header">
+                  <h3 class="vacante-title">{{ detalleSeleccionado()!.vacante.titulo }}</h3>
+                  <div class="vacante-company-info">
+                    <span class="company-badge">
+                      <svg class="icon-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                      </svg>
+                      {{ detalleSeleccionado()!.vacante.empresa_nombre }}
+                    </span>
+                    @if (detalleSeleccionado()!.vacante.empresa_rubro) {
+                      <span class="sector-badge">Sector: {{ detalleSeleccionado()!.vacante.empresa_rubro }}</span>
+                    }
+                    @if (detalleSeleccionado()!.vacante.ciudad) {
+                      <span class="location-badge">
+                        <svg class="icon-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        {{ detalleSeleccionado()!.vacante.ciudad }}, {{ detalleSeleccionado()!.vacante.pais }}
+                      </span>
+                    }
+                  </div>
+                </div>
+
+                <!-- Cuadrícula de características -->
+                <div class="vacante-meta-grid">
+                  <div class="meta-box">
+                    <span class="meta-box__label">Modalidad</span>
+                    <span class="meta-box__val">{{ detalleSeleccionado()!.vacante.modalidad_label }}</span>
+                  </div>
+                  <div class="meta-box">
+                    <span class="meta-box__label">Tipo de Contrato</span>
+                    <span class="meta-box__val">{{ detalleSeleccionado()!.vacante.tipo_empleo_label }}</span>
+                  </div>
+                  <div class="meta-box">
+                    <span class="meta-box__label">Nivel de Experiencia</span>
+                    <span class="meta-box__val">{{ detalleSeleccionado()!.vacante.seniority || 'No especificado' }}</span>
+                  </div>
+                  <div class="meta-box">
+                    <span class="meta-box__label">Rango Salarial</span>
+                    <span class="meta-box__val">
+                      @if (detalleSeleccionado()!.vacante.salario_visible && detalleSeleccionado()!.vacante.salario_min) {
+                        {{ detalleSeleccionado()!.vacante.salario_min | number:'1.0-0' }} - {{ detalleSeleccionado()!.vacante.salario_max | number:'1.0-0' }} {{ detalleSeleccionado()!.vacante.currency }}
+                      } @else {
+                        No revelado
+                      }
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Descripción de la Vacante -->
+                <div class="vacante-section">
+                  <h4 class="vacante-section__title">Descripción del Puesto</h4>
+                  <p class="vacante-description">{{ detalleSeleccionado()!.vacante.descripcion }}</p>
+                </div>
+
+                <!-- Habilidades Requeridas -->
+                @if (detalleSeleccionado()!.vacante.habilidades.length > 0) {
+                  <div class="vacante-section">
+                    <h4 class="vacante-section__title">Habilidades y Tecnologías</h4>
+                    <div class="skills-wrap">
+                      @for (sk of detalleSeleccionado()!.vacante.habilidades; track sk.nombre) {
+                        <span class="skill-pill" [class.skill-pill--required]="sk.importancia === 'required'">
+                          {{ sk.nombre }}
+                          @if (sk.nivel_minimo) {
+                            <small>({{ sk.nivel_minimo }})</small>
+                          }
+                        </span>
+                      }
+                    </div>
+                  </div>
+                }
+
+              </section>
+            </div>
+          }
+
+        }
+
+        <!-- Pie del Modal -->
+        <footer class="modal-footer">
+          <button class="btn btn--outline" (click)="cerrarModalDetalle()">Cerrar</button>
+        </footer>
+
+      </div>
+    </div>
+  }
+
+  <!-- ══ Modal de Confirmación de Retiro ════════════════════════════════════ -->
+  @if (modalRetirarAbierto()) {
+    <div class="modal-backdrop" (click)="cerrarModalRetirar()">
+      <div class="modal-container modal-container--sm" (click)="$event.stopPropagation()">
+
+        <header class="modal-header modal-header--danger">
+          <h3 class="modal-title">¿Retirar postulación?</h3>
+          <button class="btn-close" (click)="cerrarModalRetirar()">✕</button>
+        </header>
+
+        <div class="modal-body">
+          <p class="warning-text">
+            Estás a punto de retirar tu postulación a:
+            <br>
+            <strong>{{ postulacionARetirar()?.job_titulo }}</strong> en <strong>{{ postulacionARetirar()?.empresa_nombre }}</strong>.
+          </p>
+          <p class="info-subtext">Esta acción notificará a la empresa que ya no deseas continuar en el proceso.</p>
+
+          <div class="form-group">
+            <label for="motivo-retiro">Motivo del retiro (opcional):</label>
+            <textarea
+              id="motivo-retiro"
+              rows="3"
+              placeholder="Ej: Acepté otra oferta, cambio de residencia, etc."
+              [(ngModel)]="motivoRetiro"
+            ></textarea>
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button class="btn btn--outline" (click)="cerrarModalRetirar()" [disabled]="retirando()">
+            Cancelar
+          </button>
+          <button class="btn btn--danger" (click)="confirmarRetiro()" [disabled]="retirando()">
+            @if (retirando()) {
+              Retirando...
+            } @else {
+              Confirmar Retiro
+            }
+          </button>
+        </footer>
+
+      </div>
+    </div>
+  }
+
+</div>
