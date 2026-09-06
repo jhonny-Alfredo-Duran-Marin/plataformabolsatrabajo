@@ -196,3 +196,39 @@ class JobSkill(Base):
 
     def __repr__(self) -> str:
         return f"<JobSkill(job_posting_id={self.job_posting_id}, skill_id={self.skill_id}, importance={self.importance})>"
+
+
+# ─── Preguntas de filtro (screening) — HU-14 postulaciones ──────────────────
+
+
+class ScreeningQuestion(Base):
+    """Pregunta de filtro que una empresa define para una vacante."""
+
+    __tablename__ = "screening_question"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    job_posting_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("job_posting.id", ondelete="CASCADE"), nullable=False
+    )
+    question_text: Mapped[str] = mapped_column(Text, nullable=False)
+    question_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    is_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    is_knockout: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    min_score: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ScreeningOption(Base):
+    """Opción de respuesta para una pregunta de filtro de tipo selección."""
+
+    __tablename__ = "screening_option"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    question_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("screening_question.id", ondelete="CASCADE"), nullable=False
+    )
+    option_text: Mapped[str] = mapped_column(String(300), nullable=False)
+    is_accepted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    score: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

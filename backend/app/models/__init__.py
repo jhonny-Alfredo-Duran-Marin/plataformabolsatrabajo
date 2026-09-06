@@ -21,13 +21,18 @@ from app.models.vacante import (
     JobPosting,
     JobSkill,
     JobStatus,
+    ScreeningOption,
+    ScreeningQuestion,
     SeniorityLevel,
     SkillProficiencyLevel,
     WorkModality,
 )
+from app.models.postulacion import Application, ApplicationAnswer
 
 __all__ = [
     "AppUser",
+    "Application",
+    "ApplicationAnswer",
     "AuditLog",
     "CandidateEducation",
     "CandidateLanguage",
@@ -46,6 +51,8 @@ __all__ = [
     "Language",
     "LoginAttempt",
     "Role",
+    "ScreeningOption",
+    "ScreeningQuestion",
     "Sector",
     "SeniorityLevel",
     "Skill",

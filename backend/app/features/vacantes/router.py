@@ -1,7 +1,9 @@
 import uuid
 from decimal import Decimal
+from typing import List
 
 from fastapi import APIRouter, Depends, Query, Request, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -13,9 +15,26 @@ from app.features.vacantes.schema import (
     VacanteUpdateRequest,
 )
 from app.features.vacantes.service import VacanteService
+from app.models.vacante import ScreeningOption, ScreeningQuestion
 from app.security.dependencies import CurrentUser, get_current_user, require_roles
 
 router = APIRouter(prefix="/vacantes", tags=["vacantes"])
+
+
+class ScreeningOptionSchema(BaseModel):
+    id: uuid.UUID
+    option_text: str
+
+
+class ScreeningQuestionSchema(BaseModel):
+    id: uuid.UUID
+    question_text: str
+    question_type: str
+    is_required: bool
+    options: List[ScreeningOptionSchema] = []
+
+    class Config:
+        from_attributes = True
 
 
 @router.post(
@@ -166,3 +185,37 @@ def eliminar_vacante(
         current_user=current_user,
         ip_address=ip_address,
     )
+
+
+@router.get(
+    "/{vacante_id}/preguntas",
+    response_model=List[ScreeningQuestionSchema],
+    summary="Consultar preguntas de filtro de una vacante",
+    description="Retorna las preguntas de filtro (screening) configuradas para la vacante, usadas al postularse (HU-14).",
+)
+def obtener_preguntas_vacante(vacante_id: uuid.UUID, db: Session = Depends(get_db)):
+    preguntas = (
+        db.query(ScreeningQuestion)
+        .filter(ScreeningQuestion.job_posting_id == vacante_id)
+        .order_by(ScreeningQuestion.position)
+        .all()
+    )
+
+    resultado = []
+    for pregunta in preguntas:
+        opciones = (
+            db.query(ScreeningOption)
+            .filter(ScreeningOption.question_id == pregunta.id)
+            .order_by(ScreeningOption.position)
+            .all()
+        )
+        resultado.append(
+            {
+                "id": pregunta.id,
+                "question_text": pregunta.question_text,
+                "question_type": pregunta.question_type,
+                "is_required": pregunta.is_required,
+                "options": [{"id": o.id, "option_text": o.option_text} for o in opciones],
+            }
+        )
+    return resultado
