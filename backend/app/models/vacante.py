@@ -21,7 +21,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 if TYPE_CHECKING:
-    from app.models.catalogo import JobCategory, Skill
+    from app.models.catalogo import FieldOfStudy, JobCategory, Language, Skill
     from app.models.empresa import Company
     from app.models.usuario import AppUser
 
@@ -164,6 +164,17 @@ class JobPosting(Base):
     skills: Mapped[list["JobSkill"]] = relationship(
         back_populates="job", cascade="all, delete-orphan", lazy="selectin"
     )
+    education_preferences: Mapped[list["JobEducationPreference"]] = relationship(
+        cascade="all, delete-orphan", lazy="selectin"
+    )
+    language_requirements: Mapped[list["JobLanguageRequirement"]] = relationship(
+        cascade="all, delete-orphan", lazy="selectin"
+    )
+    stages: Mapped[list["JobSelectionStage"]] = relationship(
+        back_populates="job_posting",
+        order_by="JobSelectionStage.stage_number",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:
         return f"<JobPosting(id={self.id}, title='{self.title}', status='{self.status}', company_id={self.company_id})>"
@@ -232,3 +243,65 @@ class ScreeningOption(Base):
     is_accepted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     score: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+# ─── Preferencias educativas y de idioma — HU-13 búsqueda con afinidad ──────
+
+
+class JobEducationPreference(Base):
+    """Preferencia o requisito de carrera/nivel educativo para la vacante (tabla job_education_preference)."""
+
+    __tablename__ = "job_education_preference"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    job_posting_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("job_posting.id", ondelete="CASCADE"), nullable=False
+    )
+    field_of_study_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("field_of_study.id", ondelete="RESTRICT"), nullable=False
+    )
+    education_level: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    is_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    field_of_study: Mapped["FieldOfStudy"] = relationship(lazy="joined")
+
+
+class JobLanguageRequirement(Base):
+    """Requisito de idioma para la vacante (tabla job_language_requirement)."""
+
+    __tablename__ = "job_language_requirement"
+
+    job_posting_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("job_posting.id", ondelete="CASCADE"), primary_key=True
+    )
+    language_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("language.id", ondelete="RESTRICT"), primary_key=True
+    )
+    proficiency_level: Mapped[str] = mapped_column(String(30), nullable=False)
+    is_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    language: Mapped["Language"] = relationship(lazy="joined")
+
+
+# ─── Etapas del proceso de selección — HU-17 pipeline kanban ────────────────
+
+
+class JobSelectionStage(Base):
+    """Etapa configurada para el proceso de selección de una vacante (tabla job_selection_stage)."""
+
+    __tablename__ = "job_selection_stage"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    job_posting_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("job_posting.id", ondelete="CASCADE"), nullable=False
+    )
+    stage_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_terminal: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    job_posting: Mapped["JobPosting"] = relationship(back_populates="stages")
