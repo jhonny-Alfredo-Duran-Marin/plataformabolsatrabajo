@@ -1,0 +1,102 @@
+<div class="modal-backdrop" (click)="cerrarModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Preguntas de filtro</h2>
+      <button type="button" class="close-btn" (click)="cerrarModal()">×</button>
+    </div>
+
+    <div class="modal-body">
+      <p class="text-muted" *ngIf="vacanteTitulo">Vacante: <strong>{{ vacanteTitulo }}</strong></p>
+      <p class="text-muted">
+        Definí preguntas que el egresado deberá responder al postularse. Las marcadas como
+        <strong>eliminatorias</strong> descartan automáticamente al candidato si responde una opción que no cumple el requisito.
+      </p>
+
+      @if (cargando) {
+        <div class="loading-state">Cargando preguntas...</div>
+      }
+
+      @if (!cargando && preguntas.length > 0) {
+        <ul class="lista-preguntas">
+          @for (p of preguntas; track p.id) {
+            <li class="pregunta-item">
+              <div class="pregunta-info">
+                <span class="pregunta-texto">{{ p.question_text }}</span>
+                <span class="tag" *ngIf="p.is_required">Obligatoria</span>
+                <span class="tag tag--eliminatoria" *ngIf="p.is_knockout">Eliminatoria</span>
+                <span class="tag tag--tipo">{{ p.question_type === 'single_choice' ? 'Selección' : p.question_type === 'number' ? 'Número' : 'Texto libre' }}</span>
+              </div>
+              @if (p.options.length > 0) {
+                <ul class="opciones-list">
+                  @for (o of p.options; track o.id) {
+                    <li [class.opcion--rechazada]="!o.is_accepted">
+                      {{ o.option_text }} <span class="opcion-estado">{{ o.is_accepted ? '(cumple)' : '(descarta)' }}</span>
+                    </li>
+                  }
+                </ul>
+              }
+              <button type="button" class="btn-eliminar" (click)="eliminarPregunta(p)" title="Eliminar pregunta">Eliminar</button>
+            </li>
+          }
+        </ul>
+      }
+
+      @if (!cargando && preguntas.length === 0 && !mostrandoFormulario) {
+        <p class="empty-state">Esta vacante todavía no tiene preguntas de filtro.</p>
+      }
+
+      @if (!mostrandoFormulario) {
+        <button type="button" class="btn btn--outline" (click)="abrirFormularioNuevaPregunta()">+ Agregar pregunta</button>
+      }
+
+      @if (mostrandoFormulario) {
+        <div class="nueva-pregunta-form">
+          <div class="form-group">
+            <label>Texto de la pregunta</label>
+            <input type="text" class="form-control" [(ngModel)]="nuevaPregunta.question_text" placeholder="Ej: ¿Tenés disponibilidad para trabajar fines de semana?" />
+          </div>
+
+          <div class="form-group">
+            <label>Tipo de respuesta</label>
+            <select class="form-control" [(ngModel)]="nuevaPregunta.question_type" (ngModelChange)="onTipoChange()">
+              <option value="text">Texto libre</option>
+              <option value="number">Número</option>
+              <option value="single_choice">Selección (opción única)</option>
+            </select>
+          </div>
+
+          <div class="form-check">
+            <label><input type="checkbox" [(ngModel)]="nuevaPregunta.is_required" /> Obligatoria</label>
+          </div>
+
+          @if (nuevaPregunta.question_type === 'single_choice') {
+            <div class="form-check">
+              <label><input type="checkbox" [(ngModel)]="nuevaPregunta.is_knockout" /> Eliminatoria (descarta automáticamente si la opción no cumple)</label>
+            </div>
+
+            <div class="opciones-form">
+              <label>Opciones</label>
+              @for (opt of nuevaPregunta.options; track $index) {
+                <div class="opcion-row">
+                  <input type="text" class="form-control" [(ngModel)]="opt.option_text" placeholder="Texto de la opción" />
+                  <label class="opcion-check">
+                    <input type="checkbox" [(ngModel)]="opt.is_accepted" /> Cumple el requisito
+                  </label>
+                  <button type="button" class="btn-quitar-opcion" (click)="quitarOpcion($index)">×</button>
+                </div>
+              }
+              <button type="button" class="btn-link" (click)="agregarOpcion()">+ Agregar opción</button>
+            </div>
+          }
+
+          <div class="form-actions">
+            <button type="button" class="btn btn--outline" (click)="cancelarFormulario()">Cancelar</button>
+            <button type="button" class="btn btn--primary" [disabled]="guardando" (click)="guardarNuevaPregunta()">
+              {{ guardando ? 'Guardando...' : 'Guardar pregunta' }}
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>

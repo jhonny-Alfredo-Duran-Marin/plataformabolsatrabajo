@@ -9,6 +9,9 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.features.vacantes.schema import (
     FiltrosDisponiblesResponse,
+    PreguntaFiltroCreateRequest,
+    PreguntaFiltroResponse,
+    PreguntaFiltroUpdateRequest,
     VacanteCambioEstadoRequest,
     VacanteCreateRequest,
     VacanteDetalleBusquedaResponse,
@@ -34,6 +37,7 @@ class ScreeningQuestionSchema(BaseModel):
     question_text: str
     question_type: str
     is_required: bool
+    is_knockout: bool = False
     options: List[ScreeningOptionSchema] = []
 
     class Config:
@@ -287,7 +291,54 @@ def obtener_preguntas_vacante(vacante_id: uuid.UUID, db: Session = Depends(get_d
                 "question_text": pregunta.question_text,
                 "question_type": pregunta.question_type,
                 "is_required": pregunta.is_required,
+                "is_knockout": pregunta.is_knockout,
                 "options": [{"id": o.id, "option_text": o.option_text} for o in opciones],
             }
         )
     return resultado
+
+
+@router.post(
+    "/{vacante_id}/preguntas",
+    response_model=PreguntaFiltroResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Crear una pregunta de filtro para la vacante (HU-11)",
+    description="Permite a la empresa propietaria definir una pregunta de filtro, opcionalmente excluyente.",
+)
+def crear_pregunta_filtro(
+    vacante_id: uuid.UUID,
+    payload: PreguntaFiltroCreateRequest,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_roles("empresa", "platform_admin")),
+):
+    return VacanteService(db).crear_pregunta_filtro(vacante_id, payload, current_user)
+
+
+@router.put(
+    "/{vacante_id}/preguntas/{pregunta_id}",
+    response_model=PreguntaFiltroResponse,
+    summary="Editar una pregunta de filtro (HU-11)",
+    description="Permite editar una pregunta mientras la vacante no tenga postulaciones registradas.",
+)
+def actualizar_pregunta_filtro(
+    vacante_id: uuid.UUID,
+    pregunta_id: uuid.UUID,
+    payload: PreguntaFiltroUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_roles("empresa", "platform_admin")),
+):
+    return VacanteService(db).actualizar_pregunta_filtro(vacante_id, pregunta_id, payload, current_user)
+
+
+@router.delete(
+    "/{vacante_id}/preguntas/{pregunta_id}",
+    summary="Eliminar una pregunta de filtro (HU-11)",
+    description="Permite eliminar una pregunta mientras la vacante no tenga postulaciones registradas.",
+)
+def eliminar_pregunta_filtro(
+    vacante_id: uuid.UUID,
+    pregunta_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_roles("empresa", "platform_admin")),
+):
+    return VacanteService(db).eliminar_pregunta_filtro(vacante_id, pregunta_id, current_user)

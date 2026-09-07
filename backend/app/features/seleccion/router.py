@@ -1,5 +1,8 @@
+import csv
+import io
 import uuid
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.common.request_context import get_client_ip
@@ -63,11 +66,71 @@ def configurar_etapas_vacante(
 @router.get("/vacantes/{id_vacante}/pipeline", response_model=PipelineVacanteResponse)
 def obtener_pipeline_vacante(
     id_vacante: uuid.UUID,
+    carrera_id: uuid.UUID | None = Query(None, description="Filtra candidatos por carrera (HU-16)"),
+    habilidad_id: uuid.UUID | None = Query(None, description="Filtra candidatos por habilidad declarada (HU-16)"),
+    ordenar_por: str = Query("fecha", description="'fecha' o 'afinidad' (HU-16)"),
     current_user: CurrentUser = Depends(_solo_empresa),
     db: Session = Depends(get_db),
 ) -> PipelineVacanteResponse:
-    """HU-17: Obtener el tablero/pipeline de postulantes organizados por etapas para la vacante."""
-    return SeleccionService(db).obtener_pipeline_vacante(current_user.id_usuario, id_vacante)
+    """HU-17: Obtener el tablero/pipeline de postulantes organizados por etapas para la vacante.
+
+    HU-16: admite filtrar el pool por carrera/habilidad y ordenar por fecha o afinidad.
+    """
+    return SeleccionService(db).obtener_pipeline_vacante(
+        current_user.id_usuario,
+        id_vacante,
+        carrera_id=carrera_id,
+        habilidad_id=habilidad_id,
+        ordenar_por=ordenar_por,
+    )
+
+
+@router.get("/vacantes/{id_vacante}/pipeline/exportar")
+def exportar_pool_postulantes(
+    id_vacante: uuid.UUID,
+    carrera_id: uuid.UUID | None = Query(None),
+    habilidad_id: uuid.UUID | None = Query(None),
+    ordenar_por: str = Query("fecha"),
+    current_user: CurrentUser = Depends(_solo_empresa),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
+    """HU-16: Exporta el pool de postulantes de la vacante en formato CSV."""
+    pipeline = SeleccionService(db).obtener_pipeline_vacante(
+        current_user.id_usuario,
+        id_vacante,
+        carrera_id=carrera_id,
+        habilidad_id=habilidad_id,
+        ordenar_por=ordenar_por,
+    )
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(
+        ["Nombre", "Titular profesional", "Carrera", "Email", "Teléfono", "Ciudad", "Afinidad (%)", "Estado", "Etapa", "Fecha de postulación"]
+    )
+    for c in pipeline.candidatos:
+        writer.writerow(
+            [
+                c.candidato_nombre,
+                c.candidato_titular or "",
+                c.candidato_carrera or "",
+                c.candidato_email or "",
+                c.candidato_telefono or "",
+                c.candidato_ciudad or "",
+                c.candidato_afinidad if c.candidato_afinidad is not None else "",
+                c.estado_label,
+                c.etapa_actual_nombre or "",
+                c.fecha_postulacion.strftime("%Y-%m-%d %H:%M"),
+            ]
+        )
+    buffer.seek(0)
+
+    nombre_archivo = f"postulantes_{pipeline.vacante.titulo.replace(' ', '_')}.csv"
+    return StreamingResponse(
+        iter([buffer.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{nombre_archivo}"'},
+    )
 
 
 @router.post("/postulaciones/{id_postulacion}/avanzar", response_model=CandidatoPipelineItem)

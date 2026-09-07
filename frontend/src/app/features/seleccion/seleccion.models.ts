@@ -40,6 +40,8 @@ export interface CandidatoPipelineItem {
   candidato_email?: string | null;
   candidato_telefono?: string | null;
   candidato_ciudad?: string | null;
+  candidato_carrera_id?: string | null;
+  candidato_afinidad?: number | null;
   estado: string;
   estado_label: string;
   estado_color: string;
@@ -57,6 +59,12 @@ export interface PipelineVacanteResponse {
   vacante: VacanteResumenSeleccion;
   etapas: EtapaResponse[];
   candidatos: CandidatoPipelineItem[];
+}
+
+export interface FiltrosPoolPostulantes {
+  carrera_id?: string;
+  habilidad_id?: string;
+  ordenar_por?: 'fecha' | 'afinidad';
 }
 
 export interface AvanzarEtapaRequest {

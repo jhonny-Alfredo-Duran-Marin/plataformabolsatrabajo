@@ -13,6 +13,7 @@ export interface ScreeningQuestion {
   question_text: string;
   question_type: string;
   is_required: boolean;
+  is_knockout: boolean;
   options: ScreeningOption[];
 }
 

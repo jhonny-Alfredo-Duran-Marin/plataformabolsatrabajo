@@ -17,7 +17,7 @@ from app.features.seleccion.schema import (
     PipelineVacanteResponse,
     VacanteResumenSeleccion,
 )
-from app.models.candidato import CandidateProfile
+from app.models.candidato import CandidateEducation, CandidateProfile, CandidateSkill
 from app.models.empresa import CompanyMember
 from app.models.postulacion import Application
 from app.models.vacante import JobPosting, JobSelectionStage
@@ -145,13 +145,21 @@ class SeleccionService:
         ]
 
     def obtener_pipeline_vacante(
-        self, user_id: uuid.UUID, job_id: uuid.UUID
+        self,
+        user_id: uuid.UUID,
+        job_id: uuid.UUID,
+        carrera_id: uuid.UUID | None = None,
+        habilidad_id: uuid.UUID | None = None,
+        ordenar_por: str = "fecha",
     ) -> PipelineVacanteResponse:
+        from app.features.vacantes.service import VacanteService
+
         miembro = self._obtener_miembro(user_id)
         vacante = self.repo.obtener_vacante(job_id, miembro.company_id)
         if not vacante:
             raise NotFoundException("Vacante no encontrada o no pertenece a la empresa.")
 
+        vacante_service = VacanteService(self.db)
         etapas = self.repo.obtener_etapas_vacante(job_id)
         apps = self.repo.obtener_postulaciones_vacante(job_id)
 
@@ -176,13 +184,35 @@ class SeleccionService:
 
             # Obtener carrera principal
             carrera_nombre = None
+            carrera_id_candidato = None
             if cand and cand.educations:
                 for edu in cand.educations:
                     if edu.field_of_study:
                         carrera_nombre = edu.field_of_study.name
+                        carrera_id_candidato = edu.field_of_study_id
                         break
                     elif edu.program_name:
                         carrera_nombre = edu.program_name
+
+            candidato_skills_ids = (
+                {
+                    cs.skill_id
+                    for cs in self.db.query(CandidateSkill).filter(CandidateSkill.candidate_id == cand.id).all()
+                }
+                if cand
+                else set()
+            )
+            candidato_carreras_ids = {
+                e.field_of_study_id for e in cand.educations if e.field_of_study_id
+            } if cand and cand.educations else set()
+
+            # Filtro por carrera o habilidad requerida (HU-16)
+            if carrera_id is not None and carrera_id not in candidato_carreras_ids:
+                continue
+            if habilidad_id is not None and habilidad_id not in candidato_skills_ids:
+                continue
+
+            afinidad = vacante_service._calcular_afinidad(vacante, candidato_skills_ids, candidato_carreras_ids)
 
             nombre_completo = f"{cand.first_name} {cand.last_name}" if cand else "Candidato"
             info_estado = ESTADOS_INFO.get(a.current_status, {"label": a.current_status.capitalize(), "color": "gray"})
@@ -201,6 +231,8 @@ class SeleccionService:
                     candidato_email=user.email if user else None,
                     candidato_telefono=cand.phone if cand else None,
                     candidato_ciudad=cand.city if cand else None,
+                    candidato_carrera_id=carrera_id_candidato,
+                    candidato_afinidad=afinidad,
                     estado=a.current_status,
                     estado_label=info_estado["label"],
                     estado_color=info_estado["color"],
@@ -214,6 +246,11 @@ class SeleccionService:
                     puede_descartar=puede_descartar,
                 )
             )
+
+        if ordenar_por == "afinidad":
+            candidatos_list.sort(key=lambda c: c.candidato_afinidad or 0, reverse=True)
+        else:
+            candidatos_list.sort(key=lambda c: c.fecha_postulacion, reverse=True)
 
         activos = total - descartados - contratados
 

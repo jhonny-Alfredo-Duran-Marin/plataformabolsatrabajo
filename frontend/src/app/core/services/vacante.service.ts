@@ -6,6 +6,9 @@ import {
   FiltrosBusquedaVacantes,
   FiltrosDisponibles,
   JobStatus,
+  PreguntaFiltro,
+  PreguntaFiltroCreateRequest,
+  PreguntaFiltroUpdateRequest,
   Vacante,
   VacanteCambioEstadoRequest,
   VacanteCreateRequest,
@@ -246,6 +249,40 @@ export class VacanteService {
     return this.http
       .get<VacanteDetalle>(`${this.apiUrl}/buscar/${vacanteId}`, { headers: this._headers() })
       .pipe(catchError((error: HttpErrorResponse) => this._handleError(error, 'Error al obtener el detalle de la vacante')));
+  }
+
+  // ─── Preguntas de filtro (screening) — HU-11 ─────────────────────────────
+
+  /** Lista las preguntas de filtro configuradas para una vacante. */
+  listarPreguntasFiltro(vacanteId: string): Observable<PreguntaFiltro[]> {
+    return this.http
+      .get<PreguntaFiltro[]>(`${this.apiUrl}/${vacanteId}/preguntas`, { headers: this._headers() })
+      .pipe(catchError((error: HttpErrorResponse) => this._handleError(error, 'Error al cargar las preguntas de filtro')));
+  }
+
+  /** Crea una nueva pregunta de filtro para la vacante. */
+  crearPreguntaFiltro(vacanteId: string, data: PreguntaFiltroCreateRequest): Observable<PreguntaFiltro> {
+    return this.http
+      .post<PreguntaFiltro>(`${this.apiUrl}/${vacanteId}/preguntas`, data, { headers: this._headers() })
+      .pipe(catchError((error: HttpErrorResponse) => this._handleError(error, 'Error al crear la pregunta de filtro')));
+  }
+
+  /** Edita una pregunta de filtro existente (solo si la vacante no tiene postulaciones). */
+  actualizarPreguntaFiltro(
+    vacanteId: string,
+    preguntaId: string,
+    data: PreguntaFiltroUpdateRequest
+  ): Observable<PreguntaFiltro> {
+    return this.http
+      .put<PreguntaFiltro>(`${this.apiUrl}/${vacanteId}/preguntas/${preguntaId}`, data, { headers: this._headers() })
+      .pipe(catchError((error: HttpErrorResponse) => this._handleError(error, 'Error al editar la pregunta de filtro')));
+  }
+
+  /** Elimina una pregunta de filtro (solo si la vacante no tiene postulaciones). */
+  eliminarPreguntaFiltro(vacanteId: string, preguntaId: string): Observable<{ mensaje: string }> {
+    return this.http
+      .delete<{ mensaje: string }>(`${this.apiUrl}/${vacanteId}/preguntas/${preguntaId}`, { headers: this._headers() })
+      .pipe(catchError((error: HttpErrorResponse) => this._handleError(error, 'Error al eliminar la pregunta de filtro')));
   }
 
   // ─── Utilidades Privadas ────────────────────────────────────────────────

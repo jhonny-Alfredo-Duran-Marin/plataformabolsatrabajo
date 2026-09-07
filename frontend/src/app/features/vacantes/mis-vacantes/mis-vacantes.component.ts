@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { JobStatus, Vacante } from '../../../core/models/vacante.models';
 import { ToastService } from '../../../core/services/toast.service';
 import { VacanteService } from '../../../core/services/vacante.service';
+import { PreguntasFiltroModalComponent } from '../preguntas-filtro-modal/preguntas-filtro-modal.component';
 
 /**
  * Componente para que la empresa gestione y supervise sus vacantes laborales.
@@ -11,7 +12,7 @@ import { VacanteService } from '../../../core/services/vacante.service';
 @Component({
   selector: 'app-mis-vacantes',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, PreguntasFiltroModalComponent],
   templateUrl: './mis-vacantes.component.html',
   styleUrl: './mis-vacantes.component.scss',
 })
@@ -20,6 +21,16 @@ export class MisVacantesComponent implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
+
+  vacantePreguntasFiltro: Vacante | null = null;
+
+  abrirPreguntasFiltro(vacante: Vacante): void {
+    this.vacantePreguntasFiltro = vacante;
+  }
+
+  cerrarPreguntasFiltro(): void {
+    this.vacantePreguntasFiltro = null;
+  }
 
   vacantes: Vacante[] = [];
   cargando = false;

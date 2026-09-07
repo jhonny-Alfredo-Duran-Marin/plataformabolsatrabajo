@@ -250,6 +250,43 @@ export interface VacantesPaginadas {
   items: VacanteResumen[];
 }
 
+// ─── Preguntas de filtro (screening) — HU-11 ────────────────────────────────
+
+export interface PreguntaFiltroOpcion {
+  id?: string;
+  option_text: string;
+  is_accepted: boolean;
+  position: number;
+}
+
+export interface PreguntaFiltro {
+  id: string;
+  job_posting_id: string;
+  question_text: string;
+  question_type: 'text' | 'number' | 'single_choice';
+  is_required: boolean;
+  is_knockout: boolean;
+  position: number;
+  options: PreguntaFiltroOpcion[];
+}
+
+export interface PreguntaFiltroCreateRequest {
+  question_text: string;
+  question_type: 'text' | 'number' | 'single_choice';
+  is_required: boolean;
+  is_knockout: boolean;
+  position: number;
+  options: PreguntaFiltroOpcion[];
+}
+
+export interface PreguntaFiltroUpdateRequest {
+  question_text?: string;
+  is_required?: boolean;
+  is_knockout?: boolean;
+  position?: number;
+  options?: PreguntaFiltroOpcion[];
+}
+
 export interface FiltrosBusquedaVacantes {
   q?: string;
   carrera_id?: string;

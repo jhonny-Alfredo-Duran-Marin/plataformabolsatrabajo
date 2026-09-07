@@ -78,6 +78,20 @@
         color: #dc3545;
         margin-left: 4px;
       }
+
+      .badge-excluyente {
+        display: inline-block;
+        margin-left: 8px;
+        padding: 2px 8px;
+        border-radius: 100px;
+        background: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+        font-size: 0.6875rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
     }
 
     .form-control {

@@ -158,6 +158,32 @@
         </div>
       </div>
 
+      <!-- Barra de filtro, orden y exportación del pool de postulantes (HU-16) -->
+      @if (candidatos().length > 0) {
+        <div class="pool-toolbar">
+          <input
+            type="text"
+            class="pool-search"
+            placeholder="Buscar por nombre o carrera..."
+            [ngModel]="busquedaPool()"
+            (ngModelChange)="busquedaPool.set($event)"
+          />
+          <div class="pool-orden">
+            <label>Ordenar por</label>
+            <select [ngModel]="ordenarPor()" (ngModelChange)="cambiarOrden($event)">
+              <option value="fecha">Fecha de postulación</option>
+              <option value="afinidad">Afinidad con la vacante</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn-secondary" [disabled]="exportando()" (click)="exportarPool()">
+            <svg class="icon-sm" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v8.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V4a1 1 0 011-1zM3 15a1 1 0 011 1v1a1 1 0 001 1h10a1 1 0 001-1v-1a1 1 0 112 0v1a3 3 0 01-3 3H5a3 3 0 01-3-3v-1a1 1 0 011-1z" clip-rule="evenodd"/>
+            </svg>
+            <span>{{ exportando() ? 'Exportando...' : 'Exportar CSV' }}</span>
+          </button>
+        </div>
+      }
+
       <!-- Estado sin etapas configuradas -->
       @if (etapas().length === 0) {
         <div class="empty-pipeline">
@@ -286,6 +312,9 @@
 
     <div class="card-meta-row">
       <span class="estado-badge" [attr.data-color]="c.estado_color">{{ c.estado_label }}</span>
+      @if (c.candidato_afinidad !== null && c.candidato_afinidad !== undefined) {
+        <span class="afinidad-badge" [title]="'Afinidad con la vacante'">{{ c.candidato_afinidad }}% afín</span>
+      }
       <span class="fecha-txt">{{ formatFecha(c.fecha_postulacion) }}</span>
     </div>
 
