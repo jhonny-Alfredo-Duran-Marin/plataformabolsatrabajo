@@ -16,6 +16,7 @@ class Vacante {
   final int positionsAvailable;
   final String? applicationDeadline;
   final List<VacanteSkill> skills;
+  final int? afinidadPorcentaje;
 
   const Vacante({
     required this.id,
@@ -33,12 +34,21 @@ class Vacante {
     required this.positionsAvailable,
     required this.applicationDeadline,
     required this.skills,
+    this.afinidadPorcentaje,
   });
 
+  /// Acepta tanto el shape de GET /vacantes (company_name plano) como el de
+  /// GET /vacantes/buscar (objeto company anidado, con afinidad calculada).
   factory Vacante.fromJson(Map<String, dynamic> json) {
+    final empresa = json['company'] as Map<String, dynamic>?;
+    final nombreEmpresa = json['company_name'] as String? ??
+        (empresa?['trade_name'] as String?) ??
+        (empresa?['legal_name'] as String?) ??
+        'Empresa';
+
     return Vacante(
       id: json['id'] as String,
-      companyName: json['company_name'] as String? ?? 'Empresa',
+      companyName: nombreEmpresa,
       title: json['title'] as String,
       description: json['description'] as String? ?? '',
       seniorityLevel: json['seniority_level'] as String? ?? '',
@@ -54,6 +64,7 @@ class Vacante {
       skills: (json['skills'] as List<dynamic>? ?? [])
           .map((e) => VacanteSkill.fromJson(e as Map<String, dynamic>))
           .toList(),
+      afinidadPorcentaje: json['afinidad_porcentaje'] as int?,
     );
   }
 
@@ -81,7 +92,7 @@ class VacanteSkill {
 
   factory VacanteSkill.fromJson(Map<String, dynamic> json) {
     return VacanteSkill(
-      skillName: json['skill_name'] as String? ?? '',
+      skillName: json['skill_name'] as String? ?? json['name'] as String? ?? '',
       importance: json['importance'] as String? ?? '',
       minProficiency: json['min_proficiency'] as String? ?? '',
     );

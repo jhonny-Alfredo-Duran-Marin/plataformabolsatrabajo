@@ -4,6 +4,7 @@ import '../../core/models/perfil_egresado.dart';
 import '../../core/models/sesion.dart';
 import '../../core/services/perfil_service.dart';
 import '../auth/login_screen.dart';
+import '../postulaciones/mis_postulaciones_screen.dart';
 import '../vacantes/vacantes_screen.dart';
 import 'editar_perfil_screen.dart';
 import 'mi_cv_screen.dart';
@@ -106,6 +107,8 @@ class _EgresadoPanelScreenState extends State<EgresadoPanelScreen> {
                 _accesoMiCv(context),
                 const SizedBox(height: 12),
                 _accesoVacantes(context),
+                const SizedBox(height: 12),
+                _accesoMisPostulaciones(context),
               ],
             ),
           );
@@ -218,6 +221,24 @@ class _EgresadoPanelScreenState extends State<EgresadoPanelScreen> {
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (_) => MiCvScreen(accessToken: widget.sesion.accessToken),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _accesoMisPostulaciones(BuildContext context) {
+    return Card(
+      child: ListTile(
+        leading: const Icon(Icons.assignment_turned_in_outlined),
+        title: const Text('Mis postulaciones'),
+        subtitle: const Text('Seguí el estado de tus postulaciones y retiralas si querés'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => MisPostulacionesScreen(accessToken: widget.sesion.accessToken),
             ),
           );
         },
