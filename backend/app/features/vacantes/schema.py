@@ -1,9 +1,6 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
-<<<<<<< HEAD
-from pydantic import BaseModel, ConfigDict
-=======
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -221,7 +218,6 @@ class VacantePaginadaResponse(BaseModel):
 # Endpoints bajo /vacantes/buscar, separados del listado público simple
 # (GET /vacantes) para no romper el contrato ya consumido por la app móvil
 # y el listado web existentes.
->>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
 
 
 class EmpresaEnVacanteResponse(BaseModel):
@@ -233,11 +229,7 @@ class EmpresaEnVacanteResponse(BaseModel):
     website: str | None = None
     description: str | None = None
 
-<<<<<<< HEAD
-    model_config = ConfigDict(from_attributes=True)
-=======
     model_config = {"from_attributes": True}
->>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
 
 
 class HabilidadEnVacanteResponse(BaseModel):
@@ -246,11 +238,7 @@ class HabilidadEnVacanteResponse(BaseModel):
     importance: str = "required"
     min_proficiency: str | None = None
 
-<<<<<<< HEAD
-    model_config = ConfigDict(from_attributes=True)
-=======
     model_config = {"from_attributes": True}
->>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
 
 
 class CarreraEnVacanteResponse(BaseModel):
@@ -259,11 +247,7 @@ class CarreraEnVacanteResponse(BaseModel):
     education_level: str | None = None
     is_required: bool = True
 
-<<<<<<< HEAD
-    model_config = ConfigDict(from_attributes=True)
-=======
     model_config = {"from_attributes": True}
->>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
 
 
 class VacanteResumenResponse(BaseModel):
@@ -293,17 +277,10 @@ class VacanteResumenResponse(BaseModel):
     education_preferences: list[CarreraEnVacanteResponse] = []
     afinidad_porcentaje: int | None = None
 
-<<<<<<< HEAD
-    model_config = ConfigDict(from_attributes=True)
-
-
-class VacanteDetalleResponse(VacanteResumenResponse):
-=======
     model_config = {"from_attributes": True}
 
 
 class VacanteDetalleBusquedaResponse(VacanteResumenResponse):
->>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
     responsibilities: list[str] = []
     requirements: list[str] = []
     benefits: list[str] = []
@@ -334,16 +311,8 @@ class FiltrosDisponiblesResponse(BaseModel):
     salario_max_disponible: Decimal | None = None
 
 
-<<<<<<< HEAD
-class VacantesPaginadasResponse(BaseModel):
-=======
 class VacantesBuscadasResponse(BaseModel):
->>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
     total: int
     limit: int
     offset: int
     items: list[VacanteResumenResponse]
-<<<<<<< HEAD
-
-=======
->>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad

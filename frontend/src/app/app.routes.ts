@@ -13,27 +13,16 @@ export const routes: Routes = [
     pathMatch: 'full',
   },
   {
-<<<<<<< HEAD
-    path: 'registro-empresa',
-    redirectTo: 'auth/registro-empresa',
-    pathMatch: 'full',
-  },
-  {
-=======
->>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
     path: 'registro',
     redirectTo: 'auth/registro',
     pathMatch: 'full',
   },
   {
-<<<<<<< HEAD
-=======
     path: 'registro-empresa',
     redirectTo: 'auth/registro-empresa',
     pathMatch: 'full',
   },
   {
->>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
     path: 'auth/login',
     loadComponent: () => import('./features/auth/login/login').then((m) => m.Login),
   },
@@ -86,13 +75,6 @@ export const routes: Routes = [
         path: 'bitacora',
         loadComponent: () => import('./features/admin/bitacora/bitacora.component').then((m) => m.BitacoraComponent),
       },
-      {
-        path: 'seleccion',
-        loadComponent: () =>
-          import('./features/seleccion/tablero-seleccion/tablero-seleccion.component').then(
-            (m) => m.TableroSeleccionComponent,
-          ),
-      },
     ],
   },
   {
@@ -100,12 +82,6 @@ export const routes: Routes = [
     loadComponent: () => import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
   },
   {
-<<<<<<< HEAD
-    path: 'seleccion',
-    loadComponent: () =>
-      import('./features/seleccion/tablero-seleccion/tablero-seleccion.component').then(
-        (m) => m.TableroSeleccionComponent,
-=======
     path: 'postulaciones',
     canActivate: [authGuard],
     data: { roles: ['candidate'] },
@@ -121,7 +97,6 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/seleccion/pipeline-seleccion/pipeline-seleccion.component').then(
         (m) => m.PipelineSeleccionComponent,
->>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
       ),
   },
   {
@@ -146,8 +121,6 @@ export const routes: Routes = [
     pathMatch: 'full',
   },
   {
-<<<<<<< HEAD
-=======
     path: 'vacantes/crear',
     canActivate: [authGuard],
     data: { roles: ['EMPRESA'] },
@@ -175,7 +148,6 @@ export const routes: Routes = [
       ),
   },
   {
->>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
     path: '**',
     redirectTo: 'auth/login',
   },

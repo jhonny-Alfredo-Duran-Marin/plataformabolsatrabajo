@@ -30,8 +30,6 @@ export class AdminLayout {
     { ruta: '/admin/moderacion-vacantes', icono: '📋', etiqueta: 'Moderación de ofertas', exacta: false },
     { ruta: '/vacantes', icono: '💼', etiqueta: 'Bolsa de vacantes', exacta: false },
     { ruta: '/admin/bitacora', icono: '☰', etiqueta: 'Bitácora del sistema', exacta: false },
-    { ruta: '/admin/seleccion', icono: '📊', etiqueta: 'Proceso de selección', exacta: false },
-    { ruta: '/vacantes', icono: '💼', etiqueta: 'Bolsa de vacantes', exacta: false },
   ];
 
   cerrarSesion(): void {

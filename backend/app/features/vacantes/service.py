@@ -1,10 +1,3 @@
-<<<<<<< HEAD
-import uuid
-from decimal import Decimal
-from sqlalchemy.orm import Session
-
-from app.common.exceptions import NotFoundException
-=======
 import math
 import uuid
 from datetime import datetime
@@ -18,27 +11,12 @@ from app.common.exceptions import (
     ForbiddenException,
     ResourceNotFoundException,
 )
->>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
 from app.features.vacantes.repository import VacanteRepository
 from app.features.vacantes.schema import (
     CarreraEnVacanteResponse,
     EmpresaEnVacanteResponse,
     FiltrosDisponiblesResponse,
     HabilidadEnVacanteResponse,
-<<<<<<< HEAD
-    VacanteDetalleResponse,
-    VacanteResumenResponse,
-    VacantesPaginadasResponse,
-)
-from app.models.candidato import CandidateEducation, CandidateProfile, CandidateSkill
-from app.models.oferta import JobPosting
-
-
-class VacanteService:
-    def __init__(self, db: Session) -> None:
-        self.db = db
-        self.repo = VacanteRepository(db)
-=======
     JobSkillItemResponse,
     VacanteCambioEstadoRequest,
     VacanteCreateRequest,
@@ -547,7 +525,6 @@ class VacanteService:
     # ─── Búsqueda avanzada con afinidad — HU-13 ─────────────────────────────
     # Vive bajo /vacantes/buscar (separado de listar_publicas/GET /vacantes)
     # para no romper el contrato ya consumido por el listado web y la app móvil.
->>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
 
     def buscar_vacantes(
         self,
@@ -564,11 +541,7 @@ class VacanteService:
         limit: int = 20,
         offset: int = 0,
         usuario_id: uuid.UUID | None = None,
-<<<<<<< HEAD
-    ) -> VacantesPaginadasResponse:
-=======
     ) -> VacantesBuscadasResponse:
->>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
         """Busca vacantes con filtros combinados y calcula la afinidad con el perfil del egresado si está autenticado."""
         items, total = self.repo.buscar_vacantes(
             q=q,
@@ -586,111 +559,6 @@ class VacanteService:
             offset=offset,
         )
 
-<<<<<<< HEAD
-        # Obtener perfil y datos del candidato para cálculo de afinidad
-        candidato_skills: set[uuid.UUID] = set()
-        candidato_carreras: set[uuid.UUID] = set()
-        es_candidato = False
-
-        if usuario_id:
-            perfil = (
-                self.db.query(CandidateProfile)
-                .filter(CandidateProfile.user_id == usuario_id)
-                .one_or_none()
-            )
-            if perfil:
-                es_candidato = True
-                candidato_skills = {
-                    cs.skill_id
-                    for cs in self.db.query(CandidateSkill).filter(CandidateSkill.candidate_id == perfil.id).all()
-                }
-                candidato_carreras = {
-                    ce.field_of_study_id
-                    for ce in self.db.query(CandidateEducation)
-                    .filter(CandidateEducation.candidate_id == perfil.id, CandidateEducation.field_of_study_id.isnot(None))
-                    .all()
-                    if ce.field_of_study_id is not None
-                }
-
-        vacantes_dto: list[VacanteResumenResponse] = []
-        for vacante in items:
-            afinidad = None
-            if es_candidato:
-                afinidad = self._calcular_afinidad(vacante, candidato_skills, candidato_carreras)
-
-            dto = self._mapear_a_resumen(vacante, afinidad)
-            vacantes_dto.append(dto)
-
-        # Si el usuario solicitó ordenar por afinidad y está autenticado
-        if ordenar_por == "afinidad" and es_candidato:
-            vacantes_dto.sort(key=lambda x: (x.afinidad_porcentaje or 0), reverse=True)
-
-        return VacantesPaginadasResponse(
-            total=total,
-            limit=limit,
-            offset=offset,
-            items=vacantes_dto,
-        )
-
-    def obtener_detalle(
-        self,
-        vacante_id: uuid.UUID,
-        usuario_id: uuid.UUID | None = None,
-    ) -> VacanteDetalleResponse:
-        """Obtiene el detalle completo de una vacante e incrementa sus vistas."""
-        vacante = self.repo.obtener_por_id(vacante_id)
-        if not vacante:
-            raise NotFoundException("La vacante solicitada no existe o no está disponible.")
-
-        # Incrementar contador de vistas de forma asíncrona / atómica
-        self.repo.incrementar_vistas(vacante_id)
-
-        afinidad = None
-        if usuario_id:
-            perfil = (
-                self.db.query(CandidateProfile)
-                .filter(CandidateProfile.user_id == usuario_id)
-                .one_or_none()
-            )
-            if perfil:
-                candidato_skills = {
-                    cs.skill_id
-                    for cs in self.db.query(CandidateSkill).filter(CandidateSkill.candidate_id == perfil.id).all()
-                }
-                candidato_carreras = {
-                    ce.field_of_study_id
-                    for ce in self.db.query(CandidateEducation)
-                    .filter(CandidateEducation.candidate_id == perfil.id, CandidateEducation.field_of_study_id.isnot(None))
-                    .all()
-                    if ce.field_of_study_id is not None
-                }
-                afinidad = self._calcular_afinidad(vacante, candidato_skills, candidato_carreras)
-
-        resumen = self._mapear_a_resumen(vacante, afinidad)
-
-        responsabilidades = (
-            vacante.responsibilities_json
-            if isinstance(vacante.responsibilities_json, list)
-            else []
-        )
-        requisitos = (
-            vacante.requirements_json
-            if isinstance(vacante.requirements_json, list)
-            else []
-        )
-        beneficios = (
-            vacante.benefits_json
-            if isinstance(vacante.benefits_json, list)
-            else []
-        )
-
-        empresa = vacante.company
-        return VacanteDetalleResponse(
-            **resumen.model_dump(),
-            responsibilities=responsabilidades,
-            requirements=requisitos,
-            benefits=beneficios,
-=======
         candidato_skills, candidato_carreras, es_candidato = self._perfil_afinidad_de(usuario_id)
 
         vacantes_dto = []
@@ -724,7 +592,6 @@ class VacanteService:
             responsibilities=vacante.responsibilities_json if isinstance(vacante.responsibilities_json, list) else [],
             requirements=vacante.requirements_json if isinstance(vacante.requirements_json, list) else [],
             benefits=vacante.benefits_json if isinstance(vacante.benefits_json, list) else [],
->>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
             company_contact_email=empresa.contact_email if empresa else None,
             company_phone=empresa.phone if empresa else None,
             company_address=empresa.address if empresa else None,
@@ -732,10 +599,6 @@ class VacanteService:
 
     def obtener_filtros_disponibles(self) -> FiltrosDisponiblesResponse:
         """Obtiene las opciones disponibles para los filtros de búsqueda."""
-<<<<<<< HEAD
-        data = self.repo.obtener_filtros_disponibles()
-        return FiltrosDisponiblesResponse(**data)
-=======
         return FiltrosDisponiblesResponse(**self.repo.obtener_filtros_disponibles())
 
     def _perfil_afinidad_de(
@@ -758,7 +621,6 @@ class VacanteService:
             .all()
         }
         return skills, carreras, True
->>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
 
     def _calcular_afinidad(
         self,
@@ -770,37 +632,20 @@ class VacanteService:
         score = 0
         total_peso = 0
 
-<<<<<<< HEAD
-        # Coincidencia de carrera (40 puntos máximos)
-=======
->>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
         carreras_vacante = {ep.field_of_study_id for ep in vacante.education_preferences}
         if carreras_vacante:
             total_peso += 40
             if candidato_carreras & carreras_vacante:
                 score += 40
         else:
-<<<<<<< HEAD
-            # Si la vacante no exige una carrera específica, aporta puntaje base
             score += 20
             total_peso += 20
 
-        # Coincidencia de habilidades (60 puntos máximos)
-=======
-            score += 20
-            total_peso += 20
-
->>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
         skills_vacante = {js.skill_id for js in vacante.skills}
         if skills_vacante:
             total_peso += 60
             coincidencias = len(candidato_skills & skills_vacante)
-<<<<<<< HEAD
-            fraccion = coincidencias / len(skills_vacante)
-            score += int(fraccion * 60)
-=======
             score += int((coincidencias / len(skills_vacante)) * 60)
->>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
         else:
             score += 30
             total_peso += 30
@@ -808,20 +653,9 @@ class VacanteService:
         if total_peso == 0:
             return 50
 
-<<<<<<< HEAD
-        porcentaje = int((score / total_peso) * 100)
-        return max(15, min(98, porcentaje))
-
-    def _mapear_a_resumen(
-        self,
-        vacante: JobPosting,
-        afinidad: int | None = None,
-    ) -> VacanteResumenResponse:
-=======
         return max(15, min(98, int((score / total_peso) * 100)))
 
     def _mapear_a_resumen_busqueda(self, vacante: JobPosting, afinidad: int | None = None) -> VacanteResumenResponse:
->>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
         empresa = vacante.company
         empresa_dto = EmpresaEnVacanteResponse(
             id=empresa.id,
@@ -837,11 +671,7 @@ class VacanteService:
             HabilidadEnVacanteResponse(
                 skill_id=js.skill_id,
                 name=js.skill.name if js.skill else "",
-<<<<<<< HEAD
-                importance=js.importance,
-=======
                 importance=js.importance or "required",
->>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
                 min_proficiency=js.min_proficiency,
             )
             for js in vacante.skills
@@ -886,7 +716,3 @@ class VacanteService:
             education_preferences=carreras_dto,
             afinidad_porcentaje=afinidad,
         )
-<<<<<<< HEAD
-
-=======
->>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad

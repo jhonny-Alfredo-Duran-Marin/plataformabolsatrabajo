@@ -12,9 +12,6 @@ class ResourceNotFoundException(AppException):
     status_code = 404
 
 
-NotFoundException = ResourceNotFoundException
-
-
 class BusinessException(AppException):
     status_code = 422
 

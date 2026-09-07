@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 export type SeniorityLevel = 'internship' | 'junior' | 'mid' | 'senior' | 'lead';
 
 export type EmploymentType =
@@ -162,7 +160,6 @@ export interface VacanteFiltros {
 // ─── Búsqueda avanzada con afinidad (HU-13) ─────────────────────────────────
 // Tipos usados por GET /vacantes/buscar, separado del listado simple de arriba.
 
->>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
 export interface EmpresaEnVacante {
   id: string;
   legal_name: string;
@@ -267,7 +264,3 @@ export interface FiltrosBusquedaVacantes {
   limit?: number;
   offset?: number;
 }
-<<<<<<< HEAD
-
-=======
->>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
