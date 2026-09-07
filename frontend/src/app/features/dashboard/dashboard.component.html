@@ -43,11 +43,11 @@
         </div>
         <div class="card-grid">
           <div class="stat-card stat-card--blue">
-            <span class="stat-card__num">0</span>
+            <span class="stat-card__num">{{ postulacionesActivasCount() }}</span>
             <span class="stat-card__label">Postulaciones activas</span>
           </div>
           <div class="stat-card stat-card--purple">
-            <span class="stat-card__num">0%</span>
+            <span class="stat-card__num">{{ perfilPorcentaje() }}%</span>
             <span class="stat-card__label">Perfil completado</span>
           </div>
           <div class="stat-card stat-card--green">
@@ -57,9 +57,24 @@
         </div>
         <div class="action-area">
           <a routerLink="/vacantes" class="btn btn--primary">Explorar vacantes</a>
+          <a routerLink="/postulaciones" class="btn btn--outline">Ver mis postulaciones</a>
           <a routerLink="/perfil/profesional" class="btn btn--outline">Ver mi perfil</a>
           <a routerLink="/perfil/visibilidad" class="btn btn--outline">Visibilidad del perfil</a>
         </div>
+
+        @if (postulaciones().length > 0) {
+          <div class="recent-applications" style="margin-top: 2rem;">
+            <h3>Mis Postulaciones Recientes</h3>
+            <ul style="list-style: none; padding: 0;">
+              @for (app of postulaciones().slice(0, 5); track app.id) {
+                <li style="padding: 1rem; border: 1px solid #eee; border-radius: 8px; margin-bottom: 1rem;">
+                  <strong>{{ app.job_title }}</strong> en {{ app.company_name }} <br>
+                  <span style="font-size: 0.9em; color: #666;">Estado: {{ app.current_status }} - Fecha: {{ app.applied_at | date }}</span>
+                </li>
+              }
+            </ul>
+          </div>
+        }
       </section>
     }
 
@@ -75,20 +90,22 @@
         </div>
         <div class="card-grid">
           <div class="stat-card stat-card--blue">
-            <span class="stat-card__num">0</span>
+            <span class="stat-card__num">{{ vacantesPublicadas }}</span>
             <span class="stat-card__label">Vacantes publicadas</span>
+          </div>
+          <div class="stat-card stat-card--orange">
+            <span class="stat-card__num">{{ vacantesEnRevision }}</span>
+            <span class="stat-card__label">En revisión institucional</span>
           </div>
           <div class="stat-card stat-card--purple">
             <span class="stat-card__num">0</span>
             <span class="stat-card__label">Postulantes recibidos</span>
           </div>
-          <div class="stat-card stat-card--green">
-            <span class="stat-card__num">0</span>
-            <span class="stat-card__label">Entrevistas programadas</span>
-          </div>
         </div>
         <div class="action-area">
           <a routerLink="/vacantes/crear" class="btn btn--primary">Publicar vacante</a>
+          <a routerLink="/vacantes/mis-vacantes" class="btn btn--outline">Ver estado de mis vacantes</a>
+          <a routerLink="/seleccion" class="btn btn--outline">Proceso de selección</a>
         </div>
       </section>
     }

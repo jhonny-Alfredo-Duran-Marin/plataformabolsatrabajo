@@ -33,10 +33,14 @@ class RolesService:
         ]
 
     def listar_usuarios(self) -> list[UsuarioAdminResponse]:
-        usuarios: list[UsuarioAdminResponse] = []
-        for usuario in self.repo.listar_usuarios():
-            usuarios.append(self._a_dto(usuario))
-        return usuarios
+        usuarios = self.repo.listar_usuarios()
+        ids = [usuario.id for usuario in usuarios]
+        roles_por_usuario = self.repo.roles_de_usuarios(ids)
+        miembros_empresa = self.repo.miembros_empresa_de(ids)
+        return [
+            self._a_dto(usuario, roles_por_usuario.get(usuario.id, []), usuario.id in miembros_empresa)
+            for usuario in usuarios
+        ]
 
     def asignar_rol(
         self,
@@ -73,9 +77,12 @@ class RolesService:
         )
         self.db.commit()
 
-        return self._a_dto(usuario), rol_anterior
+        return self._dto_individual(usuario), rol_anterior
 
-    def _a_dto(self, usuario) -> UsuarioAdminResponse:
+    def _dto_individual(self, usuario) -> UsuarioAdminResponse:
+        return self._a_dto(usuario, self.repo.roles_de_usuario(usuario.id), self.repo.es_miembro_empresa(usuario.id))
+
+    def _a_dto(self, usuario, roles: list[str], es_miembro_empresa: bool) -> UsuarioAdminResponse:
         estado = _ETIQUETAS_ESTADO.get(usuario.account_status, usuario.account_status)
         return UsuarioAdminResponse(
             id=usuario.id,
@@ -83,6 +90,6 @@ class RolesService:
             estado=estado,
             fecha_registro=usuario.created_at,
             ultimo_acceso=usuario.last_login_at,
-            roles=self.repo.roles_de_usuario(usuario.id),
-            es_miembro_empresa=self.repo.es_miembro_empresa(usuario.id),
+            roles=roles,
+            es_miembro_empresa=es_miembro_empresa,
         )

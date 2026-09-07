@@ -16,6 +16,8 @@ from app.security.dependencies import CurrentUser, require_roles
 from app.features.bitacora.service import BitacoraService
 from app.features.perfil.service import EgresadoService
 from app.features.empresa.service import EmpresaService
+from app.features.vacantes.schema import VacanteModeracionRequest, VacantePaginadaResponse, VacanteResponse
+from app.features.vacantes.service import VacanteService
 
 router = APIRouter(prefix="/validacion", tags=["validacion-institucional"])
 
@@ -161,3 +163,35 @@ def restaurar_empresa(
     )
     db.commit()
     return empresa
+
+
+# ─── Moderación de ofertas laborales (HU-12) ────────────────────────────────
+
+
+@router.get("/vacantes/pendientes", response_model=VacantePaginadaResponse)
+def listar_vacantes_pendientes(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=10, ge=1, le=100),
+    current_user: CurrentUser = Depends(_solo_admin),
+    db: Session = Depends(get_db),
+):
+    return VacanteService(db).listar_pendientes_revision(page=page, page_size=page_size)
+
+
+@router.post("/vacantes/{vacante_id}/decision", response_model=VacanteResponse)
+def decidir_vacante(
+    vacante_id: uuid.UUID,
+    data: VacanteModeracionRequest,
+    request: Request,
+    current_user: CurrentUser = Depends(_solo_admin),
+    db: Session = Depends(get_db),
+):
+    # VacanteService.moderar ya registra su propia auditoria y hace commit,
+    # siguiendo el mismo patron self-contained del resto del modulo vacantes.
+    return VacanteService(db).moderar(
+        vacante_id=vacante_id,
+        aprobado=data.aprobado,
+        motivo_rechazo=data.motivo_rechazo,
+        current_user=current_user,
+        ip_address=get_client_ip(request),
+    )

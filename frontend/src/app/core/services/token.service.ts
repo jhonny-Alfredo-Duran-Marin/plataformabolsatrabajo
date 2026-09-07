@@ -4,9 +4,9 @@
  */
 import { Injectable } from '@angular/core';
 
-const ACCESS_KEY  = 'egresa_access_token';
-const REFRESH_KEY = 'egresa_refresh_token';
-const ROL_KEY     = 'egresa_rol';
+const ACCESS_KEY  = 'token';
+const REFRESH_KEY = 'refresh_token';
+const ROL_KEY     = 'rol';
 
 export interface JwtPayload {
   sub: string;      // ID del usuario

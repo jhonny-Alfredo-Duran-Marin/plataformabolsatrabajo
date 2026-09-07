@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   {
@@ -12,16 +13,27 @@ export const routes: Routes = [
     pathMatch: 'full',
   },
   {
+<<<<<<< HEAD
     path: 'registro-empresa',
     redirectTo: 'auth/registro-empresa',
     pathMatch: 'full',
   },
   {
+=======
+>>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
     path: 'registro',
     redirectTo: 'auth/registro',
     pathMatch: 'full',
   },
   {
+<<<<<<< HEAD
+=======
+    path: 'registro-empresa',
+    redirectTo: 'auth/registro-empresa',
+    pathMatch: 'full',
+  },
+  {
+>>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
     path: 'auth/login',
     loadComponent: () => import('./features/auth/login/login').then((m) => m.Login),
   },
@@ -64,6 +76,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'moderacion-vacantes',
+        loadComponent: () =>
+          import('./features/admin/moderacion-vacantes/moderacion-vacantes.component').then(
+            (m) => m.ModeracionVacantesComponent,
+          ),
+      },
+      {
         path: 'bitacora',
         loadComponent: () => import('./features/admin/bitacora/bitacora.component').then((m) => m.BitacoraComponent),
       },
@@ -81,10 +100,28 @@ export const routes: Routes = [
     loadComponent: () => import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
   },
   {
+<<<<<<< HEAD
     path: 'seleccion',
     loadComponent: () =>
       import('./features/seleccion/tablero-seleccion/tablero-seleccion.component').then(
         (m) => m.TableroSeleccionComponent,
+=======
+    path: 'postulaciones',
+    canActivate: [authGuard],
+    data: { roles: ['candidate'] },
+    loadComponent: () =>
+      import('./features/postulaciones/mis-postulaciones/mis-postulaciones.component').then(
+        (m) => m.MisPostulacionesComponent,
+      ),
+  },
+  {
+    path: 'seleccion',
+    canActivate: [authGuard],
+    data: { roles: ['empresa'] },
+    loadComponent: () =>
+      import('./features/seleccion/pipeline-seleccion/pipeline-seleccion.component').then(
+        (m) => m.PipelineSeleccionComponent,
+>>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
       ),
   },
   {
@@ -109,6 +146,36 @@ export const routes: Routes = [
     pathMatch: 'full',
   },
   {
+<<<<<<< HEAD
+=======
+    path: 'vacantes/crear',
+    canActivate: [authGuard],
+    data: { roles: ['EMPRESA'] },
+    loadComponent: () =>
+      import('./features/vacantes/crear-vacante/crear-vacante.component').then(
+        (m) => m.CrearVacanteComponent,
+      ),
+  },
+  {
+    path: 'vacantes/mis-vacantes',
+    canActivate: [authGuard],
+    data: { roles: ['EMPRESA'] },
+    loadComponent: () =>
+      import('./features/vacantes/mis-vacantes/mis-vacantes.component').then(
+        (m) => m.MisVacantesComponent,
+      ),
+  },
+  {
+    path: 'vacantes/:id',
+    canActivate: [authGuard],
+    data: { roles: ['EGRESADO', 'ESTUDIANTE', 'EMPRESA', 'ADMINISTRADOR'] },
+    loadComponent: () =>
+      import('./features/vacantes/vacante-detalle/vacante-detalle.component').then(
+        (m) => m.VacanteDetalleComponent,
+      ),
+  },
+  {
+>>>>>>> 8a7aaf477858b3da8e1335d385ccfa4cc3d228ad
     path: '**',
     redirectTo: 'auth/login',
   },

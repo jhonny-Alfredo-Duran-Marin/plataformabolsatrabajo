@@ -27,6 +27,8 @@ export class AdminLayout {
     { ruta: '/admin/roles', icono: '◉', etiqueta: 'Gestión de roles', exacta: false },
     { ruta: '/admin/validacion-egresados', icono: '✓', etiqueta: 'Validación de egresados', exacta: false },
     { ruta: '/admin/empresas', icono: '🏢', etiqueta: 'Gestión de empresas', exacta: false },
+    { ruta: '/admin/moderacion-vacantes', icono: '📋', etiqueta: 'Moderación de ofertas', exacta: false },
+    { ruta: '/vacantes', icono: '💼', etiqueta: 'Bolsa de vacantes', exacta: false },
     { ruta: '/admin/bitacora', icono: '☰', etiqueta: 'Bitácora del sistema', exacta: false },
     { ruta: '/admin/seleccion', icono: '📊', etiqueta: 'Proceso de selección', exacta: false },
     { ruta: '/vacantes', icono: '💼', etiqueta: 'Bolsa de vacantes', exacta: false },

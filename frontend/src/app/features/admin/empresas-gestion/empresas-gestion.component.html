@@ -136,13 +136,28 @@
 
             <!-- Acciones -->
             <td class="text-center">
-              <button *ngIf="emp.activo" type="button" class="btn-danger-sm" title="Dar de baja lógica"
-                (click)="abrirModalBajaLogica(emp)">
+              <div *ngIf="emp.estado_verificacion === 'PENDIENTE'" class="validacion-cell">
+                <div class="validacion-botones">
+                  <button type="button" class="btn-success-sm" title="Aprobar empresa"
+                    [disabled]="isDecidiendo[emp.id]" (click)="aprobar(emp)">
+                    ✅ Aprobar
+                  </button>
+                  <button type="button" class="btn-danger-sm" title="Rechazar empresa"
+                    [disabled]="isDecidiendo[emp.id]" (click)="rechazar(emp)">
+                    ✖️ Rechazar
+                  </button>
+                </div>
+                <input type="text" class="motivo-input" placeholder="Motivo si rechazas..."
+                  [(ngModel)]="motivosRechazo[emp.id]" [disabled]="isDecidiendo[emp.id]" />
+              </div>
+
+              <button *ngIf="emp.estado_verificacion !== 'PENDIENTE' && emp.activo" type="button"
+                class="btn-danger-sm" title="Dar de baja lógica" (click)="abrirModalBajaLogica(emp)">
                 🗑️ Desactivar
               </button>
 
-              <button *ngIf="!emp.activo" type="button" class="btn-success-sm" title="Restaurar empresa"
-                (click)="restaurarEmpresa(emp)">
+              <button *ngIf="emp.estado_verificacion !== 'PENDIENTE' && !emp.activo" type="button"
+                class="btn-success-sm" title="Restaurar empresa" (click)="restaurarEmpresa(emp)">
                 ♻️ Reactivar
               </button>
             </td>

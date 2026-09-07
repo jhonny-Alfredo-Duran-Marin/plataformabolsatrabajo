@@ -62,11 +62,15 @@ class EmpresaService:
     def _dto_con_motivo(self, empresa: Company) -> EmpresaResponse:
         return _a_dto(empresa, self.repo.ultimo_motivo_rechazo(empresa.id))
 
+    def _listar_con_motivos(self, empresas: list[Company]) -> list[EmpresaResponse]:
+        motivos = self.repo.ultimos_motivos_rechazo([empresa.id for empresa in empresas])
+        return [_a_dto(empresa, motivos.get(empresa.id)) for empresa in empresas]
+
     def listar_pendientes(self) -> list[EmpresaResponse]:
-        return [self._dto_con_motivo(empresa) for empresa in self.repo.listar_pendientes()]
+        return self._listar_con_motivos(self.repo.listar_pendientes())
 
     def listar_todas(self, incluir_inactivas: bool = False) -> list[EmpresaResponse]:
-        return [self._dto_con_motivo(empresa) for empresa in self.repo.listar_todas(incluir_inactivas=incluir_inactivas)]
+        return self._listar_con_motivos(self.repo.listar_todas(incluir_inactivas=incluir_inactivas))
 
     def decidir(self, empresa_id: uuid.UUID | str, aprobado: bool, motivo_rechazo: str | None) -> EmpresaResponse:
         empresa = self._obtener(empresa_id)

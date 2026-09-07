@@ -86,6 +86,43 @@ class AuthService:
         )
         return usuario
 
+    _TAMANIO_MAP: dict[str, str] = {
+        "startup": "startup",
+        "micro": "startup",
+        "1-10": "startup",
+        "1 - 10": "startup",
+        "pequeña": "small",
+        "pequena": "small",
+        "small": "small",
+        "11-50": "small",
+        "11 - 50": "small",
+        "mediana": "medium",
+        "medium": "medium",
+        "51-200": "medium",
+        "51 - 200": "medium",
+        "grande": "large",
+        "large": "large",
+        "+200": "large",
+        "200+": "large",
+        "corporacion": "corporation",
+        "corporación": "corporation",
+        "corporation": "corporation",
+    }
+
+    def _mapear_tamanio_empresa(self, tamanio: str | None) -> str | None:
+        """Normaliza el tamaño de empresa al valor exacto que exige ck_comp_size
+        ('startup', 'small', 'medium', 'large', 'corporation'), aceptando el texto
+        libre que puede llegar del formulario de registro."""
+        if not tamanio:
+            return None
+        raw = tamanio.strip().lower()
+        if raw in ("startup", "small", "medium", "large", "corporation"):
+            return raw
+        for clave, valor in self._TAMANIO_MAP.items():
+            if clave in raw:
+                return valor
+        return "small"
+
     def registrar_empresa(self, data: RegistroEmpresaRequest) -> AppUser:
         if self.usuarios.existe_correo(data.correo):
             raise ConflictException("El correo electrónico ya está registrado.")
@@ -99,6 +136,8 @@ class AuthService:
             sector = self.db.scalar(select(Sector).where(func.lower(Sector.name) == data.sector.lower()))
             sector_id = sector.id if sector else None
 
+        company_size = self._mapear_tamanio_empresa(data.tamanio)
+
         usuario = AppUser(
             email=data.correo.strip().lower(),
             password_hash=hash_password(data.password),
@@ -111,7 +150,7 @@ class AuthService:
             legal_name=data.razon_social,
             tax_id=data.nit,
             sector_id=sector_id,
-            company_size=data.tamanio,
+            company_size=company_size,
             description=data.descripcion,
             website=data.sitio_web,
             phone=data.telefono,

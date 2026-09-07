@@ -1,0 +1,129 @@
+<div class="admin-container">
+  <!-- Encabezado de la Sección -->
+  <header class="admin-header">
+    <div>
+      <div class="header-badge">Administración Institucional • UAGRM</div>
+      <h1>Moderación de Ofertas Laborales</h1>
+      <p class="subtitle">
+        Revisá y aprobá o rechazá las vacantes enviadas por las empresas antes de que se publiquen (HU-12).
+      </p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn-refresh" (click)="cargarPendientes()" [disabled]="isLoading">
+        🔄 Actualizar
+      </button>
+    </div>
+  </header>
+
+  <!-- Notificación Toast Flotante -->
+  <div *ngIf="toastMessage" class="toast-banner" [class.toast-error]="toastEsError">
+    <span>{{ toastMessage }}</span>
+  </div>
+
+  <!-- Estado de Carga / Error -->
+  <div *ngIf="isLoading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Cargando vacantes pendientes de revisión...</p>
+  </div>
+
+  <div *ngIf="errorMessage && !isLoading" class="error-state">
+    <p>{{ errorMessage }}</p>
+    <button (click)="cargarPendientes()" class="btn-secondary">Reintentar</button>
+  </div>
+
+  <!-- Listado de Vacantes Pendientes -->
+  <div *ngIf="!isLoading && !errorMessage" class="table-card">
+    <div *ngIf="vacantes.length === 0" class="empty-state">
+      <p>No hay vacantes pendientes de revisión en este momento. ✅</p>
+    </div>
+
+    <div *ngIf="vacantes.length > 0" class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Vacante</th>
+            <th>Empresa</th>
+            <th>Modalidad / Ciudad</th>
+            <th>Enviada</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let v of vacantes">
+            <td>
+              <div class="empresa-cell">
+                <a [routerLink]="['/vacantes', v.id]" class="empresa-name" target="_blank">{{ v.title }}</a>
+                <span class="empresa-meta">{{ v.seniority_level }} · {{ v.employment_type }}</span>
+              </div>
+            </td>
+            <td>{{ v.company_name || 'Sin nombre' }}</td>
+            <td>
+              <div class="sector-cell">
+                <span>{{ v.work_modality }}</span>
+                <small>{{ v.city }}</small>
+              </div>
+            </td>
+            <td>{{ v.created_at | date:'short' }}</td>
+            <td class="text-center">
+              <button type="button" class="btn-success-sm" title="Aprobar y publicar"
+                [disabled]="isProcessingAction" (click)="aprobar(v)">
+                ✅ Aprobar
+              </button>
+              <button type="button" class="btn-danger-sm" title="Rechazar con motivo"
+                [disabled]="isProcessingAction" (click)="abrirModalRechazo(v)">
+                ✖️ Rechazar
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Paginación -->
+    <div *ngIf="totalPages > 1" class="pagination-bar">
+      <button type="button" class="btn-secondary" [disabled]="page <= 1" (click)="irAPagina(page - 1)">
+        ← Anterior
+      </button>
+      <span>Página {{ page }} de {{ totalPages }} ({{ total }} pendientes)</span>
+      <button type="button" class="btn-secondary" [disabled]="page >= totalPages" (click)="irAPagina(page + 1)">
+        Siguiente →
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal de Rechazo (motivo obligatorio) -->
+  <div *ngIf="showRechazoModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-icon warning">
+        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      </div>
+
+      <h2>Rechazar Vacante</h2>
+      <p class="modal-desc">
+        Vas a rechazar <strong>{{ vacanteParaRechazar?.title }}</strong> de
+        <strong>{{ vacanteParaRechazar?.company_name }}</strong>. La empresa será notificada con el motivo
+        para que pueda corregirla y volver a enviarla.
+      </p>
+
+      <div class="form-group">
+        <label for="motivo_rechazo">Motivo del rechazo <span class="required">*</span></label>
+        <textarea id="motivo_rechazo" rows="3" [(ngModel)]="motivoRechazo"
+          placeholder="Ej. La descripción del puesto es insuficiente, falta detallar los requisitos..."></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" (click)="cerrarModalRechazo()" [disabled]="isProcessingAction">
+          Cancelar
+        </button>
+        <button type="button" class="btn-confirm-delete" (click)="confirmarRechazo()"
+          [disabled]="isProcessingAction || !motivoRechazo.trim()">
+          <span *ngIf="!isProcessingAction">Confirmar Rechazo</span>
+          <span *ngIf="isProcessingAction">Procesando...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

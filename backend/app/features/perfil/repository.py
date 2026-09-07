@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.candidato import (
@@ -72,6 +72,24 @@ class EgresadoRepository:
         )
         return self.db.scalar(stmt)
 
+    def educacion_principal_de(self, candidate_ids: list[uuid.UUID]) -> dict[uuid.UUID, CandidateEducation]:
+        """Versión batch de obtener_educacion_principal: una sola query para
+        todos los candidatos en vez de una por candidato (evita N+1 al listar)."""
+        if not candidate_ids:
+            return {}
+        stmt = (
+            select(CandidateEducation)
+            .where(
+                CandidateEducation.candidate_id.in_(candidate_ids),
+                CandidateEducation.description.like(f"{self.MARCADOR_EDUCACION_REGISTRO}%"),
+            )
+            .order_by(CandidateEducation.candidate_id, CandidateEducation.created_at.asc())
+        )
+        resultado: dict[uuid.UUID, CandidateEducation] = {}
+        for fila in self.db.scalars(stmt):
+            resultado.setdefault(fila.candidate_id, fila)
+        return resultado
+
     # --- Experiencia laboral (tabla work_experience) ---
     def listar_experiencia(self, candidate_id: uuid.UUID) -> list[WorkExperience]:
         stmt = select(WorkExperience).where(WorkExperience.candidate_id == candidate_id)
@@ -138,6 +156,18 @@ class EgresadoRepository:
             CandidateSkill.candidate_id == candidate_id
         )
         return list(self.db.scalars(stmt))
+
+    def cantidad_habilidades_de(self, candidate_ids: list[uuid.UUID]) -> dict[uuid.UUID, int]:
+        """Versión batch de len(listar_habilidades(...)): una sola query para
+        todos los candidatos en vez de una por candidato (evita N+1 al listar)."""
+        if not candidate_ids:
+            return {}
+        stmt = (
+            select(CandidateSkill.candidate_id, func.count())
+            .where(CandidateSkill.candidate_id.in_(candidate_ids))
+            .group_by(CandidateSkill.candidate_id)
+        )
+        return dict(self.db.execute(stmt).all())
 
     def reemplazar_habilidades(self, candidate_id: uuid.UUID, skill_ids: list[uuid.UUID]) -> None:
         self.db.query(CandidateSkill).filter(CandidateSkill.candidate_id == candidate_id).delete()

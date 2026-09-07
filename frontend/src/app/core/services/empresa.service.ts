@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../features/auth/auth.service';
-import { ConfiguracionEmpresaRequest, Empresa } from '../models/empresa.models';
+import { ConfiguracionEmpresaRequest, DecisionEmpresaRequest, Empresa } from '../models/empresa.models';
 
 @Injectable({
   providedIn: 'root',
@@ -21,6 +21,13 @@ export class EmpresaService {
   listarEmpresas(incluirInactivas: boolean = true): Observable<Empresa[]> {
     const params = new HttpParams().set('incluir_inactivas', String(incluirInactivas));
     return this.http.get<Empresa[]>(this.apiUrl, { headers: this.headers(), params });
+  }
+
+  /** Aprueba o rechaza la verificación de una empresa (HU-06) */
+  decidir(empresaId: string, decision: DecisionEmpresaRequest): Observable<Empresa> {
+    return this.http.post<Empresa>(`${this.apiUrl}/${empresaId}/decision`, decision, {
+      headers: this.headers(),
+    });
   }
 
   /** Actualiza los permisos de notificaciones o postulaciones de la empresa */
