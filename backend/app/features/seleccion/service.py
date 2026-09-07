@@ -171,7 +171,7 @@ class SeleccionService:
         contratados = 0
 
         for a in apps:
-            if a.current_status == "rejected":
+            if a.current_status in ("rejected", "withdrawn"):
                 descartados += 1
             elif a.current_status == "hired":
                 contratados += 1
