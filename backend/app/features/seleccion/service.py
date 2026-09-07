@@ -329,7 +329,7 @@ class SeleccionService:
             self.repo.crear_notificacion(
                 user_id=app.candidate.user_id,
                 tipo="application_status",
-                title=f"Avance en proceso: {app.job_posting.title}",
+                titulo=f"Avance en proceso: {app.job_posting.title}",
                 cuerpo=f"¡Felicidades! Has avanzado a la etapa '{etapa_destino.name}' en el proceso de selección de {empresa_nombre}.",
                 enlace=f"/postulaciones",
             )
@@ -377,7 +377,7 @@ class SeleccionService:
             self.repo.crear_notificacion(
                 user_id=app.candidate.user_id,
                 tipo="application_status",
-                title=f"Actualización de tu postulación: {app.job_posting.title}",
+                titulo=f"Actualización de tu postulación: {app.job_posting.title}",
                 cuerpo=f"Tu proceso de postulación a {app.job_posting.title} en {empresa_nombre} ha finalizado. Te agradecemos por tu interés y tiempo.",
                 enlace=f"/postulaciones",
             )
