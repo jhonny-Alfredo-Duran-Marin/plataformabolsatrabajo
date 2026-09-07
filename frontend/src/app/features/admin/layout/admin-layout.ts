@@ -6,7 +6,7 @@ import { AuthService } from '../../auth/auth.service';
 interface ItemMenu {
   ruta: string;
   etiqueta: string;
-  tipoIcono: 'dashboard' | 'roles' | 'validacion' | 'empresas' | 'moderacion' | 'bolsa' | 'bitacora';
+  tipoIcono: 'dashboard' | 'roles' | 'validacion' | 'empresas' | 'moderacion' | 'bitacora';
   exacta: boolean;
 }
 
@@ -28,7 +28,6 @@ export class AdminLayout {
     { ruta: '/admin/validacion-egresados', tipoIcono: 'validacion', etiqueta: 'Validación de egresados', exacta: false },
     { ruta: '/admin/empresas', tipoIcono: 'empresas', etiqueta: 'Gestión de empresas', exacta: false },
     { ruta: '/admin/moderacion-vacantes', tipoIcono: 'moderacion', etiqueta: 'Moderación de ofertas', exacta: false },
-    { ruta: '/vacantes', tipoIcono: 'bolsa', etiqueta: 'Bolsa de vacantes', exacta: false },
     { ruta: '/admin/bitacora', tipoIcono: 'bitacora', etiqueta: 'Bitácora del sistema', exacta: false },
   ];
 
