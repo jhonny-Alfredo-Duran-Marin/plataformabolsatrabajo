@@ -1,10 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { AuthService } from '../../auth/auth.service';
 import { BitacoraLog, BitacoraFiltros } from './bitacora.model';
 import { BitacoraService } from './bitacora.service';
+
+const TAMANIO_PAGINA = 15;
 
 @Component({
   selector: 'app-bitacora',
@@ -17,6 +19,14 @@ export class BitacoraComponent implements OnInit {
   readonly logs = signal<BitacoraLog[]>([]);
   readonly cargando = signal(false);
   readonly error = signal<string | null>(null);
+  readonly paginaActual = signal(1);
+
+  readonly totalPaginas = computed(() => Math.max(1, Math.ceil(this.logs().length / TAMANIO_PAGINA)));
+
+  readonly logsPagina = computed(() => {
+    const inicio = (this.paginaActual() - 1) * TAMANIO_PAGINA;
+    return this.logs().slice(inicio, inicio + TAMANIO_PAGINA);
+  });
 
   filtros: BitacoraFiltros = {
     usuarioId: null,
@@ -47,6 +57,7 @@ export class BitacoraComponent implements OnInit {
     this.bitacoraService.listar(token, this.filtros).subscribe({
       next: (logs) => {
         this.logs.set(logs);
+        this.paginaActual.set(1);
         this.cargando.set(false);
       },
       error: () => {
@@ -54,6 +65,11 @@ export class BitacoraComponent implements OnInit {
         this.cargando.set(false);
       },
     });
+  }
+
+  irAPagina(pagina: number): void {
+    if (pagina < 1 || pagina > this.totalPaginas()) return;
+    this.paginaActual.set(pagina);
   }
 
   exportar(formato: 'excel' | 'pdf'): void {

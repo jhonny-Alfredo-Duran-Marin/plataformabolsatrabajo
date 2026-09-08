@@ -67,6 +67,12 @@ export class ValidacionEgresadosComponent implements OnInit {
     return this.carrerasPorId().get(carreraId) ?? `#${carreraId}`;
   }
 
+  claseCompletitud(porcentaje: number): string {
+    if (porcentaje >= 80) return 'badge-verificada';
+    if (porcentaje >= 40) return 'badge-pendiente';
+    return 'badge-suspendida';
+  }
+
   aprobar(perfil: PerfilEgresado): void {
     this.decidir(perfil, true);
   }
