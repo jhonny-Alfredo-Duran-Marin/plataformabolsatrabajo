@@ -10,11 +10,12 @@ import {
 } from '../../../core/models/vacante.models';
 import { VacanteService } from '../../../core/services/vacante.service';
 import { AuthService } from '../../auth/auth.service';
+import { PostulacionModalComponent } from '../../../shared/components/postulacion-modal/postulacion-modal.component';
 
 @Component({
   selector: 'app-busqueda-vacantes',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, PostulacionModalComponent],
   templateUrl: './busqueda-vacantes.component.html',
   styleUrl: './busqueda-vacantes.component.scss',
 })
@@ -48,6 +49,7 @@ export class BusquedaVacantesComponent implements OnInit {
 
   // Postulación feedback
   toastMessage: string | null = null;
+  mostrarModalPostulacion = false;
 
   ngOnInit(): void {
     this.cargarFiltrosDisponibles();
@@ -153,8 +155,17 @@ export class BusquedaVacantesComponent implements OnInit {
       this.mostrarToast('Debes iniciar sesión como egresado para postularte.', true);
       return;
     }
-    this.mostrarToast('¡Postulación enviada exitosamente! La empresa revisará tu perfil.');
+    this.mostrarModalPostulacion = true;
+  }
+
+  cerrarModalPostulacion(): void {
+    this.mostrarModalPostulacion = false;
+  }
+
+  onPostulacionExitosa(): void {
+    this.mostrarModalPostulacion = false;
     this.cerrarModalDetalle();
+    this.mostrarToast('¡Postulación enviada exitosamente! La empresa revisará tu perfil.');
   }
 
   getModalidadLabel(mod: string): string {

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../core/models/vacante.dart';
+import 'postulacion_screen.dart';
 
 class VacanteDetalleScreen extends StatelessWidget {
+  final String accessToken;
   final Vacante vacante;
 
-  const VacanteDetalleScreen({super.key, required this.vacante});
+  const VacanteDetalleScreen({super.key, required this.accessToken, required this.vacante});
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +31,11 @@ class VacanteDetalleScreen extends StatelessWidget {
               _chip(vacante.employmentType),
               _chip(vacante.workModality),
               _chip('${vacante.positionsAvailable} vacante(s)'),
+              if (vacante.afinidadPorcentaje != null)
+                Chip(
+                  label: Text('${vacante.afinidadPorcentaje}% afín', style: const TextStyle(color: Colors.white)),
+                  backgroundColor: Colors.indigo,
+                ),
             ],
           ),
           const SizedBox(height: 20),
@@ -61,6 +68,18 @@ class VacanteDetalleScreen extends StatelessWidget {
               style: TextStyle(color: Colors.grey[600]),
             ),
           ],
+          const SizedBox(height: 28),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => PostulacionScreen(accessToken: accessToken, vacante: vacante),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+            child: const Text('Postularme'),
+          ),
         ],
       ),
     );

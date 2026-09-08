@@ -183,6 +183,16 @@
                       </button>
                     }
 
+                    <!-- Preguntas de filtro -->
+                    <button
+                      type="button"
+                      class="btn-state"
+                      (click)="abrirPreguntasFiltro(vac)"
+                      title="Configurar preguntas de filtro"
+                    >
+                      Preguntas
+                    </button>
+
                     <!-- Eliminar -->
                     <button
                       type="button"
@@ -266,6 +276,14 @@
         </div>
       </div>
     </div>
+  }
+
+  @if (vacantePreguntasFiltro) {
+    <app-preguntas-filtro-modal
+      [vacanteId]="vacantePreguntasFiltro.id"
+      [vacanteTitulo]="vacantePreguntasFiltro.title"
+      (cerrar)="cerrarPreguntasFiltro()"
+    />
   }
 
 </div>

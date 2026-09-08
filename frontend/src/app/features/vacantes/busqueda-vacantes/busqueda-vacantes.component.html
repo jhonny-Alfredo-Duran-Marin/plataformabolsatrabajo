@@ -380,6 +380,15 @@
   </div>
   }
 
+  <!-- MODAL DE POSTULACIÓN (preguntas de filtro reales, HU-14) -->
+  @if (mostrarModalPostulacion && vacanteSeleccionada) {
+  <app-postulacion-modal
+    [jobId]="vacanteSeleccionada.id"
+    (onClose)="cerrarModalPostulacion()"
+    (onPostulacionExitosa)="onPostulacionExitosa()"
+  />
+  }
+
   <!-- Toast Feedback -->
   @if (toastMessage) {
   <div class="toast-notification">

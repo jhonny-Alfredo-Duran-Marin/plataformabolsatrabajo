@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -8,6 +8,7 @@ import {
   ConfigurarEtapasRequest,
   DescartarCandidatoRequest,
   EtapaResponse,
+  FiltrosPoolPostulantes,
   NotaInternaRequest,
   NotaInternaResponse,
   PipelineVacanteResponse,
@@ -32,8 +33,27 @@ export class SeleccionService {
     return this.http.put<EtapaResponse[]>(`${this.base}/vacantes/${idVacante}/etapas`, data);
   }
 
-  obtenerPipeline(idVacante: string): Observable<PipelineVacanteResponse> {
-    return this.http.get<PipelineVacanteResponse>(`${this.base}/vacantes/${idVacante}/pipeline`);
+  obtenerPipeline(idVacante: string, filtros?: FiltrosPoolPostulantes): Observable<PipelineVacanteResponse> {
+    return this.http.get<PipelineVacanteResponse>(`${this.base}/vacantes/${idVacante}/pipeline`, {
+      params: this._construirParamsPool(filtros),
+    });
+  }
+
+  /** Exporta el pool de postulantes de la vacante en CSV (HU-16). */
+  exportarPool(idVacante: string, filtros?: FiltrosPoolPostulantes): Observable<Blob> {
+    return this.http.get(`${this.base}/vacantes/${idVacante}/pipeline/exportar`, {
+      params: this._construirParamsPool(filtros),
+      responseType: 'blob',
+    });
+  }
+
+  private _construirParamsPool(filtros?: FiltrosPoolPostulantes): HttpParams {
+    let params = new HttpParams();
+    if (!filtros) return params;
+    if (filtros.carrera_id) params = params.set('carrera_id', filtros.carrera_id);
+    if (filtros.habilidad_id) params = params.set('habilidad_id', filtros.habilidad_id);
+    if (filtros.ordenar_por) params = params.set('ordenar_por', filtros.ordenar_por);
+    return params;
   }
 
   avanzarEtapa(idPostulacion: string, data: AvanzarEtapaRequest): Observable<CandidatoPipelineItem> {

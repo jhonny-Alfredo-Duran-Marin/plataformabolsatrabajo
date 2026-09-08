@@ -18,6 +18,8 @@ from app.features.vacantes.schema import (
     FiltrosDisponiblesResponse,
     HabilidadEnVacanteResponse,
     JobSkillItemResponse,
+    PreguntaFiltroCreateRequest,
+    PreguntaFiltroUpdateRequest,
     VacanteCambioEstadoRequest,
     VacanteCreateRequest,
     VacanteDetalleBusquedaResponse,
@@ -30,7 +32,7 @@ from app.features.vacantes.schema import (
 from app.models.candidato import CandidateEducation, CandidateProfile, CandidateSkill
 from app.models.empresa import Company, CompanyMember
 from app.models.seguridad import AuditLog
-from app.models.vacante import JobPosting, JobSkill, JobStatus
+from app.models.vacante import JobPosting, JobSkill, JobStatus, ScreeningOption, ScreeningQuestion
 from app.security.dependencies import CurrentUser
 from app.shared.email_service import EmailService
 
@@ -521,6 +523,152 @@ class VacanteService:
         self.db.commit()
 
         return {"mensaje": "Vacante eliminada exitosamente."}
+
+    # ─── Preguntas de filtro (screening) — HU-11 ────────────────────────────
+
+    def _obtener_vacante_propia(self, vacante_id: uuid.UUID, current_user: CurrentUser) -> JobPosting:
+        vacante = self.repo.obtener_por_id(vacante_id)
+        if vacante is None:
+            raise ResourceNotFoundException("La vacante no existe.")
+
+        if not current_user.es_admin:
+            empresa, _ = self._obtener_empresa_y_miembro_de_usuario(current_user.id_usuario)
+            if vacante.company_id != empresa.id:
+                raise ForbiddenException("No tiene permisos sobre esta vacante.")
+
+        return vacante
+
+    def _vacante_tiene_postulaciones(self, vacante_id: uuid.UUID) -> bool:
+        from app.models.postulacion import Application
+
+        return self.db.query(Application.id).filter(Application.job_id == vacante_id).first() is not None
+
+    def listar_preguntas_filtro(self, vacante_id: uuid.UUID, current_user: CurrentUser) -> list[ScreeningQuestion]:
+        self._obtener_vacante_propia(vacante_id, current_user)
+        return (
+            self.db.query(ScreeningQuestion)
+            .filter(ScreeningQuestion.job_posting_id == vacante_id)
+            .order_by(ScreeningQuestion.position)
+            .all()
+        )
+
+    def crear_pregunta_filtro(
+        self,
+        vacante_id: uuid.UUID,
+        payload: "PreguntaFiltroCreateRequest",
+        current_user: CurrentUser,
+    ) -> ScreeningQuestion:
+        self._obtener_vacante_propia(vacante_id, current_user)
+
+        pregunta = ScreeningQuestion(
+            job_posting_id=vacante_id,
+            question_text=payload.question_text,
+            question_type=payload.question_type,
+            is_required=payload.is_required,
+            is_knockout=payload.is_knockout,
+            position=payload.position,
+        )
+        self.db.add(pregunta)
+        self.db.flush()
+
+        opciones_creadas = []
+        for opcion in payload.options:
+            nueva_opcion = ScreeningOption(
+                question_id=pregunta.id,
+                option_text=opcion.option_text,
+                is_accepted=opcion.is_accepted,
+                position=opcion.position,
+            )
+            self.db.add(nueva_opcion)
+            opciones_creadas.append(nueva_opcion)
+
+        self.db.commit()
+        self.db.refresh(pregunta)
+        for opcion in opciones_creadas:
+            self.db.refresh(opcion)
+        pregunta.options = opciones_creadas
+        return pregunta
+
+    def actualizar_pregunta_filtro(
+        self,
+        vacante_id: uuid.UUID,
+        pregunta_id: uuid.UUID,
+        payload: "PreguntaFiltroUpdateRequest",
+        current_user: CurrentUser,
+    ) -> ScreeningQuestion:
+        self._obtener_vacante_propia(vacante_id, current_user)
+
+        if self._vacante_tiene_postulaciones(vacante_id):
+            raise BusinessException(
+                "No se puede modificar una pregunta de filtro de una vacante que ya tiene postulaciones."
+            )
+
+        pregunta = (
+            self.db.query(ScreeningQuestion)
+            .filter(ScreeningQuestion.id == pregunta_id, ScreeningQuestion.job_posting_id == vacante_id)
+            .first()
+        )
+        if pregunta is None:
+            raise ResourceNotFoundException("La pregunta de filtro no existe.")
+
+        datos = payload.model_dump(exclude_unset=True, exclude={"options"})
+        for campo, valor in datos.items():
+            setattr(pregunta, campo, valor)
+
+        opciones_actuales = None
+        if payload.options is not None:
+            self.db.query(ScreeningOption).filter(ScreeningOption.question_id == pregunta.id).delete()
+            opciones_actuales = []
+            for opcion in payload.options:
+                nueva_opcion = ScreeningOption(
+                    question_id=pregunta.id,
+                    option_text=opcion.option_text,
+                    is_accepted=opcion.is_accepted,
+                    position=opcion.position,
+                )
+                self.db.add(nueva_opcion)
+                opciones_actuales.append(nueva_opcion)
+
+        self.db.commit()
+        self.db.refresh(pregunta)
+
+        if opciones_actuales is not None:
+            for opcion in opciones_actuales:
+                self.db.refresh(opcion)
+            pregunta.options = opciones_actuales
+        else:
+            pregunta.options = (
+                self.db.query(ScreeningOption)
+                .filter(ScreeningOption.question_id == pregunta.id)
+                .order_by(ScreeningOption.position)
+                .all()
+            )
+        return pregunta
+
+    def eliminar_pregunta_filtro(
+        self,
+        vacante_id: uuid.UUID,
+        pregunta_id: uuid.UUID,
+        current_user: CurrentUser,
+    ) -> dict[str, str]:
+        self._obtener_vacante_propia(vacante_id, current_user)
+
+        if self._vacante_tiene_postulaciones(vacante_id):
+            raise BusinessException(
+                "No se puede eliminar una pregunta de filtro de una vacante que ya tiene postulaciones."
+            )
+
+        pregunta = (
+            self.db.query(ScreeningQuestion)
+            .filter(ScreeningQuestion.id == pregunta_id, ScreeningQuestion.job_posting_id == vacante_id)
+            .first()
+        )
+        if pregunta is None:
+            raise ResourceNotFoundException("La pregunta de filtro no existe.")
+
+        self.db.delete(pregunta)
+        self.db.commit()
+        return {"mensaje": "Pregunta de filtro eliminada."}
 
     # ─── Búsqueda avanzada con afinidad — HU-13 ─────────────────────────────
     # Vive bajo /vacantes/buscar (separado de listar_publicas/GET /vacantes)

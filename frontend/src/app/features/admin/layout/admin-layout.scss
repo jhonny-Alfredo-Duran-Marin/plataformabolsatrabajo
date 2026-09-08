@@ -21,23 +21,44 @@
 .sidebar-marca {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   padding: 0.2rem 0.8rem 1.4rem;
 
-  .logo {
-    display: grid;
-    place-items: center;
-    width: 34px;
-    height: 34px;
+  .logo-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
     border-radius: 10px;
-    background: linear-gradient(135deg, #7a53c5 0%, #4c5bd4 100%);
-    font-size: 0.95rem;
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+    color: white;
+    flex-shrink: 0;
+
+    svg {
+      width: 22px;
+      height: 22px;
+    }
+  }
+
+  .brand-text {
+    display: flex;
+    flex-direction: column;
   }
 
   .nombre {
-    font-size: 1.05rem;
+    font-size: 1.1rem;
     font-weight: 800;
     letter-spacing: 0.5px;
+    color: white;
+    line-height: 1.1;
+  }
+
+  .subnombre {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.55);
   }
 }
 
@@ -65,9 +86,18 @@
 
   .icono {
     width: 20px;
-    text-align: center;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     opacity: 0.85;
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
   }
+
 
   &:hover {
     background: rgba(255, 255, 255, 0.07);

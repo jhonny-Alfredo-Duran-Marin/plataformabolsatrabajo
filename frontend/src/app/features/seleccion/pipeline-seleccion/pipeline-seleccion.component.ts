@@ -39,6 +39,11 @@ export class PipelineSeleccionComponent implements OnInit {
   cargandoPipeline = signal(false);
   error = signal<string | null>(null);
 
+  // ── Pool de postulantes: filtro, orden y exportación (HU-16) ──────────
+  ordenarPor = signal<'fecha' | 'afinidad'>('fecha');
+  busquedaPool = signal<string>('');
+  exportando = signal(false);
+
   // ── Modal: Configurar Etapas ─────────────────────────────────────────
   mostrarModalEtapas = signal(false);
   etapasEditor = signal<EtapaItem[]>([]);
@@ -72,17 +77,29 @@ export class PipelineSeleccionComponent implements OnInit {
   etapas = computed(() => this.pipeline()?.etapas ?? []);
   candidatos = computed(() => this.pipeline()?.candidatos ?? []);
 
+  /** Candidatos filtrados por el buscador de texto (nombre, carrera o titular) — HU-16. */
+  candidatosFiltrados = computed(() => {
+    const texto = this.busquedaPool().trim().toLowerCase();
+    if (!texto) return this.candidatos();
+    return this.candidatos().filter((c) =>
+      [c.candidato_nombre, c.candidato_carrera, c.candidato_titular]
+        .filter(Boolean)
+        .some((campo) => campo!.toLowerCase().includes(texto))
+    );
+  });
+
   candidatosPorEtapa = computed(() => {
     const mapa: Record<string, CandidatoPipelineItem[]> = {};
+    const candidatos = this.candidatosFiltrados();
     for (const etapa of this.etapas()) {
-      mapa[etapa.id] = this.candidatos().filter(
+      mapa[etapa.id] = candidatos.filter(
         (c) => c.etapa_actual_id === etapa.id && c.estado !== 'rejected' && c.estado !== 'withdrawn'
       );
     }
-    mapa['__sin_etapa__'] = this.candidatos().filter(
+    mapa['__sin_etapa__'] = candidatos.filter(
       (c) => !c.etapa_actual_id && c.estado !== 'rejected' && c.estado !== 'withdrawn'
     );
-    mapa['__descartados__'] = this.candidatos().filter(
+    mapa['__descartados__'] = candidatos.filter(
       (c) => c.estado === 'rejected' || c.estado === 'withdrawn'
     );
     return mapa;
@@ -125,7 +142,7 @@ export class PipelineSeleccionComponent implements OnInit {
 
   cargarPipeline(id: string): void {
     this.cargandoPipeline.set(true);
-    this.svc.obtenerPipeline(id).subscribe({
+    this.svc.obtenerPipeline(id, { ordenar_por: this.ordenarPor() }).subscribe({
       next: (data) => {
         this.pipeline.set(data);
         this.cargandoPipeline.set(false);
@@ -133,6 +150,35 @@ export class PipelineSeleccionComponent implements OnInit {
       error: (e: HttpErrorResponse) => {
         this.error.set(e.error?.detail ?? 'Error al cargar el pipeline.');
         this.cargandoPipeline.set(false);
+      },
+    });
+  }
+
+  cambiarOrden(orden: 'fecha' | 'afinidad'): void {
+    if (this.ordenarPor() === orden) return;
+    this.ordenarPor.set(orden);
+    const id = this.vacanteSeleccionadaId();
+    if (id) this.cargarPipeline(id);
+  }
+
+  exportarPool(): void {
+    const id = this.vacanteSeleccionadaId();
+    if (!id) return;
+    this.exportando.set(true);
+    this.svc.exportarPool(id, { ordenar_por: this.ordenarPor() }).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const enlace = document.createElement('a');
+        enlace.href = url;
+        const nombreVacante = this.vacanteActual()?.titulo?.replace(/\s+/g, '_') ?? 'vacante';
+        enlace.download = `postulantes_${nombreVacante}.csv`;
+        enlace.click();
+        window.URL.revokeObjectURL(url);
+        this.exportando.set(false);
+      },
+      error: () => {
+        this.error.set('No se pudo exportar el pool de postulantes.');
+        this.exportando.set(false);
       },
     });
   }

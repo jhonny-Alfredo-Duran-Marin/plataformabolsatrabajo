@@ -14,7 +14,7 @@ class ApiConfig {
   /// IP de la PC en la red WiFi local, para probar desde un celular físico
   /// (el celular y la PC deben estar en la MISMA red WiFi). Actualizala si
   /// cambia la IP de tu PC (correr "ipconfig" y buscar "Dirección IPv4").
-  static const String _hostRedLocal = '192.168.1.24:8000';
+  static const String _hostRedLocal = '192.168.1.12:8000';
 
   /// true = compilando para probar en un celular físico por WiFi.
   /// false = emulador Android / Chrome / Windows en la misma PC del backend.

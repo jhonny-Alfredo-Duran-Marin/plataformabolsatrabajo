@@ -4,9 +4,10 @@ import '../../core/models/vacante.dart';
 import '../../core/services/vacante_service.dart';
 import 'vacante_detalle_screen.dart';
 
-/// Pantalla de exploración de vacantes para el egresado (HU-35, versión
-/// mínima sin filtros de búsqueda todavía). Consume el mismo endpoint
-/// público que el buscador web, contra la Supabase real.
+/// Pantalla de exploración de vacantes para el egresado. Consume
+/// GET /vacantes/buscar (HU-13): admite búsqueda por palabra clave y
+/// ordenar por afinidad calculada según la carrera/habilidades del
+/// egresado autenticado, contra la Supabase real.
 class VacantesScreen extends StatefulWidget {
   final String accessToken;
 
@@ -18,18 +19,26 @@ class VacantesScreen extends StatefulWidget {
 
 class _VacantesScreenState extends State<VacantesScreen> {
   final _servicio = VacanteService();
+  final _busquedaCtrl = TextEditingController();
 
   late Future<List<Vacante>> _futuroVacantes;
+  String _ordenarPor = 'fecha';
 
   @override
   void initState() {
     super.initState();
-    _futuroVacantes = _servicio.listarPublicadas(widget.accessToken);
+    _futuroVacantes = _servicio.buscar(widget.accessToken, ordenarPor: _ordenarPor);
+  }
+
+  @override
+  void dispose() {
+    _busquedaCtrl.dispose();
+    super.dispose();
   }
 
   void _recargar() {
     setState(() {
-      _futuroVacantes = _servicio.listarPublicadas(widget.accessToken);
+      _futuroVacantes = _servicio.buscar(widget.accessToken, q: _busquedaCtrl.text, ordenarPor: _ordenarPor);
     });
   }
 
@@ -37,7 +46,49 @@ class _VacantesScreenState extends State<VacantesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Vacantes disponibles')),
-      body: FutureBuilder<List<Vacante>>(
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _busquedaCtrl,
+                    decoration: const InputDecoration(
+                      hintText: 'Buscar por título o palabra clave',
+                      prefixIcon: Icon(Icons.search),
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                    ),
+                    onSubmitted: (_) => _recargar(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.sort),
+                  tooltip: 'Ordenar',
+                  initialValue: _ordenarPor,
+                  onSelected: (valor) {
+                    setState(() => _ordenarPor = valor);
+                    _recargar();
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'fecha', child: Text('Más recientes')),
+                    PopupMenuItem(value: 'afinidad', child: Text('Mayor afinidad')),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Expanded(child: _listado()),
+        ],
+      ),
+    );
+  }
+
+  Widget _listado() {
+    return FutureBuilder<List<Vacante>>(
         future: _futuroVacantes,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -85,10 +136,20 @@ class _VacantesScreenState extends State<VacantesScreen> {
                       ),
                     ),
                     isThreeLine: true,
-                    trailing: const Icon(Icons.chevron_right),
+                    trailing: vacante.afinidadPorcentaje != null
+                        ? Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('${vacante.afinidadPorcentaje}%', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo)),
+                              const Text('afín', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                            ],
+                          )
+                        : const Icon(Icons.chevron_right),
                     onTap: () {
                       Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => VacanteDetalleScreen(vacante: vacante)),
+                        MaterialPageRoute(
+                          builder: (_) => VacanteDetalleScreen(accessToken: widget.accessToken, vacante: vacante),
+                        ),
                       );
                     },
                   ),
@@ -96,8 +157,6 @@ class _VacantesScreenState extends State<VacantesScreen> {
               },
             ),
           );
-        },
-      ),
-    );
+        });
   }
 }

@@ -141,6 +141,74 @@ class VacanteCambioEstadoRequest(BaseModel):
     status: JobStatus
 
 
+# ─── Preguntas de filtro (screening) — HU-11 ────────────────────────────────
+
+
+class PreguntaFiltroOpcionRequest(BaseModel):
+    """Opción de respuesta para una pregunta de filtro de selección."""
+
+    option_text: str = Field(..., min_length=1, max_length=300)
+    is_accepted: bool = Field(default=True, description="Si esta opción cumple el requisito de la pregunta")
+    position: int = Field(default=0, ge=0)
+
+
+class PreguntaFiltroCreateRequest(BaseModel):
+    """Datos para crear una pregunta de filtro en una vacante."""
+
+    question_text: str = Field(..., min_length=3)
+    question_type: str = Field(..., description="'text', 'number' o 'single_choice'")
+    is_required: bool = Field(default=True)
+    is_knockout: bool = Field(
+        default=False,
+        description="Si es excluyente: una respuesta que no cumpla descarta automáticamente la postulación. "
+        "Solo aplicable a preguntas de tipo 'single_choice', donde cada opción define si cumple el requisito.",
+    )
+    position: int = Field(default=0, ge=0)
+    options: list[PreguntaFiltroOpcionRequest] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validar_tipo(self) -> "PreguntaFiltroCreateRequest":
+        if self.question_type not in ("text", "number", "single_choice"):
+            raise ValueError("question_type debe ser 'text', 'number' o 'single_choice'.")
+        if self.question_type == "single_choice" and len(self.options) < 2:
+            raise ValueError("Una pregunta de selección necesita al menos dos opciones.")
+        if self.question_type != "single_choice" and self.is_knockout:
+            raise ValueError("Solo una pregunta de tipo 'single_choice' puede marcarse como excluyente.")
+        return self
+
+
+class PreguntaFiltroUpdateRequest(BaseModel):
+    """Datos actualizables de una pregunta de filtro existente."""
+
+    question_text: str | None = Field(default=None, min_length=3)
+    is_required: bool | None = None
+    is_knockout: bool | None = None
+    position: int | None = Field(default=None, ge=0)
+    options: list[PreguntaFiltroOpcionRequest] | None = None
+
+
+class PreguntaFiltroOpcionResponse(BaseModel):
+    id: uuid.UUID
+    option_text: str
+    is_accepted: bool
+    position: int
+
+    model_config = {"from_attributes": True}
+
+
+class PreguntaFiltroResponse(BaseModel):
+    id: uuid.UUID
+    job_posting_id: uuid.UUID
+    question_text: str
+    question_type: str
+    is_required: bool
+    is_knockout: bool
+    position: int
+    options: list[PreguntaFiltroOpcionResponse] = []
+
+    model_config = {"from_attributes": True}
+
+
 class VacanteModeracionRequest(BaseModel):
     """Decisión de moderación institucional sobre una vacante pendiente de revisión (HU-12)."""
 

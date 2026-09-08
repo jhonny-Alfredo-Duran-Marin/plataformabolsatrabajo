@@ -13,6 +13,7 @@ import uuid
 
 from app.core.database import Base, SessionLocal, engine
 import app.models  # noqa: F401 - Registra todos los modelos ORM en Base.metadata
+from app.models.candidato import CandidateProfile
 from app.models.catalogo import JobCategory, Skill
 from app.models.empresa import Company, CompanyMember
 from app.models.usuario import AppUser, Role, UserRole
@@ -66,7 +67,8 @@ def ejecutar() -> None:
             usuarios_guardados[correo] = usuario
 
             if rol is not None:
-                role_id = ROLES_FIJOS[rol]
+                role_obj = db.query(Role).filter(Role.name == rol).one_or_none()
+                role_id = role_obj.id if role_obj else ROLES_FIJOS[rol]
                 existe = (
                     db.query(UserRole)
                     .filter(UserRole.user_id == usuario.id, UserRole.role_id == role_id)
@@ -74,6 +76,29 @@ def ejecutar() -> None:
                 )
                 if existe is None:
                     db.add(UserRole(user_id=usuario.id, role_id=role_id))
+
+            if rol == "candidate":
+                perfil_existente = db.query(CandidateProfile).filter(CandidateProfile.user_id == usuario.id).one_or_none()
+                if not perfil_existente:
+                    partes = correo.split("@")[0].split(".")
+                    fn = partes[0].capitalize()
+                    ln = partes[1].capitalize() if len(partes) > 1 else "Demo"
+                    db.add(
+                        CandidateProfile(
+                            user_id=usuario.id,
+                            first_name=fn,
+                            last_name=ln,
+                            country_code="BO",
+                            city="Santa Cruz de la Sierra",
+                            document_type="ci",
+                            document_number=f"789{usuario.id.int % 100000:05d}",
+                            document_country_code="BO",
+                            verification_status="verified",
+                            profile_visibility="platform",
+                            contact_visibility=True,
+                            professional_headline="Desarrollador de Software",
+                        )
+                    )
         db.commit()
 
         print("[4/5] Creando / verificando empresas demo y miembros...")

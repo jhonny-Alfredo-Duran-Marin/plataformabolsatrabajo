@@ -1,27 +1,6 @@
-/* ===== DESIGN SYSTEM & VARIABLES ===== */
-:root {
-  --primary: #1e3a8a;
-  --primary-hover: #1e40af;
-  --primary-light: #eff6ff;
-  --primary-border: #bfdbfe;
-  --danger: #dc2626;
-  --danger-hover: #b91c1c;
-  --danger-light: #fef2f2;
-  --danger-border: #fecaca;
-  --success: #16a34a;
-  --success-light: #f0fdf4;
-  --purple: #6d28d9;
-  --purple-light: #f5f3ff;
-  --border: #e2e8f0;
-  --bg-page: #f8fafc;
-  --bg-card: #ffffff;
-  --text-main: #0f172a;
-  --text-muted: #64748b;
-  --radius: 12px;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-  --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
-}
+/* Variables del design system (--primary, --border, etc.) viven en src/styles.scss:
+   un :root dentro del .scss de un componente no aplica bajo el encapsulamiento
+   por defecto de Angular. */
 
 /* ===== ICONOS UTILITARIOS ===== */
 .icon-xs { width: 14px; height: 14px; display: inline-block; flex-shrink: 0; }
@@ -569,6 +548,50 @@
 .fecha-txt {
   font-size: 11px;
   color: #94a3b8;
+}
+
+.afinidad-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10.5px;
+  font-weight: 700;
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+// ── Barra de filtro/orden/exportación del pool (HU-16) ──────────────────────
+.pool-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+}
+
+.pool-search {
+  flex: 1;
+  min-width: 200px;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+}
+
+.pool-orden {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8125rem;
+
+  label { color: #64748b; font-weight: 600; white-space: nowrap; }
+
+  select {
+    padding: 0.45rem 0.6rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 0.8125rem;
+  }
 }
 
 .notas-indicator {

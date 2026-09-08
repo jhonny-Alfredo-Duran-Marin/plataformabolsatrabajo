@@ -1,62 +1,98 @@
-<section class="validacion">
-  <h1>Validación de egresados pendientes</h1>
+<div class="admin-container">
+  <header class="admin-header">
+    <div>
+      <div class="header-badge">Administración Institucional • UAGRM</div>
+      <h1>Validación de Egresados</h1>
+      <p class="subtitle">
+        Revisa las solicitudes de egresados pendientes de verificación institucional y decide su aprobación o
+        rechazo.
+      </p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn-refresh" (click)="cargar()" [disabled]="cargando()">
+        {{ cargando() ? 'Cargando…' : '🔄 Actualizar' }}
+      </button>
+    </div>
+  </header>
 
-  <div class="acciones-superiores">
-    <button type="button" (click)="cargar()" [disabled]="cargando()">
-      {{ cargando() ? 'Cargando…' : 'Cargar pendientes' }}
-    </button>
-  </div>
+  @if (mensaje()) {
+    <div class="toast-banner">
+      <span>{{ mensaje() }}</span>
+    </div>
+  }
 
   @if (error()) {
-    <p class="error">{{ error() }}</p>
-  }
-  @if (mensaje()) {
-    <p class="ok">{{ mensaje() }}</p>
+    <div class="error-state error-inline">
+      <p>{{ error() }}</p>
+    </div>
   }
 
   @if (cargando()) {
-    <p>Cargando...</p>
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Cargando solicitudes pendientes...</p>
+    </div>
   } @else {
-    <table>
-      <thead>
-        <tr>
-          <th>Nombre</th>
-          <th>CI</th>
-          <th>Carrera</th>
-          <th>Año egreso</th>
-          <th>Matrícula</th>
-          <th>Completitud</th>
-          <th>Motivo de rechazo</th>
-          <th>Decisión</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (perfil of pendientes(); track perfil.id) {
-          <tr>
-            <td>{{ perfil.nombres }} {{ perfil.apellidos }}</td>
-            <td>{{ perfil.ci }}</td>
-            <td>{{ nombreCarrera(perfil.carrera_id) }}</td>
-            <td>{{ perfil.anio_egreso ?? '—' }}</td>
-            <td>{{ perfil.matricula ?? '—' }}</td>
-            <td>{{ perfil.porcentaje_completitud }}%</td>
-            <td>
-              <input
-                type="text"
-                [(ngModel)]="motivosRechazo[perfil.id]"
-                placeholder="Motivo si se rechaza"
-              />
-            </td>
-            <td class="acciones">
-              <button type="button" (click)="aprobar(perfil)">Aprobar</button>
-              <button type="button" (click)="rechazar(perfil)">Rechazar</button>
-            </td>
-          </tr>
-        } @empty {
-          <tr>
-            <td colspan="8">No hay solicitudes pendientes.</td>
-          </tr>
-        }
-      </tbody>
-    </table>
+    <div class="table-card">
+      @if (pendientes().length === 0) {
+        <div class="empty-state">
+          <p>No hay solicitudes pendientes.</p>
+        </div>
+      } @else {
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Egresado</th>
+                <th>Carrera</th>
+                <th>Año egreso</th>
+                <th>Matrícula</th>
+                <th class="text-center">Completitud</th>
+                <th>Motivo de rechazo</th>
+                <th class="text-center">Decisión</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (perfil of pendientes(); track perfil.id) {
+                <tr>
+                  <td>
+                    <div class="persona-cell">
+                      <span class="persona-name">{{ perfil.nombres }} {{ perfil.apellidos }}</span>
+                      <span class="persona-meta">CI: {{ perfil.ci }}</span>
+                    </div>
+                  </td>
+                  <td>{{ nombreCarrera(perfil.carrera_id) }}</td>
+                  <td>{{ perfil.anio_egreso ?? '—' }}</td>
+                  <td>{{ perfil.matricula ?? '—' }}</td>
+                  <td class="text-center">
+                    <span class="badge" [ngClass]="claseCompletitud(perfil.porcentaje_completitud)">
+                      {{ perfil.porcentaje_completitud }}%
+                    </span>
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      class="motivo-input"
+                      placeholder="Motivo si se rechaza..."
+                      [(ngModel)]="motivosRechazo[perfil.id]"
+                    />
+                  </td>
+                  <td class="text-center">
+                    <div class="validacion-botones">
+                      <button type="button" class="btn-success-sm" title="Aprobar egresado" (click)="aprobar(perfil)">
+                        ✅ Aprobar
+                      </button>
+                      <button type="button" class="btn-danger-sm" title="Rechazar egresado" (click)="rechazar(perfil)">
+                        ✖️ Rechazar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
   }
-</section>
+</div>
