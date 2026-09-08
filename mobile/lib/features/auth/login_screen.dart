@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/services/auth_service.dart';
 import 'home_screen.dart';
+import 'registro_egresado_screen.dart';
 
 /// HU-02 — Inicio de sesión (versión móvil).
 /// Llama al mismo backend real que usa la web (Supabase compartida del equipo).
@@ -152,6 +153,15 @@ class _LoginScreenState extends State<LoginScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
                             )
                           : const Text('Iniciar sesión'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: _cargando
+                          ? null
+                          : () => Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const RegistroEgresadoScreen()),
+                              ),
+                      child: const Text('¿No tenés cuenta? Registrate como egresado'),
                     ),
                   ],
                 ),
