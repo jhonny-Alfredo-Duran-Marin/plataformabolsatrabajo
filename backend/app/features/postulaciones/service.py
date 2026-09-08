@@ -51,7 +51,11 @@ class PostulacionService:
 
         existing_app = (
             self.db.query(Application)
-            .filter(Application.candidate_id == candidate.id, Application.job_id == data.job_id)
+            .filter(
+                Application.candidate_id == candidate.id,
+                Application.job_id == data.job_id,
+                Application.current_status != "withdrawn",
+            )
             .first()
         )
         if existing_app:
