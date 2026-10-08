@@ -88,9 +88,9 @@ export const TEMAS_AYUDA: TemaAyuda[] = [
           'Revisá que el navegador no tenga bloqueadas las notificaciones de este sitio (ícono del candado junto a la dirección) y usá «Enviar un aviso de prueba».',
       },
       {
-        pregunta: '¿Qué es el boletín diario de ofertas?',
+        pregunta: '¿Cuándo me avisan de una oferta nueva?',
         respuesta:
-          'Cada mañana EGRESA revisa las ofertas publicadas el día anterior y te avisa las que tienen buena afinidad con tu perfil.',
+          'Apenas la universidad aprueba una vacante, EGRESA te avisa si tiene buena afinidad con tu perfil (60 % o más), tu universidad trabaja con esa empresa y todavía no te postulaste. Las ofertas que no te llegaron así aparecen en el boletín diario de cada mañana.',
       },
     ],
   },

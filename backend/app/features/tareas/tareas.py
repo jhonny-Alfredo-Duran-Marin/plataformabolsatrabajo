@@ -3,13 +3,15 @@
 - respaldo_diario: copia de seguridad completa de la base (Backup automático, requisito 6).
 - cierre_vacantes: cierra las vacantes publicadas cuya fecha límite ya pasó y avisa a la empresa.
 - boletin_ofertas: avisa a cada egresado verificado las ofertas publicadas en las últimas 24 horas
-  que coinciden con su perfil (motor de afinidad de HU-23), por la campana y por push.
+  que coinciden con su perfil (motor de afinidad de HU-23), por la campana y por push. Es la red de
+  seguridad del aviso inmediato (avisar_vacante_publicada), que sale apenas se publica una vacante.
 - recordatorios: avisa lo que vence en las próximas 24 horas: vacantes por cerrar (a la empresa y a
   los egresados afines que todavía no se postularon) y entrevistas (al egresado y a la empresa).
 
 Cada tarea recibe su propia sesión, hace commit y devuelve un resumen para el historial.
 """
 
+import logging
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -18,6 +20,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
+from app.core.database import SessionLocal
 from app.core.tenancy import INSTITUCION_POR_DEFECTO_ID
 from app.features.bitacora.service import BitacoraService
 from app.features.ia.services import afinidad as motor_afinidad
@@ -32,6 +35,8 @@ from app.models.institucion import CompanyInstitution
 from app.models.notificacion import Notification
 from app.models.postulacion import Application
 from app.models.vacante import JobEducationPreference, JobPosting, JobSkill, JobStatus
+
+logger = logging.getLogger(__name__)
 
 _MODULO = "tareas"
 # Afinidad mínima para avisar una oferta nueva en el boletín (la neutral, sin datos, es 50).
@@ -170,6 +175,83 @@ def _afines(db: Session, vacantes: list[JobPosting]) -> list[tuple[CandidateProf
     return resultado
 
 
+def _enlace_vacante(vacante: JobPosting) -> str:
+    return f"/vacantes/{vacante.id}"
+
+
+def _avisos_de_publicacion(db: Session, vacantes: list[JobPosting]) -> set[tuple]:
+    """(usuario, enlace) de los avisos inmediatos que ya salieron por estas vacantes."""
+    filas = db.execute(
+        select(Notification.user_id, Notification.link).where(
+            Notification.notification_type == "job_match",
+            Notification.link.in_([_enlace_vacante(v) for v in vacantes]),
+        )
+    )
+    return {(user_id, enlace) for user_id, enlace in filas}
+
+
+def avisar_vacante_publicada(db: Session, vacante_id) -> int:
+    """Avisa en el momento a los egresados afines que se publicó una vacante.
+
+    Mismo criterio que el boletín (verificados, empresa habilitada en su universidad, sin
+    postularse y con afinidad suficiente). Cada egresado recibe un solo aviso por vacante,
+    aunque se pause y se vuelva a publicar; el boletín del día ya no la repite.
+    """
+    if not motor_afinidad.ia_activa():
+        return 0
+    ahora = datetime.now(timezone.utc)
+    vacantes = _vacantes_vigentes(
+        db,
+        JobPosting.id == vacante_id,
+        or_(JobPosting.application_deadline.is_(None), JobPosting.application_deadline >= ahora),
+    )
+    if not vacantes:
+        return 0
+    vacante = vacantes[0]
+    enlace = _enlace_vacante(vacante)
+    ya_avisados = {user_id for user_id, _ in _avisos_de_publicacion(db, vacantes)}
+    empresa = vacante.company.trade_name or vacante.company.legal_name
+    plazo = (
+        f" Recibe postulaciones hasta el {vacante.application_deadline.astimezone(_ZONA_BOLIVIA):%d/%m}."
+        if vacante.application_deadline
+        else ""
+    )
+
+    avisados = 0
+    for candidato, coincidencias in _afines(db, vacantes):
+        if candidato.user_id in ya_avisados:
+            continue
+        afinidad = coincidencias[0][0]
+        emitir_notificacion(
+            db,
+            candidato.user_id,
+            "job_match",
+            f"Nueva oferta para vos: {_corto(vacante.title, 60)}",
+            f"{empresa} la acaba de publicar ({afinidad}% de afinidad con tu perfil).{plazo}",
+            enlace,
+        )
+        avisados += 1
+
+    BitacoraService(db).registrar(
+        modulo=_MODULO, accion="aviso_vacante_publicada", detalles=f"vacante={vacante.id} egresados_avisados={avisados}"
+    )
+    db.commit()
+    return avisados
+
+
+def avisar_vacante_publicada_en_segundo_plano(vacante_id) -> None:
+    """Para BackgroundTasks: corre después de responder, con su propia sesión.
+
+    Si algo falla, la publicación ya quedó hecha; el boletín diario cubre a quien no recibió el aviso.
+    """
+    try:
+        with SessionLocal() as db:
+            avisados = avisar_vacante_publicada(db, vacante_id)
+        logger.info("Vacante %s publicada: se avisó a %s egresados afines.", vacante_id, avisados)
+    except Exception:
+        logger.exception("No se pudo avisar la publicación de la vacante %s.", vacante_id)
+
+
 def boletin_ofertas(db: Session) -> str:
     if not motor_afinidad.ia_activa():
         return "El servicio de IA está apagado: hoy no se envió el boletín."
@@ -182,8 +264,17 @@ def boletin_ofertas(db: Session) -> str:
     if not nuevas:
         return "No hubo ofertas nuevas en las últimas 24 horas."
 
+    # Las vacantes que el egresado ya recibió al publicarse no se repiten en el boletín.
+    ya_avisadas = _avisos_de_publicacion(db, nuevas)
     avisados = 0
     for candidato, coincidencias in _afines(db, nuevas):
+        coincidencias = [
+            (afinidad, vacante)
+            for afinidad, vacante in coincidencias
+            if (candidato.user_id, _enlace_vacante(vacante)) not in ya_avisadas
+        ]
+        if not coincidencias:
+            continue
         # Un boletín por día: si ya lo recibió (por ejemplo, la tarea se corrió a mano), no se repite.
         if _ya_avisado(db, candidato.user_id, "job_match", "/recomendaciones", ahora - _SIN_REPETIR):
             continue
