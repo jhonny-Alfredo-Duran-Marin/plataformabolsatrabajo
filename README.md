@@ -250,7 +250,8 @@ problema. La última también la aplica el backend solo al arrancar.
 > Son cuentas de demostración de la base compartida. Las claves reales (`DATABASE_URL`,
 > Stripe) **no** van acá: se piden por el grupo del equipo.
 
-Verificadas el 01/10/2026 contra la Supabase compartida.
+Verificadas el 08/10/2026 contra producción (la Supabase compartida): todas inician sesión
+con la contraseña de la tabla.
 
 **Superadmin del SaaS.** Ve todas las universidades, aprueba altas, gestiona planes y
 pagos, y es el único que entra a Copias de seguridad: `superadmin@egresa.bo` / `Egresa2026!`.
@@ -277,6 +278,9 @@ Moderador de UMSS: `moderador@umss.egresa.bo` / `Egresa2026!`.
 | Chiquitano Agro | `rrhh@chiquitanoagro.bo` | `Egresa2026!` |
 | Altiplano Analytics | `talento@altiplanoanalytics.bo` | `Egresa2026!` |
 | Empresa Prueba SRL | `empresa@prueba.com` | `Prueba123!` |
+| Pampa Software (escenario de demostración) | `rrhh@pampasoftware.egresa.bo` | `Egresa2026!` |
+| Cooperativa Horizonte (escenario de demostración) | `talento@coophorizonte.egresa.bo` | `Egresa2026!` |
+| Mercado Express (escenario de demostración) | `empleos@mercadoexpress.egresa.bo` | `Egresa2026!` |
 
 **Egresados.**
 
@@ -288,6 +292,21 @@ Moderador de UMSS: `moderador@umss.egresa.bo` / `Egresa2026!`.
 | UMSS | `valeria.quiroga@umss.egresa.bo`, `jorge.montano@umss.egresa.bo`, `paola.arce@umss.egresa.bo` | `Egresa2026!` |
 | UMSA | `andrea.gutierrez@umsa.egresa.bo`, `luis.mamani@umsa.egresa.bo`, `rodrigo.condori@umsa.egresa.bo` | `Egresa2026!` |
 | Unifranz | `camila.salvatierra@unifranz.egresa.bo`, `diego.antelo@unifranz.egresa.bo` | `Egresa2026!` |
+
+**Egresados del escenario de demostración.** Todos con `Egresa2026!`. Los validados tienen
+postulaciones en distintas etapas; los sin validar esperan en la cola de validación de su
+universidad (pueden entrar, pero no postularse hasta que el admin los valide).
+
+| Universidad | Validados | Sin validar |
+|---|---|---|
+| UAGRM | `maria.rojas` (Sistemas), `jose.fernandez` (Contaduría), `daniela.gutierrez` (Desarrollo de software), `carlos.mamani` (Economía), `gabriela.quispe` (Industrial), `miguel.choque` (Redes), `carla.flores` (Administración), `juan.vargas` (Sistemas) | `lucia.justiniano`, `diego.suarez` |
+| UMSS | `natalia.rocha` (Industrial), `sergio.camacho` (Redes), `valentina.villarroel` (Administración), `fernando.arce` (Sistemas), `mariana.ribera` (Contaduría), `ricardo.antelo` (Desarrollo de software), `alejandra.saucedo` (Economía), `gonzalo.terrazas` (Industrial) | `ximena.cuellar`, `alvaro.montenegro` |
+| UMSA | `rocio.aguilera` (Contaduría), `mauricio.zeballos` (Desarrollo de software), `claudia.salazar` (Economía), `javier.mendez` (Industrial), `jimena.pinto` (Redes), `oscar.vaca` (Administración), `veronica.anez` (Sistemas), `marcelo.moreno` (Contaduría) | `paola.cespedes`, `cristian.chavez` |
+| Unifranz | `silvia.limachi` (Redes), `adrian.condori` (Administración), `melany.apaza` (Sistemas), `bruno.ticona` (Contaduría), `fabiola.peredo` (Desarrollo de software), `ivan.soliz` (Economía), `estefania.guzman` (Industrial), `wilson.medina` (Redes) | `andrea.zambrana`, `rodrigo.paz` |
+
+El correo completo es el usuario más el dominio de su universidad: `@uagrm.egresa.bo`,
+`@umss.egresa.bo`, `@umsa.egresa.bo` o `@unifranz.egresa.bo` (por ejemplo
+`maria.rojas@uagrm.egresa.bo`).
 
 **Para probar las funciones nuevas:**
 
@@ -386,10 +405,10 @@ Moderador de UMSS: `moderador@umss.egresa.bo` / `Egresa2026!`.
   publicadas hoy, que cierran en unas horas y ya vencidas, entrevistas de hoy y mañana. Para
   que salten los avisos (campana y push), el superadmin ejecuta en "Tareas automáticas" el
   cierre de vacantes, el boletín y los recordatorios; si no, el servidor los corre solo a
-  las 03:00. Se puede volver a correr: no duplica datos ni avisos y refresca las fechas. Usa
-  `DEMO_PASSWORD` para todas las cuentas nuevas (por ejemplo `maria.rojas@uagrm.egresa.bo` o
-  `rrhh@pampasoftware.egresa.bo`). Si existen, `empresa@prueba.com` y `antonio@prueba.com`
-  quedan con una entrevista para mañana.
+  las 03:00. Se puede volver a correr: no duplica datos ni avisos y refresca las fechas. Las
+  cuentas nuevas usan `DEMO_PASSWORD` (están en las tablas de "Cuentas de prueba"). Si
+  existen, `empresa@prueba.com` y `antonio@prueba.com` quedan con una entrevista para
+  mañana: es el mejor par para mostrar los recordatorios.
 
 Si alguna deja de funcionar (alguien del equipo pudo haberla cambiado probando), se resetea corriendo los scripts de arriba o pidiendo que se actualice manualmente — avisen en el grupo antes de cambiarlas para no romper la sesión de otro compañero.
 
