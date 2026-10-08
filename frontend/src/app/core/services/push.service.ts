@@ -101,7 +101,7 @@ export class PushService {
       localStorage.setItem(FCM_TOKEN_KEY, token);
       if (!this.escuchando) {
         this.escuchando = true;
-        onMessage(messaging, (mensaje) =>
+        onMessage(messaging, (mensaje: any) =>
           this.avisos.next({
             titulo: mensaje.notification?.title ?? mensaje.data?.['title'] ?? 'EGRESA',
             cuerpo: mensaje.notification?.body ?? mensaje.data?.['body'] ?? '',

@@ -50,6 +50,12 @@ export class RegistroUniversidad implements OnInit {
   responsableCorreo = '';
   responsableTelefono = '';
 
+  // Variables de pasarela de pago (visuales para la presentacion)
+  metodoPago = signal<'tarjeta' | 'qr'>('tarjeta');
+  numeroTarjeta = '';
+  vencimientoTarjeta = '';
+  cvvTarjeta = '';
+
   readonly planElegido = computed(() => this.planes().find((p) => p.codigo === this.plan()));
 
   ngOnInit(): void {
@@ -85,8 +91,7 @@ export class RegistroUniversidad implements OnInit {
     if (this.enviando()) return;
     const faltante = this.validar();
     if (faltante) {
-      this.error.set(faltante);
-      return;
+      this.error.set(faltante); window.scrollTo({ top: 0, behavior: 'smooth' }); return;
     }
 
     this.enviando.set(true);
@@ -126,6 +131,8 @@ export class RegistroUniversidad implements OnInit {
     if (!/^[A-Za-z0-9-]{2,20}$/.test(this.sigla.trim())) return 'La sigla debe tener entre 2 y 20 letras o n√∫meros (ej. UPDS).';
     if (this.responsableNombre.trim().length < 3) return 'Ingres√° el nombre del responsable.';
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.responsableCorreo.trim())) return 'Ingres√° un correo v√°lido para el responsable.';
-    return null;
+    if (this.plan() !== 'basico' && this.metodoPago() === 'tarjeta') { if (this.numeroTarjeta.trim().length < 15) return 'Por favor, ingres· un n˙mero de tarjeta v·lido.'; if (this.vencimientoTarjeta.trim().length < 4) return 'Por favor, ingres· el vencimiento de tu tarjeta.'; if (this.cvvTarjeta.trim().length < 3) return 'Ingres· el CVV de tu tarjeta.'; } return null;
   }
 }
+
+

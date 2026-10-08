@@ -129,12 +129,49 @@
           </div>
         </section>
 
+        <!-- 4. Pasarela de Pago -->
+        @if (plan() !== 'basico') {
+          <section class="paso">
+            <h2><span class="num">4</span> Pasarela de Pago</h2>
+            <p class="ayuda">Estás adquiriendo un plan de pago. Completá los datos para activar tu suscripción.</p>
+            
+            <div class="tabs-pago">
+              <button type="button" [class.activo]="metodoPago() === 'tarjeta'" (click)="metodoPago.set('tarjeta')">💳 Tarjeta de Débito/Crédito</button>
+              <button type="button" [class.activo]="metodoPago() === 'qr'" (click)="metodoPago.set('qr')">📱 Pago QR Simple</button>
+            </div>
+
+            @if (metodoPago() === 'tarjeta') {
+              <div class="campos">
+                <label class="ancho">
+                  <span>Número de Tarjeta</span>
+                  <input name="numeroTarjeta" [(ngModel)]="numeroTarjeta" placeholder="0000 0000 0000 0000" maxlength="19" />
+                </label>
+                <label>
+                  <span>Fecha de Vencimiento</span>
+                  <input name="vencimientoTarjeta" [(ngModel)]="vencimientoTarjeta" placeholder="MM/AA" maxlength="5" />
+                </label>
+                <label>
+                  <span>CVV</span>
+                  <input type="password" name="cvvTarjeta" [(ngModel)]="cvvTarjeta" placeholder="123" maxlength="4" />
+                </label>
+              </div>
+            } @else {
+              <div class="pago-qr">
+                <div class="qr-placeholder">
+                  <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=Pago+Suscripcion+EGRESA" alt="Código QR de Pago" width="150" height="150" />
+                </div>
+                <p>Escaneá este código QR desde la aplicación móvil de tu banco para completar la transacción.</p>
+              </div>
+            }
+          </section>
+        }
+
         <div class="enviar">
           @if (planElegido(); as p) {
             <span class="resumen">Plan <strong>{{ p.nombre }}</strong> · {{ textoPrecio(p.precio_anual_bs) }}</span>
           }
           <button type="submit" class="btn-primario" [disabled]="enviando() || cargando()">
-            {{ enviando() ? 'Enviando…' : 'Enviar solicitud' }}
+            {{ enviando() ? (plan() !== 'basico' ? 'Procesando pago seguro...' : 'Enviando...') : (plan() !== 'basico' ? 'Procesar pago y enviar' : 'Enviar solicitud') }}
           </button>
         </div>
       </form>
