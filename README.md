@@ -393,7 +393,9 @@ El correo completo es el usuario más el dominio de su universidad: `@uagrm.egre
   últimas 7), cierra las vacantes vencidas avisando a la empresa, manda a cada egresado el
   boletín con las ofertas nuevas que coinciden con su perfil y envía los recordatorios de lo
   que vence en las próximas 24 horas: vacantes por cerrar (a la empresa y a los egresados
-  afines que no se postularon) y entrevistas (al egresado y a la empresa). El superadmin ve el historial y
+  afines que no se postularon) y entrevistas (al egresado y a la empresa). Además, cuando una
+  vacante se publica (la universidad la aprueba o la publica un admin), los egresados afines
+  reciben el aviso en ese momento, sin esperar al boletín, que ya no la repite. El superadmin ve el historial y
   las puede ejecutar a mano en "Tareas automáticas". Corren solas en Railway y no en las
   computadoras del equipo (`TAREAS_AUTOMATICAS_ACTIVAS=true` para forzarlas;
   `TAREAS_HORA_DIARIA` cambia la hora). Las copias se guardan en `STORAGE_LOCAL_PATH`: en

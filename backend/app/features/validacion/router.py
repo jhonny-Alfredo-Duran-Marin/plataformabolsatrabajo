@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request
 from sqlalchemy.orm import Session
 
 from app.common.request_context import get_client_ip
@@ -17,6 +17,7 @@ from app.security.tenant import AlcanceStaff
 from app.features.bitacora.service import BitacoraService
 from app.features.perfil.service import EgresadoService
 from app.features.empresa.service import EmpresaService
+from app.features.vacantes.router import avisar_si_se_publico
 from app.features.vacantes.schema import VacanteModeracionRequest, VacantePaginadaResponse, VacanteResponse
 from app.features.vacantes.service import VacanteService
 
@@ -169,12 +170,14 @@ def decidir_vacante(
     vacante_id: uuid.UUID,
     data: VacanteModeracionRequest,
     request: Request,
+    background_tasks: BackgroundTasks,
     alcance: AlcanceStaff = Depends(requiere_permiso("boton.moderacion.decidir")),
     db: Session = Depends(get_db),
 ):
     # VacanteService.moderar ya registra su propia auditoria y hace commit,
     # siguiendo el mismo patron self-contained del resto del modulo vacantes.
-    return VacanteService(db).moderar(
+    servicio = VacanteService(db)
+    respuesta = servicio.moderar(
         vacante_id=vacante_id,
         aprobado=data.aprobado,
         motivo_rechazo=data.motivo_rechazo,
@@ -182,3 +185,6 @@ def decidir_vacante(
         ip_address=get_client_ip(request),
         institution_id=alcance.institution_id,
     )
+    # Al aprobarla queda publicada: los egresados afines reciben el aviso en el momento.
+    avisar_si_se_publico(servicio, background_tasks)
+    return respuesta

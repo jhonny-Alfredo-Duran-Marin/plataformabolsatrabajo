@@ -56,8 +56,15 @@ class VacanteService:
         self.db = db
         self.repo = VacanteRepository(db)
         self.email_service = EmailService()
+        # Id de la vacante que la última operación dejó publicada (estaba en otro estado),
+        # para que el router avise a los egresados afines después de responder.
+        self.vacante_publicada: uuid.UUID | None = None
 
     # ─── Helpers Privados ───────────────────────────────────────────────────
+
+    def _anotar_si_se_publico(self, vacante: JobPosting, estado_anterior: str | None) -> None:
+        if vacante.status == JobStatus.PUBLISHED.value and estado_anterior != JobStatus.PUBLISHED.value:
+            self.vacante_publicada = vacante.id
 
     def _obtener_empresa_y_miembro_de_usuario(
         self, usuario_id: uuid.UUID
@@ -232,6 +239,7 @@ class VacanteService:
             ip_address=ip_address,
         )
         self.db.commit()
+        self._anotar_si_se_publico(vacante_creada, None)
 
         return self._a_dto(vacante_creada)
 
@@ -347,6 +355,7 @@ class VacanteService:
             if vacante.company_id != empresa.id:
                 raise ForbiddenException("No tiene permisos para modificar esta vacante.")
 
+        estado_anterior = vacante.status
         datos_dict = payload.model_dump(exclude_unset=True, exclude={"skills", "status"})
 
         # Regla: Si se solicita publicar y la empresa no está verificada, rechazar.
@@ -392,6 +401,7 @@ class VacanteService:
             ip_address=ip_address,
         )
         self.db.commit()
+        self._anotar_si_se_publico(vacante_actualizada, estado_anterior)
 
         return self._a_dto(vacante_actualizada)
 
@@ -425,6 +435,7 @@ class VacanteService:
             if not current_user.es_admin:
                 nuevo_estado = JobStatus.PENDING_REVIEW.value
 
+        estado_anterior = vacante.status
         vacante_modificada = self.repo.cambiar_estado(vacante, nuevo_estado)
 
         self._registrar_auditoria(
@@ -435,6 +446,7 @@ class VacanteService:
             ip_address=ip_address,
         )
         self.db.commit()
+        self._anotar_si_se_publico(vacante_modificada, estado_anterior)
 
         return self._a_dto(vacante_modificada)
 
@@ -519,6 +531,7 @@ class VacanteService:
             ip_address=ip_address,
         )
         self.db.commit()
+        self._anotar_si_se_publico(vacante_moderada, JobStatus.PENDING_REVIEW.value)
 
         return self._a_dto(vacante_moderada)
 

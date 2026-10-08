@@ -295,6 +295,58 @@ def test_el_boletin_avisa_solo_las_ofertas_nuevas_que_coinciden(db_session, dato
     assert avisos(no_coincide.id) == []
 
 
+def test_al_publicarse_la_vacante_avisa_en_el_momento_a_los_afines(db_session, datos):
+    db = db_session
+    habilidad = Skill(name=f"Elixir {datos['sufijo']}", category="Software")
+    db.add(habilidad)
+    vacante = JobPosting(
+        company_id=datos["empresa_id"],
+        title=f"Desarrollador Elixir {datos['sufijo']}",
+        description="Vacante que se publica durante el test",
+        seniority_level="junior",
+        employment_type="permanent",
+        work_modality="remote",
+        city="Santa Cruz",
+        status="draft",
+        created_by=datos["reclutador_id"],
+    )
+    db.add(vacante)
+    db.flush()
+    db.add(JobSkill(job_posting_id=vacante.id, skill_id=habilidad.id, importance="required"))
+    afin = _usuario(db, "publica_si", "candidate")
+    no_afin = _usuario(db, "publica_no", "candidate")
+    perfil = CandidateProfile(user_id=afin.id, first_name="Eli", last_name="Afín", verification_status="verified")
+    db.add_all([perfil, CandidateProfile(user_id=no_afin.id, first_name="No", last_name="Afín", verification_status="verified")])
+    db.flush()
+    db.add(CandidateSkill(candidate_id=perfil.id, skill_id=habilidad.id))
+    db.commit()
+
+    def avisos(usuario_id):
+        db.expire_all()
+        return db.scalars(
+            select(Notification).where(Notification.user_id == usuario_id, Notification.notification_type == "job_match")
+        ).all()
+
+    # La empresa pide publicarla: queda en revisión de la universidad y todavía no avisa a nadie.
+    pedido = client.patch(f"/api/vacantes/{vacante.id}/estado", json={"status": "published"}, headers=datos["empresa"])
+    assert pedido.status_code == 200 and pedido.json()["status"] == "pending_review"
+    assert avisos(afin.id) == []
+
+    # La universidad la aprueba: el egresado afín recibe el aviso sin esperar al boletín.
+    decision = client.post(f"/api/validacion/vacantes/{vacante.id}/decision", json={"aprobado": True}, headers=datos["admin"])
+    assert decision.status_code == 200 and decision.json()["status"] == "published"
+    [aviso] = avisos(afin.id)
+    assert aviso.link == f"/vacantes/{vacante.id}"
+    assert vacante.title in aviso.title and "100% de afinidad" in aviso.body
+    assert avisos(no_afin.id) == []
+
+    # Ni pausarla y volver a publicarla ni el boletín del día repiten el aviso.
+    for estado in ("paused", "published"):
+        assert client.patch(f"/api/vacantes/{vacante.id}/estado", json={"status": estado}, headers=datos["admin"]).status_code == 200
+    tareas.boletin_ofertas(db)
+    assert [a.link for a in avisos(afin.id) if vacante.title in (a.title + (a.body or ""))] == [f"/vacantes/{vacante.id}"]
+
+
 def test_recordatorios_de_vacantes_por_cerrar_y_entrevistas(db_session, datos):
     db = db_session
     ahora = datetime.now(timezone.utc)

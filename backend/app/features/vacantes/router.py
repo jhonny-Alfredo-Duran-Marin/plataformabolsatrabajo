@@ -2,11 +2,12 @@ import uuid
 from decimal import Decimal
 from typing import List
 
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.features.tareas.tareas import avisar_vacante_publicada_en_segundo_plano
 from app.features.vacantes.schema import (
     EstadisticasPublicasResponse,
     FiltrosDisponiblesResponse,
@@ -26,6 +27,12 @@ from app.models.vacante import ScreeningOption, ScreeningQuestion
 from app.security.dependencies import CurrentUser, get_current_user, get_current_user_optional, require_roles
 
 router = APIRouter(prefix="/vacantes", tags=["vacantes"])
+
+
+def avisar_si_se_publico(servicio: VacanteService, background_tasks: BackgroundTasks) -> None:
+    """Si la operación dejó la vacante publicada, avisa a los egresados afines después de responder."""
+    if servicio.vacante_publicada is not None:
+        background_tasks.add_task(avisar_vacante_publicada_en_segundo_plano, servicio.vacante_publicada)
 
 
 class ScreeningOptionSchema(BaseModel):
@@ -58,11 +65,15 @@ class ScreeningQuestionSchema(BaseModel):
 def crear_vacante(
     payload: VacanteCreateRequest,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: CurrentUser = Depends(require_roles("empresa", "platform_admin")),
 ):
     ip_address = request.client.host if request.client else None
-    return VacanteService(db).crear_vacante(payload, current_user, ip_address=ip_address)
+    servicio = VacanteService(db)
+    respuesta = servicio.crear_vacante(payload, current_user, ip_address=ip_address)
+    avisar_si_se_publico(servicio, background_tasks)
+    return respuesta
 
 
 @router.get(
@@ -223,16 +234,20 @@ def actualizar_vacante(
     vacante_id: uuid.UUID,
     payload: VacanteUpdateRequest,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: CurrentUser = Depends(require_roles("empresa", "platform_admin")),
 ):
     ip_address = request.client.host if request.client else None
-    return VacanteService(db).actualizar_vacante(
+    servicio = VacanteService(db)
+    respuesta = servicio.actualizar_vacante(
         vacante_id=vacante_id,
         payload=payload,
         current_user=current_user,
         ip_address=ip_address,
     )
+    avisar_si_se_publico(servicio, background_tasks)
+    return respuesta
 
 
 @router.patch(
@@ -245,16 +260,20 @@ def cambiar_estado_vacante(
     vacante_id: uuid.UUID,
     payload: VacanteCambioEstadoRequest,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: CurrentUser = Depends(require_roles("empresa", "platform_admin")),
 ):
     ip_address = request.client.host if request.client else None
-    return VacanteService(db).cambiar_estado(
+    servicio = VacanteService(db)
+    respuesta = servicio.cambiar_estado(
         vacante_id=vacante_id,
         payload=payload,
         current_user=current_user,
         ip_address=ip_address,
     )
+    avisar_si_se_publico(servicio, background_tasks)
+    return respuesta
 
 
 @router.delete(
