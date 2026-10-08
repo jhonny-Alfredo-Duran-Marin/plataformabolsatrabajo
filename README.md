@@ -371,12 +371,24 @@ Moderador de UMSS: `moderador@umss.egresa.bo` / `Egresa2026!`.
   ícono de ayuda de la barra superior de cada pantalla.
 - **Tareas automáticas y backup automático (requisitos 1 y 6):** todos los días desde las
   03:00 (hora de Bolivia) el backend hace una copia de seguridad completa (conserva las
-  últimas 7), cierra las vacantes vencidas avisando a la empresa y manda a cada egresado el
-  boletín con las ofertas nuevas que coinciden con su perfil. El superadmin ve el historial y
+  últimas 7), cierra las vacantes vencidas avisando a la empresa, manda a cada egresado el
+  boletín con las ofertas nuevas que coinciden con su perfil y envía los recordatorios de lo
+  que vence en las próximas 24 horas: vacantes por cerrar (a la empresa y a los egresados
+  afines que no se postularon) y entrevistas (al egresado y a la empresa). El superadmin ve el historial y
   las puede ejecutar a mano en "Tareas automáticas". Corren solas en Railway y no en las
   computadoras del equipo (`TAREAS_AUTOMATICAS_ACTIVAS=true` para forzarlas;
   `TAREAS_HORA_DIARIA` cambia la hora). Las copias se guardan en `STORAGE_LOCAL_PATH`: en
   Railway conviene montar un volumen en `/app/storage` para que no se pierdan al redesplegar.
+- **Escenario de demostración con datos realistas:** `python -m scripts.sembrar_escenario_demo`
+  (después de `sembrar_multitenant`, que corre solo al principio). Agrega 3 empresas, 25
+  vacantes, 40 egresados de las cuatro universidades (8 sin validar), unas 100 postulaciones
+  en todas las etapas, entrevistas y conversaciones, y deja eventos por vencer: vacantes
+  publicadas hoy, que cierran en unas horas y ya vencidas, entrevistas de hoy y mañana. Al
+  final corre las tareas automáticas, así los avisos aparecen enseguida en la campana. Se
+  puede volver a correr: no duplica datos ni avisos y refresca las fechas. Usa
+  `DEMO_PASSWORD` para todas las cuentas nuevas (por ejemplo `maria.rojas@uagrm.egresa.bo` o
+  `rrhh@pampasoftware.egresa.bo`). Si existen, `empresa@prueba.com` y `antonio@prueba.com`
+  quedan con una entrevista para mañana.
 
 Si alguna deja de funcionar (alguien del equipo pudo haberla cambiado probando), se resetea corriendo los scripts de arriba o pidiendo que se actualice manualmente — avisen en el grupo antes de cambiarlas para no romper la sesión de otro compañero.
 

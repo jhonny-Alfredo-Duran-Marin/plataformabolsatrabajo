@@ -21,6 +21,7 @@ const ICONO_TAREA: Record<string, string> = {
   respaldo_diario: '💾',
   cierre_vacantes: '⏰',
   boletin_ofertas: '📬',
+  recordatorios: '🔔',
 };
 
 /** Procesos que la plataforma corre sola todos los días, con su historial. */

@@ -19,8 +19,10 @@ from app.main import app
 from app.models.candidato import CandidateProfile, CandidateSkill
 from app.models.catalogo import Skill
 from app.models.empresa import Company, CompanyMember
+from app.models.entrevista import Interview
 from app.models.institucion import CompanyInstitution, Institution
 from app.models.notificacion import Notification
+from app.models.postulacion import Application
 from app.models.respaldo import SystemBackup
 from app.models.seguridad import AuditLog
 from app.models.tarea import ScheduledTaskRun
@@ -293,6 +295,84 @@ def test_el_boletin_avisa_solo_las_ofertas_nuevas_que_coinciden(db_session, dato
     assert avisos(no_coincide.id) == []
 
 
+def test_recordatorios_de_vacantes_por_cerrar_y_entrevistas(db_session, datos):
+    db = db_session
+    ahora = datetime.now(timezone.utc)
+    habilidad = Skill(name=f"Rust {datos['sufijo']}", category="Software")
+    db.add(habilidad)
+    por_cerrar = JobPosting(
+        company_id=datos["empresa_id"],
+        title=f"Desarrollador Rust {datos['sufijo']}",
+        description="Vacante que cierra pronto",
+        seniority_level="junior",
+        employment_type="permanent",
+        work_modality="remote",
+        city="Santa Cruz",
+        status="published",
+        published_at=ahora - timedelta(days=10),
+        application_deadline=ahora + timedelta(hours=6),
+        created_by=datos["reclutador_id"],
+    )
+    db.add(por_cerrar)
+    db.flush()
+    db.add(JobSkill(job_posting_id=por_cerrar.id, skill_id=habilidad.id, importance="required"))
+    afin = _usuario(db, "cierre_afin", "candidate")
+    postulado = _usuario(db, "cierre_postulado", "candidate")
+    perfil_afin = CandidateProfile(user_id=afin.id, first_name="Ana", last_name="Afín", verification_status="verified")
+    perfil_postulado = CandidateProfile(
+        user_id=postulado.id, first_name="Pablo", last_name="Postulado", verification_status="verified"
+    )
+    db.add_all([perfil_afin, perfil_postulado])
+    db.flush()
+    db.add_all(
+        [
+            CandidateSkill(candidate_id=perfil_afin.id, skill_id=habilidad.id),
+            CandidateSkill(candidate_id=perfil_postulado.id, skill_id=habilidad.id),
+        ]
+    )
+    postulacion = Application(candidate_id=perfil_postulado.id, job_id=por_cerrar.id, current_status="interview")
+    db.add(postulacion)
+    db.flush()
+    entrevista = Interview(
+        application_id=postulacion.id,
+        scheduled_start=ahora + timedelta(hours=20),
+        scheduled_end=ahora + timedelta(hours=21),
+        modality="virtual",
+        meeting_url="https://meet.example.com/egresa",
+        status="confirmed",
+        created_by=datos["reclutador_id"],
+    )
+    db.add(entrevista)
+    db.commit()
+
+    resumen = tareas.recordatorios(db)
+    assert "cierran en las próximas 24 horas" in resumen
+
+    def avisos(usuario_id, tipo):
+        return db.scalars(
+            select(Notification).where(Notification.user_id == usuario_id, Notification.notification_type == tipo)
+        ).all()
+
+    [aviso_egresado] = avisos(afin.id, "vacante_por_cerrar")
+    assert aviso_egresado.link == f"/vacantes/{por_cerrar.id}" and por_cerrar.title in aviso_egresado.body
+    # Quien ya se postuló no recibe la «última oportunidad», pero sí el recordatorio de su entrevista.
+    assert avisos(postulado.id, "vacante_por_cerrar") == []
+    [entrevista_egresado] = avisos(postulado.id, "interview_reminder")
+    assert entrevista_egresado.link == f"/postulaciones?entrevista={entrevista.id}"
+    assert "virtual" in entrevista_egresado.body
+
+    [cierre_empresa] = avisos(datos["reclutador_id"], "recordatorio_vacante")
+    assert por_cerrar.title in cierre_empresa.title and "1 postulación" in cierre_empresa.body
+    [entrevista_empresa] = avisos(datos["reclutador_id"], "interview_reminder")
+    assert "Pablo Postulado" in entrevista_empresa.title
+
+    # Si la tarea vuelve a correr el mismo día no repite los avisos.
+    tareas.recordatorios(db)
+    assert len(avisos(afin.id, "vacante_por_cerrar")) == 1
+    assert len(avisos(datos["reclutador_id"], "recordatorio_vacante")) == 1
+    assert len(avisos(postulado.id, "interview_reminder")) == 1
+
+
 def test_cada_tarea_corre_una_vez_por_dia_desde_la_hora(db_session):
     clave = f"prueba_{uuid.uuid4().hex[:6]}"
     bolivia = planificador.ZONA_BOLIVIA
@@ -333,7 +413,12 @@ def test_panel_de_tareas_solo_para_el_superadmin(datos):
     assert client.get("/api/admin/tareas", headers=datos["admin"]).status_code == 403
     res = client.get("/api/admin/tareas", headers=datos["superadmin"])
     assert res.status_code == 200, res.text
-    assert {t["clave"] for t in res.json()["tareas"]} == {"respaldo_diario", "cierre_vacantes", "boletin_ofertas"}
+    assert {t["clave"] for t in res.json()["tareas"]} == {
+        "respaldo_diario",
+        "cierre_vacantes",
+        "boletin_ofertas",
+        "recordatorios",
+    }
 
     corrida = client.post("/api/admin/tareas/cierre_vacantes/ejecutar", headers=datos["superadmin"])
     assert corrida.status_code == 200, corrida.text

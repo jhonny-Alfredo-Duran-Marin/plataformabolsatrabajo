@@ -84,8 +84,14 @@ export class NotificacionesCampanaComponent implements OnInit {
         return '📈';
       case 'job_match':
         return '✨';
+      case 'vacante_por_cerrar':
+      case 'recordatorio_vacante':
+        return '⏳';
+      case 'vacante_cerrada':
+        return '🔒';
       case 'interview_scheduled':
       case 'interview_status':
+      case 'interview_reminder':
         return '📅';
       case 'message_received':
         return '💬';

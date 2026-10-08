@@ -93,6 +93,7 @@ const TEXTO_ACCION: Record<string, string> = {
   respaldo_automatico: 'Se hizo la copia de seguridad diaria',
   cerrar_vacantes_vencidas: 'Se cerraron las vacantes vencidas',
   boletin_ofertas: 'Se envió el boletín diario de ofertas',
+  recordatorios: 'Se enviaron los recordatorios de cierres y entrevistas',
   ejecutar_tarea: 'Ejecutó una tarea automática a mano',
   abrir_bitacora: 'Abrió la bitácora confidencial',
   clave_bitacora_incorrecta: 'Intentó abrir la bitácora con una clave incorrecta',

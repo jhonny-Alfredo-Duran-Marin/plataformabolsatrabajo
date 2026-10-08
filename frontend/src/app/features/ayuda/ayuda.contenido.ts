@@ -452,13 +452,18 @@ export const TEMAS_AYUDA: TemaAyuda[] = [
     audiencia: 'universidad',
     rutas: ['/admin/tareas'],
     resumen:
-      'Procesos que corren solos todos los días: copia de seguridad, cierre de vacantes vencidas y boletín de ofertas para los egresados.',
+      'Procesos que corren solos todos los días: copia de seguridad, cierre de vacantes vencidas, boletín de ofertas y recordatorios de lo que vence en las próximas 24 horas.',
     pasos: [
       'Revisá cuándo corrió cada tarea por última vez y su resultado.',
       'Usá «Ejecutar ahora» para correrla en el momento (no reemplaza la ejecución automática del día).',
       'Abrí el historial para ver las últimas ejecuciones.',
     ],
     preguntas: [
+      {
+        pregunta: '¿Qué avisan los recordatorios?',
+        respuesta:
+          'Las vacantes que cierran en las próximas 24 horas (a la empresa y a los egresados afines que no se postularon) y las entrevistas de las próximas 24 horas (al egresado y a la empresa). No repiten el mismo aviso en el día.',
+      },
       {
         pregunta: '¿Qué pasa si el servidor estaba apagado a la hora programada?',
         respuesta: 'La tarea corre apenas el servidor vuelve, una sola vez por día.',

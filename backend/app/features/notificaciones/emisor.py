@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 # módulos que notifican; los que no aparecen acá se envían siempre.
 CATEGORIA_POR_TIPO: dict[str, str] = {
     **dict.fromkeys(("application_status", "stage_change"), "notify_stage_changes"),
-    **dict.fromkeys(("job_match", "vacante_afinidad"), "notify_job_matches"),
+    **dict.fromkeys(("job_match", "vacante_afinidad", "vacante_por_cerrar"), "notify_job_matches"),
     **dict.fromkeys(
         (
             "interview_proposal",
@@ -29,6 +29,7 @@ CATEGORIA_POR_TIPO: dict[str, str] = {
             "interview_confirmed",
             "interview_rejected",
             "interview_scheduled",
+            "interview_reminder",
         ),
         "notify_interview_events",
     ),

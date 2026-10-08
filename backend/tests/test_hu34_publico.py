@@ -107,6 +107,8 @@ def setup_datos_hu34(db_session: Session):
         work_modality="remote",
         city="Santa Cruz",
         status="published",
+        # Con fecha, como toda vacante publicada: sin ella queda última y sale de la primera página.
+        published_at=datetime.now(timezone.utc),
         created_by=empresa_user.id,
     )
     db_session.add(vacante)
@@ -204,6 +206,8 @@ def test_vacante_de_empresa_dada_de_baja_no_es_publica(db_session: Session):
         work_modality="remote",
         city="Santa Cruz",
         status="published",
+        # Con fecha, como toda vacante publicada: sin ella queda última y sale de la primera página.
+        published_at=datetime.now(timezone.utc),
         created_by=empresa_user.id,
     )
     db_session.add(vacante)
