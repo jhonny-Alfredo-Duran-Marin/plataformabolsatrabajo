@@ -10,8 +10,11 @@ para que las tareas automáticas generen avisos:
 - entrevistas de hoy y de mañana: recordatorio al egresado y a la empresa;
 - vacantes en revisión y egresados sin validar: colas de moderación y de validación.
 
-Al final corre esas tareas (quedan en el historial de «Tareas automáticas»), así los avisos
-aparecen enseguida en la campana y, si el backend tiene Firebase, también como push.
+Si esta máquina tiene las credenciales de Firebase, al final corre esas tareas (quedan en el
+historial de «Tareas automáticas») y los avisos llegan a la campana y como push. Si no las
+tiene, conviene ejecutarlas desde el panel del superadmin («Tareas automáticas» → «Ejecutar
+ahora»): las corre el servidor, que sí manda los push. Con --con-tareas se corren igual desde
+acá (solo campana). Si nadie las ejecuta, las corre solas el servidor a las 03:00.
 
 Es idempotente: busca por correo, NIT, título de vacante y postulación, así que no duplica
 nada. Al volver a correrlo refresca las fechas y el escenario vuelve a quedar «por vencer».
@@ -19,10 +22,11 @@ Si un correo del escenario ya pertenece a otra cuenta, esa fila se saltea: nunca
 contraseña de un usuario que no sembró. Las cuentas usan la contraseña DEMO_PASSWORD de backend/.env.
 
 Uso (desde la carpeta backend):
-    python -m scripts.sembrar_escenario_demo
+    python -m scripts.sembrar_escenario_demo [--con-tareas]
 """
 
 import random
+import sys
 import unicodedata
 from datetime import datetime, time, timedelta, timezone
 
@@ -30,6 +34,7 @@ from sqlalchemy import select
 
 import app.models  # noqa: F401 - registra todos los modelos
 from app.core.database import SessionLocal
+from app.features.notificaciones import fcm_service
 from app.features.tareas import planificador
 from app.models.candidato import CandidateProfile
 from app.models.comunicacion import Conversation, ConversationMember, Message
@@ -664,9 +669,17 @@ def ejecutar() -> None:
     )
 
     print("\n== Tareas automáticas (generan los avisos) ==")
-    for clave in ("cierre_vacantes", "boletin_ofertas", "recordatorios"):
-        corrida = planificador.ejecutar(clave, disparador="manual", autor=AUTOR)
-        print(f"- {clave}: {corrida.estado} · {corrida.resumen}")
+    if "--con-tareas" in sys.argv[1:] or fcm_service.inicializar_firebase():
+        for clave in ("cierre_vacantes", "boletin_ofertas", "recordatorios"):
+            corrida = planificador.ejecutar(clave, disparador="manual", autor=AUTOR)
+            print(f"- {clave}: {corrida.estado} · {corrida.resumen}")
+    else:
+        print(
+            "Esta máquina no tiene Firebase. Para que los avisos lleguen también como push, entrá como "
+            "superadmin a «Tareas automáticas» y tocá «Ejecutar ahora» en «Cierre de vacantes vencidas», "
+            "«Boletín diario de ofertas» y «Recordatorios de cierres y entrevistas», en ese orden. "
+            "Para correrlas desde acá (solo en la campana): python -m scripts.sembrar_escenario_demo --con-tareas"
+        )
     print("\nListo. Las cuentas nuevas usan la contraseña de DEMO_PASSWORD.")
 
 

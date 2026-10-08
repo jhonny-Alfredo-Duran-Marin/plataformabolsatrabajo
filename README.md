@@ -383,9 +383,10 @@ Moderador de UMSS: `moderador@umss.egresa.bo` / `Egresa2026!`.
   (después de `sembrar_multitenant`, que corre solo al principio). Agrega 3 empresas, 25
   vacantes, 40 egresados de las cuatro universidades (8 sin validar), unas 100 postulaciones
   en todas las etapas, entrevistas y conversaciones, y deja eventos por vencer: vacantes
-  publicadas hoy, que cierran en unas horas y ya vencidas, entrevistas de hoy y mañana. Al
-  final corre las tareas automáticas, así los avisos aparecen enseguida en la campana. Se
-  puede volver a correr: no duplica datos ni avisos y refresca las fechas. Usa
+  publicadas hoy, que cierran en unas horas y ya vencidas, entrevistas de hoy y mañana. Para
+  que salten los avisos (campana y push), el superadmin ejecuta en "Tareas automáticas" el
+  cierre de vacantes, el boletín y los recordatorios; si no, el servidor los corre solo a
+  las 03:00. Se puede volver a correr: no duplica datos ni avisos y refresca las fechas. Usa
   `DEMO_PASSWORD` para todas las cuentas nuevas (por ejemplo `maria.rojas@uagrm.egresa.bo` o
   `rrhh@pampasoftware.egresa.bo`). Si existen, `empresa@prueba.com` y `antonio@prueba.com`
   quedan con una entrevista para mañana.
