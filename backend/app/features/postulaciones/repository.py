@@ -12,6 +12,7 @@ from app.models.postulacion import (
     ApplicationStatusHistory,
 )
 from app.models.vacante import JobPosting
+from app.shared.exportacion import ZONA_BOLIVIA
 
 
 class PostulacionRepository:
@@ -50,11 +51,12 @@ class PostulacionRepository:
             else:
                 stmt = stmt.where(Application.current_status == estado_clean)
 
+        # Los días del filtro son días de Bolivia: una postulación de las 22:00 cuenta en ese día, no en el siguiente.
         if fecha_desde:
-            stmt = stmt.where(Application.applied_at >= datetime.combine(fecha_desde, time.min))
+            stmt = stmt.where(Application.applied_at >= datetime.combine(fecha_desde, time.min, tzinfo=ZONA_BOLIVIA))
 
         if fecha_hasta:
-            stmt = stmt.where(Application.applied_at <= datetime.combine(fecha_hasta, time.max))
+            stmt = stmt.where(Application.applied_at <= datetime.combine(fecha_hasta, time.max, tzinfo=ZONA_BOLIVIA))
 
         if busqueda and busqueda.strip():
             query_str = f"%{busqueda.strip().lower()}%"

@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import select
@@ -142,19 +142,19 @@ class EntrevistasRepository:
         )
         stage_abierta = self.db.scalar(stmt_open_stage)
         if stage_abierta:
-            stage_abierta.left_at = datetime.now()
+            stage_abierta.left_at = datetime.now(timezone.utc)
             stage_abierta.result = "passed"
 
         estado_anterior = application.current_status
         application.current_stage_id = nueva_etapa.id
         application.current_status = nuevo_status
-        application.updated_at = datetime.now()
+        application.updated_at = datetime.now(timezone.utc)
 
         # Registrar nuevo ingreso de etapa
         nuevo_ingreso = ApplicationStageHistory(
             application_id=application.id,
             stage_id=nueva_etapa.id,
-            entered_at=datetime.now(),
+            entered_at=datetime.now(timezone.utc),
             changed_by=user_id,
             result="pending",
             notes=observacion,

@@ -28,6 +28,8 @@ _ETIQUETAS_ESTADO = {
 # manualmente desde este panel: siempre se otorga junto con una fila de company_member,
 # nunca de forma aislada.
 _ROLES_ASIGNABLES = ("candidate", "moderator", "platform_admin")
+# Lo que asigna el admin de una universidad: igual que al crear staff, los administradores los nombra el superadmin.
+_ROLES_DE_UNIVERSIDAD = ("candidate", "moderator")
 
 
 class RolesService:
@@ -36,12 +38,16 @@ class RolesService:
         self.repo = RolesRepository(db)
         self.bitacora = BitacoraService(db)
 
-    def listar_roles(self) -> list[RolResponse]:
-        """Roles que el panel puede asignar (el de empresa no se asigna a mano)."""
+    def listar_roles(self, institution_id: uuid.UUID | None = None) -> list[RolResponse]:
+        """Roles que el panel puede asignar (el de empresa no se asigna a mano).
+
+        El admin de una universidad no nombra administradores: eso es del superadmin.
+        """
+        asignables = _ROLES_ASIGNABLES if institution_id is None else _ROLES_DE_UNIVERSIDAD
         return [
             RolResponse(id=rol.id, nombre=rol.name, descripcion=rol.description)
             for rol in self.repo.listar_roles()
-            if rol.name in _ROLES_ASIGNABLES
+            if rol.name in asignables
         ]
 
     def listar_usuarios(self, institution_id: uuid.UUID | None = None) -> list[UsuarioAdminResponse]:
@@ -80,6 +86,11 @@ class RolesService:
         if self.repo.es_miembro_empresa(usuario.id):
             # Quitarle el rol de empresa le cortaría el acceso a su empresa.
             raise BusinessException("Las cuentas de empresa se gestionan desde Gestión de empresas.")
+        if institution_id is not None and (
+            nombre_rol not in _ROLES_DE_UNIVERSIDAD or "platform_admin" in self.repo.roles_de_usuario(usuario.id)
+        ):
+            # Sin esto, el admin de una universidad se saltaría el límite del plan nombrando co-administradores.
+            raise ForbiddenException("Solo el superadministrador puede nombrar o cambiar administradores de universidad.")
 
         if nombre_rol in ("moderator", "platform_admin"):
             # El staff queda atado a una universidad; solo un platform_admin sin universidad

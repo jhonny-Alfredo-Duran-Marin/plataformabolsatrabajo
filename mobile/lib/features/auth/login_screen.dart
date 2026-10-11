@@ -48,9 +48,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => HomeScreen(sesion: sesion)));
     } on AuthException catch (e) {
-      setState(() => _error = e.mensaje);
+      if (mounted) setState(() => _error = e.mensaje);
     } catch (_) {
-      setState(() => _error = 'Ocurrió un error inesperado. Intentá de nuevo.');
+      if (mounted) setState(() => _error = 'Ocurrió un error inesperado. Intentá de nuevo.');
     } finally {
       if (mounted) setState(() => _cargando = false);
     }

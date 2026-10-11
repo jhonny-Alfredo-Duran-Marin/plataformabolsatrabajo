@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import List
 
 from fastapi import HTTPException
@@ -41,7 +41,11 @@ class PostulacionService:
     # ─── Postularse a una vacante — HU-14 ───────────────────────────────────
 
     def postular_vacante(self, user_id: str, data: PostulacionCreate) -> PostulacionResponse:
-        candidate = self.db.query(CandidateProfile).filter(CandidateProfile.user_id == user_id).first()
+        # El bloqueo de la fila del egresado serializa sus postulaciones: un doble clic o un reintento
+        # de la app no crea dos postulaciones a la misma vacante.
+        candidate = (
+            self.db.query(CandidateProfile).filter(CandidateProfile.user_id == user_id).with_for_update().first()
+        )
         if not candidate:
             raise HTTPException(status_code=403, detail="Perfil de candidato no encontrado.")
 
@@ -52,9 +56,15 @@ class PostulacionService:
         if not vacante:
             raise HTTPException(status_code=404, detail="La vacante no existe.")
 
-        # Solo se postula a ofertas publicadas; una retirada u oculta por denuncias (HU-22) no recibe postulaciones.
-        if vacante.status != "published" or esta_oculta(self.db, vacante.id):
+        # Solo se postula a ofertas publicadas; una retirada, oculta por denuncias (HU-22) o de una empresa
+        # dada de baja no recibe postulaciones.
+        empresa_de_baja = vacante.company is not None and vacante.company.account_status == "suspended"
+        if vacante.status != "published" or esta_oculta(self.db, vacante.id) or empresa_de_baja:
             raise HTTPException(status_code=400, detail="Esta oferta ya no recibe postulaciones.")
+
+        # El cierre automático corre una vez al día: hasta entonces, la fecha límite se controla acá.
+        if vacante.application_deadline is not None and vacante.application_deadline < datetime.now(timezone.utc):
+            raise HTTPException(status_code=400, detail="La fecha límite para postularse a esta oferta ya pasó.")
 
         if not empresa_habilitada_en(self.db, vacante.company_id, institucion_efectiva(candidate.institution_id)):
             raise HTTPException(status_code=403, detail="Esta empresa no recluta egresados de tu universidad.")
@@ -354,8 +364,8 @@ class PostulacionService:
 
         estado_anterior = app.current_status
         app.current_status = "withdrawn"
-        app.withdrawn_at = datetime.now()
-        app.updated_at = datetime.now()
+        app.withdrawn_at = datetime.now(timezone.utc)
+        app.updated_at = datetime.now(timezone.utc)
 
         motivo_final = motivo.strip() if motivo and motivo.strip() else "Retiro voluntario por el egresado"
         self.repo.registrar_cambio_estado(application=app, nuevo_estado="withdrawn", user_id=user_id, motivo=motivo_final)

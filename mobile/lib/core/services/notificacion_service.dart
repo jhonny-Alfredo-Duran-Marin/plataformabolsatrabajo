@@ -108,9 +108,11 @@ class NotificacionService {
         final data = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
         return PreferenciasNotificacion.fromJson(data);
       }
-    } catch (_) {}
-
-    return const PreferenciasNotificacion();
+    } catch (_) {
+      // Sigue abajo: mismo error que una respuesta distinta de 200.
+    }
+    // No se devuelven valores por defecto: guardarlos pisaría las preferencias reales de la cuenta.
+    throw const NotificacionException('No se pudieron cargar tus preferencias. Intentá de nuevo.');
   }
 
   /// Actualiza las preferencias de notificación del usuario

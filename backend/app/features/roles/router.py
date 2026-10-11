@@ -22,9 +22,9 @@ router = APIRouter(prefix="/admin", tags=["gestion-roles"])
 _ve_usuarios = requiere_permiso("menu.usuarios")
 
 
-@router.get("/roles", response_model=list[RolResponse], dependencies=[Depends(_ve_usuarios)])
-def listar_roles(db: Session = Depends(get_db)):
-    return RolesService(db).listar_roles()
+@router.get("/roles", response_model=list[RolResponse])
+def listar_roles(alcance: AlcanceStaff = Depends(_ve_usuarios), db: Session = Depends(get_db)):
+    return RolesService(db).listar_roles(alcance.institution_id)
 
 
 @router.get("/usuarios", response_model=list[UsuarioAdminResponse])

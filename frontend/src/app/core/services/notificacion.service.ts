@@ -64,7 +64,8 @@ export class NotificacionService {
     }
     this.obtenerContadorNoLeidas().subscribe({
       next: (res) => this.noLeidasCount.set(res.no_leidas),
-      error: () => this.noLeidasCount.set(0),
+      // Un corte pasajero no borra la cuenta de la campana: queda la última conocida.
+      error: () => undefined,
     });
   }
 

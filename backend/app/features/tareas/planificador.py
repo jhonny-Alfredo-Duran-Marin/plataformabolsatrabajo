@@ -79,7 +79,10 @@ def le_toca(db: Session, clave: str, ahora: datetime | None = None) -> bool:
         return False
     if any(c.status == "running" and ahora - c.started_at < _SIN_RESPUESTA for c in corridas):
         return False
-    return sum(c.status == "failure" for c in corridas) < _INTENTOS_POR_DIA
+    # Una corrida que quedó «running» más allá del plazo (el proceso se cayó a mitad) cuenta como fallida,
+    # para que los reintentos del día sigan teniendo tope.
+    fallidas = sum(c.status == "failure" or c.status == "running" for c in corridas)
+    return fallidas < _INTENTOS_POR_DIA
 
 
 def resultado_de(corrida: ScheduledTaskRun) -> ResultadoCorrida:
@@ -125,18 +128,26 @@ def ejecutar(clave: str, disparador: str = "automatico", autor: str | None = Non
 def revisar() -> list[ResultadoCorrida]:
     """Una vuelta del planificador: corre las tareas a las que les toca."""
     corridas: list[ResultadoCorrida] = []
-    with engine.connect() as conn:
+    # En autocommit: el candado es de la sesión y la conexión no queda «idle in transaction»
+    # mientras corren tareas largas como la copia de seguridad.
+    with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
         if not conn.execute(text("SELECT pg_try_advisory_lock(:c)"), {"c": _CANDADO}).scalar():
             return corridas  # otra instancia ya está corriendo las tareas
         try:
             for clave in TAREAS:
-                with SessionLocal() as db:
-                    toca = le_toca(db, clave)
-                if toca:
-                    corridas.append(ejecutar(clave))
+                # Si falla la consulta o el registro de una tarea, las siguientes corren igual.
+                try:
+                    with SessionLocal() as db:
+                        toca = le_toca(db, clave)
+                    if toca:
+                        corridas.append(ejecutar(clave))
+                except Exception:  # noqa: BLE001 - se reintenta en la próxima vuelta
+                    logger.exception("No se pudo revisar o registrar la tarea automática %s", clave)
         finally:
-            conn.execute(text("SELECT pg_advisory_unlock(:c)"), {"c": _CANDADO})
-            conn.commit()
+            try:
+                conn.execute(text("SELECT pg_advisory_unlock(:c)"), {"c": _CANDADO})
+            except Exception:  # noqa: BLE001 - al cerrarse la conexión el candado se libera solo
+                logger.warning("No se pudo liberar el candado de tareas; se libera al cerrar la conexión.")
     return corridas
 
 

@@ -14,6 +14,8 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
 ZONA_BOLIVIA = timezone(timedelta(hours=-4))
+# Primeros caracteres con los que Excel interpreta una celda como fórmula.
+_INICIO_DE_FORMULA = ("=", "+", "-", "@", "\t", "\r")
 
 # Las fuentes base del PDF solo tienen Latin-1: estos caracteres se cambian por equivalentes.
 _EQUIVALENTES_LATIN1 = str.maketrans({"—": "-", "–": "-", "•": "*", "“": '"', "”": '"', "‘": "'", "’": "'", "…": "..."})
@@ -56,10 +58,10 @@ def a_excel(tabla: Tabla) -> bytes:
     wb = Workbook()
     ws = wb.active
     ws.title = "".join(c for c in tabla.titulo if c not in "[]:*?/\\")[:31] or "Reporte"
-    ws.append([tabla.titulo])
+    ws.append([_valor_excel(tabla.titulo)])
     ws["A1"].font = Font(bold=True, size=14)
     for linea in tabla.descripcion:
-        ws.append([linea])
+        ws.append([_valor_excel(linea)])
     ws.append([])
     fila_encabezado = ws.max_row + 1
     ws.append(tabla.encabezados)
@@ -91,6 +93,10 @@ def _valor_excel(valor: Any) -> Any:
         return "Sí" if valor else "No"
     if isinstance(valor, Decimal):
         return float(valor)
+    if isinstance(valor, str) and valor.startswith(_INICIO_DE_FORMULA):
+        # Un nombre como «=HYPERLINK(...)» escrito por un usuario se guarda como texto, no como fórmula
+        # que Excel ejecutaría al abrir el reporte.
+        return "'" + valor
     return valor
 
 

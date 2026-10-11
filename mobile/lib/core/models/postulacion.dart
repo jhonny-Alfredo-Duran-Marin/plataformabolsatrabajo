@@ -45,7 +45,8 @@ class PostulacionItem {
       estadoLabel: json['estado_label'] as String? ?? json['estado'] as String,
       estadoColor: json['estado_color'] as String? ?? 'gray',
       etapaActualNombre: json['etapa_actual_nombre'] as String?,
-      fechaPostulacion: DateTime.parse(json['fecha_postulacion'] as String),
+      // En hora del teléfono: «hoy» o «ayer» se calculan con el día de Bolivia, no el de UTC.
+      fechaPostulacion: DateTime.parse(json['fecha_postulacion'] as String).toLocal(),
       puedeRetirar: json['puede_retirar'] as bool? ?? false,
     );
   }
@@ -103,7 +104,7 @@ class HistorialEstado {
       haciaEstadoLabel: json['hacia_estado_label'] as String,
       haciaEstadoColor: json['hacia_estado_color'] as String? ?? 'gray',
       motivo: json['motivo'] as String?,
-      fecha: DateTime.parse(json['fecha'] as String),
+      fecha: DateTime.parse(json['fecha'] as String).toLocal(),
     );
   }
 }

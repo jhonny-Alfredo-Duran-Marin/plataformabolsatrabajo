@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { forkJoin, of } from 'rxjs';
@@ -58,6 +58,9 @@ interface Habilidad {
   categoria: string | null;
 }
 
+/** Marca de «la carga del perfil falló» (distinta de null, que es «todavía no tiene perfil»). */
+const ERROR_DE_CARGA = 'error' as const;
+
 @Component({
   selector: 'app-perfil-profesional',
   standalone: true,
@@ -79,6 +82,8 @@ export class ProfesionalComponent implements OnInit {
 
   readonly cargando = signal(true);
   readonly guardando = signal(false);
+  /** La carga del perfil falló (no un 404): no se muestra ni se guarda nada hasta reintentar. */
+  readonly errorCarga = signal(false);
 
   disponibilidadOpciones = [
     { valor: 'inmediata', etiqueta: 'Inmediata' },
@@ -245,10 +250,15 @@ export class ProfesionalComponent implements OnInit {
 
   cargarTodo(): void {
     this.cargando.set(true);
+    this.errorCarga.set(false);
     const headers = this.headers();
 
     forkJoin({
-      perfil: this.http.get<Perfil>(this.apiBase, { headers }).pipe(catchError(() => of(null))),
+      // Solo un 404 (todavía sin perfil) arma el perfil en blanco. Ante otro error no se carga nada:
+      // el formulario se guarda solo y pisaría los datos reales con los vacíos.
+      perfil: this.http
+        .get<Perfil>(this.apiBase, { headers })
+        .pipe(catchError((err: HttpErrorResponse) => of(err.status === 404 ? null : ERROR_DE_CARGA))),
       formaciones: this.http.get<Formacion[]>(`${this.apiBase}/formacion`, { headers }).pipe(catchError(() => of([]))),
       experiencias: this.http.get<Experiencia[]>(`${this.apiBase}/experiencia`, { headers }).pipe(catchError(() => of([]))),
       idiomas: this.http.get<Idioma[]>(`${this.apiBase}/idiomas`, { headers }).pipe(catchError(() => of([]))),
@@ -256,7 +266,10 @@ export class ProfesionalComponent implements OnInit {
       habilidades: this.http.get<Habilidad[]>(`${this.apiBase}/habilidades`, { headers }).pipe(catchError(() => of([]))),
     }).subscribe({
       next: (resp) => {
-        if (resp.perfil) {
+        if (resp.perfil === ERROR_DE_CARGA) {
+          this.errorCarga.set(true);
+          this.toast.error('No se pudo cargar tu perfil. Reintentá en unos segundos.');
+        } else if (resp.perfil) {
           this.perfil.set(resp.perfil);
         } else if (!this.perfil()) {
           this.perfil.set({

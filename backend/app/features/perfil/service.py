@@ -1,6 +1,6 @@
 import json
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from sqlalchemy.orm import Session
 
@@ -279,7 +279,7 @@ class EgresadoService:
             raise ResourceNotFoundException("No se encontró el perfil del egresado.")
 
         perfil.verification_status = "verified" if aprobado else "rejected"
-        perfil.verified_at = datetime.now() if aprobado else None
+        perfil.verified_at = datetime.now(timezone.utc) if aprobado else None
         self.db.commit()
 
         usuario = self.usuarios.obtener_por_id(perfil.user_id)

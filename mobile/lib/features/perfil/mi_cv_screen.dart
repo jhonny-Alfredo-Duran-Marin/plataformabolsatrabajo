@@ -77,19 +77,23 @@ abstract class _SeccionCvState<T, W extends StatefulWidget> extends State<W> {
   }
 
   Future<void> _recargar() async {
+    if (!mounted) return;
     setState(() {
       cargando = true;
       error = null;
     });
     try {
       final datos = await cargar();
+      if (!mounted) return;
       setState(() {
         items = datos;
         cargando = false;
       });
-    } on PerfilException catch (e) {
+    } catch (e) {
+      // Cualquier error (también una respuesta que no se pudo leer) apaga el indicador de carga.
+      if (!mounted) return;
       setState(() {
-        error = e.mensaje;
+        error = e is PerfilException ? e.mensaje : 'No se pudo cargar esta sección. Intentá de nuevo.';
         cargando = false;
       });
     }
@@ -99,7 +103,7 @@ abstract class _SeccionCvState<T, W extends StatefulWidget> extends State<W> {
     if (!await _confirmarEliminacion(context)) return;
     try {
       await eliminar(idDe(item));
-      _recargar();
+      if (mounted) _recargar();
     } on PerfilException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.mensaje)));

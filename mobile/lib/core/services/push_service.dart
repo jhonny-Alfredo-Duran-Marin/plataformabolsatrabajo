@@ -58,12 +58,22 @@ class PushService {
   Future<void> _registrar(String token) async {
     final acceso = _accessToken;
     if (acceso == null) return;
-    final respuesta = await enviar(
-      Uri.parse('${ApiConfig.baseUrl}/notificaciones/fcm/registrar-token'),
-      accessToken: acceso,
-      cuerpo: {'fcm_token': token, 'device_type': 'android', 'device_name': 'App Android'},
-    );
-    if (respuesta.statusCode == 200) _token = token;
+    // También lo llama onTokenRefresh: un error acá no puede quedar suelto (cerraría la app en
+    // modo debug) y el token nuevo se vuelve a registrar en el próximo activar().
+    try {
+      final respuesta = await enviar(
+        Uri.parse('${ApiConfig.baseUrl}/notificaciones/fcm/registrar-token'),
+        accessToken: acceso,
+        cuerpo: {'fcm_token': token, 'device_type': 'android', 'device_name': 'App Android'},
+      );
+      if (respuesta.statusCode == 200) {
+        _token = token;
+      } else {
+        debugPrint('No se pudo registrar el token de avisos push (${respuesta.statusCode}).');
+      }
+    } catch (e) {
+      debugPrint('No se pudo registrar el token de avisos push: $e');
+    }
   }
 
   void _mostrarEnPrimerPlano(RemoteMessage mensaje) {
@@ -85,6 +95,8 @@ class PushService {
     _token = null;
     await _renovacion?.cancel();
     _renovacion = null;
+    await _primerPlano?.cancel();
+    _primerPlano = null;
     if (acceso == null || token == null) return;
     try {
       await enviar(

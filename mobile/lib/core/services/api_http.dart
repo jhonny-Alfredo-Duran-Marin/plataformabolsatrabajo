@@ -37,20 +37,34 @@ String mensajeDeError(http.Response respuesta, String porDefecto) {
   return porDefecto;
 }
 
+/// Lo registra la app al arrancar: qué hacer cuando el servidor rechaza el token de la sesión
+/// (venció o la cuenta se desactivó). Sin esto cada pantalla mostraba «No se pudo cargar» para siempre.
+void Function()? alVencerLaSesion;
+
+http.Response _revisarSesion(http.Response respuesta, String? accessToken) {
+  // Solo con token: sin él, un 401 es «correo o contraseña incorrectos» del login.
+  if (respuesta.statusCode == 401 && accessToken != null) alVencerLaSesion?.call();
+  return respuesta;
+}
+
 Future<http.Response> obtener(Uri uri, {String? accessToken}) async {
+  final http.Response respuesta;
   try {
-    return await http.get(uri, headers: encabezados(accessToken)).timeout(_espera);
+    respuesta = await http.get(uri, headers: encabezados(accessToken)).timeout(_espera);
   } catch (_) {
     throw const ApiException(mensajeSinConexion);
   }
+  return _revisarSesion(respuesta, accessToken);
 }
 
 Future<http.Response> enviar(Uri uri, {String? accessToken, Object? cuerpo}) async {
+  final http.Response respuesta;
   try {
-    return await http
+    respuesta = await http
         .post(uri, headers: encabezados(accessToken, json: true), body: jsonEncode(cuerpo ?? const {}))
         .timeout(_espera);
   } catch (_) {
     throw const ApiException(mensajeSinConexion);
   }
+  return _revisarSesion(respuesta, accessToken);
 }

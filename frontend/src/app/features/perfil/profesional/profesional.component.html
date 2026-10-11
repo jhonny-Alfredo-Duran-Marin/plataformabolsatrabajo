@@ -6,6 +6,11 @@
       <div class="spinner"></div>
       <p>Cargando tu información profesional...</p>
     </div>
+  } @else if (errorCarga()) {
+    <div class="loading-full-state">
+      <p>No se pudo cargar tu perfil profesional. Tus datos están a salvo: no se guardó nada.</p>
+      <button type="button" class="btn btn-outline" (click)="cargarTodo()">Reintentar</button>
+    </div>
   } @else {
     <div class="perfil-container">
 

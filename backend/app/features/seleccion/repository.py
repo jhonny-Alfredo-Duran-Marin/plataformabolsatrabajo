@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, contains_eager, joinedload, selectinload
 
@@ -72,7 +72,7 @@ class SeleccionRepository:
                 etapa.name = item["name"].strip()
                 etapa.description = item.get("description")
                 etapa.is_terminal = item.get("is_terminal", False)
-                etapa.updated_at = datetime.now()
+                etapa.updated_at = datetime.now(timezone.utc)
                 ids_a_conservar.add(stage_id)
                 resultado.append(etapa)
             else:
@@ -156,7 +156,7 @@ class SeleccionRepository:
         )
         stage_abierta = self.db.scalar(stmt_open_stage)
         if stage_abierta:
-            stage_abierta.left_at = datetime.now()
+            stage_abierta.left_at = datetime.now(timezone.utc)
             stage_abierta.result = "passed"
             if observacion:
                 stage_abierta.notes = observacion
@@ -164,13 +164,13 @@ class SeleccionRepository:
         estado_anterior = application.current_status
         application.current_stage_id = nueva_etapa.id
         application.current_status = nuevo_status
-        application.updated_at = datetime.now()
+        application.updated_at = datetime.now(timezone.utc)
 
         # Registrar nuevo ingreso de etapa
         nuevo_ingreso = ApplicationStageHistory(
             application_id=application.id,
             stage_id=nueva_etapa.id,
-            entered_at=datetime.now(),
+            entered_at=datetime.now(timezone.utc),
             changed_by=user_id,
             result="pending",
             notes=observacion,
@@ -200,13 +200,13 @@ class SeleccionRepository:
         )
         stage_abierta = self.db.scalar(stmt_open_stage)
         if stage_abierta:
-            stage_abierta.left_at = datetime.now()
+            stage_abierta.left_at = datetime.now(timezone.utc)
             stage_abierta.result = "failed"
             stage_abierta.notes = motivo
 
         estado_anterior = application.current_status
         application.current_status = "rejected"
-        application.updated_at = datetime.now()
+        application.updated_at = datetime.now(timezone.utc)
 
         # Registrar historial de estado
         hist_estado = ApplicationStatusHistory(
