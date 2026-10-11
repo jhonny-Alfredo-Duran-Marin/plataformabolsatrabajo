@@ -301,22 +301,32 @@ def eliminar_vacante(
     summary="Consultar preguntas de filtro de una vacante",
     description="Retorna las preguntas de filtro (screening) configuradas para la vacante, usadas al postularse (HU-14).",
 )
-def obtener_preguntas_vacante(vacante_id: uuid.UUID, db: Session = Depends(get_db)):
+def obtener_preguntas_vacante(
+    vacante_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    # Misma visibilidad que el detalle: el egresado ve las de ofertas publicadas de empresas de su
+    # universidad; la empresa y la universidad, las de sus vacantes aunque no estén publicadas.
+    VacanteService(db).obtener_detalle(vacante_id, current_user=current_user)
     preguntas = (
         db.query(ScreeningQuestion)
         .filter(ScreeningQuestion.job_posting_id == vacante_id)
         .order_by(ScreeningQuestion.position)
         .all()
     )
+    opciones_por_pregunta: dict[uuid.UUID, list[ScreeningOption]] = {p.id: [] for p in preguntas}
+    if preguntas:
+        for opcion in (
+            db.query(ScreeningOption)
+            .filter(ScreeningOption.question_id.in_(list(opciones_por_pregunta)))
+            .order_by(ScreeningOption.position)
+        ):
+            opciones_por_pregunta[opcion.question_id].append(opcion)
 
     resultado = []
     for pregunta in preguntas:
-        opciones = (
-            db.query(ScreeningOption)
-            .filter(ScreeningOption.question_id == pregunta.id)
-            .order_by(ScreeningOption.position)
-            .all()
-        )
+        opciones = opciones_por_pregunta[pregunta.id]
         resultado.append(
             {
                 "id": pregunta.id,

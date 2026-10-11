@@ -32,7 +32,8 @@ class Notificacion {
       body: json['body'] as String?,
       link: json['link'] as String?,
       readAt: readAtStr,
-      createdAt: DateTime.tryParse(createdAtStr) ?? DateTime.now(),
+      // La API manda la hora en UTC: se muestra en la hora del teléfono (Bolivia), como en los demás modelos.
+      createdAt: DateTime.tryParse(createdAtStr)?.toLocal() ?? DateTime.now(),
       leida: json['leida'] == true || readAtStr != null,
     );
   }

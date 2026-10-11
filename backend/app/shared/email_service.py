@@ -46,7 +46,11 @@ class EmailService:
     def enviar(self, destinatario: str, asunto: str, cuerpo: str) -> None:
         """Aviso de cuenta: si falla, se registra en el log y el trámite sigue."""
         if not self.configurado():
-            logger.info("Correo a %s | asunto: %s\n%s", destinatario, asunto, cuerpo)
+            if self.settings.environment == "production":
+                # En producción el cuerpo no va al log (puede tener datos personales): solo se avisa que no salió.
+                logger.warning("Correo sin configurar: no se envió a %s (asunto: %s).", destinatario, asunto)
+            else:
+                logger.info("Correo a %s | asunto: %s\n%s", destinatario, asunto, cuerpo)
             return
         try:
             self._enviar([destinatario], asunto, cuerpo, [])

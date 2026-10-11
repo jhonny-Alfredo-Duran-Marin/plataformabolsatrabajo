@@ -49,9 +49,9 @@ class _CambiarPasswordScreenState extends State<CambiarPasswordScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Contraseña actualizada.')));
       Navigator.of(context).pop<Sesion>(sesion);
     } on AuthException catch (e) {
-      setState(() => _error = e.mensaje);
+      if (mounted) setState(() => _error = e.mensaje);
     } catch (_) {
-      setState(() => _error = 'Ocurrió un error inesperado. Intentá de nuevo.');
+      if (mounted) setState(() => _error = 'Ocurrió un error inesperado. Intentá de nuevo.');
     } finally {
       if (mounted) setState(() => _guardando = false);
     }

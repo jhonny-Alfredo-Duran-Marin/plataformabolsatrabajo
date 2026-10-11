@@ -133,7 +133,7 @@ class _PostulacionDetalleScreenState extends State<PostulacionDetalleScreen> {
         ],
       ),
     );
-    if (confirmado != true) return;
+    if (confirmado != true || !mounted) return;
 
     setState(() => _retirando = true);
     try {

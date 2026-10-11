@@ -206,7 +206,7 @@ class VacanteRepository:
             if hasattr(vacante, clave) and valor is not None:
                 setattr(vacante, clave, valor)
 
-        vacante.updated_at = datetime.now()
+        vacante.updated_at = datetime.now(timezone.utc)
 
         if nuevas_skills is not None:
             self.db.execute(delete(JobSkill).where(JobSkill.job_posting_id == vacante.id))
@@ -226,10 +226,10 @@ class VacanteRepository:
         """Actualiza el estado del ciclo de vida de la vacante."""
         vacante.status = nuevo_estado
         if nuevo_estado == JobStatus.PUBLISHED.value and vacante.published_at is None:
-            vacante.published_at = published_at or datetime.now()
+            vacante.published_at = published_at or datetime.now(timezone.utc)
         if nuevo_estado in (JobStatus.CLOSED.value, JobStatus.ARCHIVED.value) and vacante.closed_at is None:
-            vacante.closed_at = datetime.now()
-        vacante.updated_at = datetime.now()
+            vacante.closed_at = datetime.now(timezone.utc)
+        vacante.updated_at = datetime.now(timezone.utc)
         self.db.flush()
         return vacante
 
@@ -243,8 +243,8 @@ class VacanteRepository:
         vacante.status = nuevo_estado
         vacante.rejection_reason = rejection_reason
         if nuevo_estado == JobStatus.PUBLISHED.value and vacante.published_at is None:
-            vacante.published_at = datetime.now()
-        vacante.updated_at = datetime.now()
+            vacante.published_at = datetime.now(timezone.utc)
+        vacante.updated_at = datetime.now(timezone.utc)
         self.db.flush()
         return self.obtener_por_id(vacante.id) or vacante
 

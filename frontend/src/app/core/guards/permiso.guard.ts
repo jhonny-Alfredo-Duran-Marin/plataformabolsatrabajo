@@ -21,6 +21,17 @@ export const PANTALLAS_ADMIN: { ruta: string; permiso: string }[] = [
 ];
 
 /**
+ * Pantallas solo del superadministrador del SaaS (admin sin universidad): copias de seguridad y
+ * tareas automáticas. El backend igual las rechaza; esto evita una pantalla llena de errores.
+ */
+export const superadminGuard: CanActivateFn = () => {
+  const esSuperadmin = localStorage.getItem('rol') === 'platform_admin' && !localStorage.getItem('institucion');
+  if (esSuperadmin) return true;
+  inject(ToastService).error('Esa sección es solo del superadministrador.');
+  return inject(Router).parseUrl('/admin');
+};
+
+/**
  * Las rutas del panel declaran `data: { permiso: 'menu.x' }`. El backend ya rechaza los
  * datos sin permiso; esto evita mostrar una pantalla vacía o llena de errores.
  */

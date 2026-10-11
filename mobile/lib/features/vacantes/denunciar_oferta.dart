@@ -76,6 +76,13 @@ class _HojaDenunciaState extends State<_HojaDenuncia> {
         _enviando = false;
         _error = e.mensaje;
       });
+    } catch (_) {
+      // Una respuesta que no se pudo leer no deja el botón bloqueado para siempre.
+      if (!mounted) return;
+      setState(() {
+        _enviando = false;
+        _error = 'No se pudo enviar la denuncia. Intentá de nuevo.';
+      });
     }
   }
 

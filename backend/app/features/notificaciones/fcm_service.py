@@ -125,6 +125,13 @@ def obtener_tokens_activos(db: Session, user_id: uuid.UUID) -> list[str]:
     return [t[0] for t in tokens]
 
 
+def _errores_de_token_muerto() -> tuple[type[Exception], ...]:
+    """Errores de FCM que significan que el token no sirve más (import diferido de firebase_admin)."""
+    from firebase_admin import exceptions, messaging
+
+    return (messaging.UnregisteredError, messaging.SenderIdMismatchError, exceptions.InvalidArgumentError)
+
+
 def enviar_push_fcm(
     db: Session,
     user_id: uuid.UUID,
@@ -172,8 +179,15 @@ def enviar_push_fcm(
     )
     respuesta = messaging.send_each_for_multicast(mensaje_multicast)
 
-    # Tokens inválidos o de apps desinstaladas: no se les vuelve a enviar.
-    invalidos = [tokens[i] for i, r in enumerate(respuesta.responses) if not r.success]
+    # Solo se desactivan los tokens que Firebase da por muertos (app desinstalada, token de otro
+    # proyecto o mal formado). Un corte o una cuota agotada es pasajero: ese token sigue activo.
+    muertos = _errores_de_token_muerto()
+    invalidos = [
+        tokens[i] for i, r in enumerate(respuesta.responses) if not r.success and isinstance(r.exception, muertos)
+    ]
+    pasajeros = respuesta.failure_count - len(invalidos)
+    if pasajeros:
+        logger.warning("FCM: %s envíos fallaron por un error pasajero para el usuario %s.", pasajeros, user_id)
     if invalidos:
         db.query(UserDeviceToken).filter(UserDeviceToken.fcm_token.in_(invalidos)).update(
             {"is_active": False, "updated_at": datetime.now(timezone.utc)}, synchronize_session=False

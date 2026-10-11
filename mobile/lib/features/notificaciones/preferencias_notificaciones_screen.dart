@@ -16,6 +16,7 @@ class _PreferenciasNotificacionesScreenState extends State<PreferenciasNotificac
   final _servicio = NotificacionService();
   bool _cargando = true;
   bool _guardando = false;
+  String? _error;
   late PreferenciasNotificacion _prefs;
 
   @override
@@ -25,13 +26,25 @@ class _PreferenciasNotificacionesScreenState extends State<PreferenciasNotificac
   }
 
   Future<void> _cargar() async {
-    setState(() => _cargando = true);
-    final p = await _servicio.obtenerPreferencias(widget.accessToken);
-    if (!mounted) return;
     setState(() {
-      _prefs = p;
-      _cargando = false;
+      _cargando = true;
+      _error = null;
     });
+    try {
+      final p = await _servicio.obtenerPreferencias(widget.accessToken);
+      if (!mounted) return;
+      setState(() {
+        _prefs = p;
+        _cargando = false;
+      });
+    } catch (e) {
+      // Sin las preferencias reales no se muestra el formulario: guardarlo pisaría lo configurado.
+      if (!mounted) return;
+      setState(() {
+        _error = e is NotificacionException ? e.mensaje : 'No se pudieron cargar tus preferencias.';
+        _cargando = false;
+      });
+    }
   }
 
   Future<void> _guardar() async {
@@ -56,7 +69,7 @@ class _PreferenciasNotificacionesScreenState extends State<PreferenciasNotificac
       appBar: AppBar(
         title: const Text('Preferencias de Alertas'),
         actions: [
-          if (!_cargando)
+          if (!_cargando && _error == null)
             IconButton(
               icon: _guardando
                   ? const SizedBox(
@@ -72,6 +85,20 @@ class _PreferenciasNotificacionesScreenState extends State<PreferenciasNotificac
       ),
       body: _cargando
           ? const Center(child: CircularProgressIndicator())
+          : _error != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(_error!, textAlign: TextAlign.center),
+                    const SizedBox(height: 12),
+                    FilledButton(onPressed: _cargar, child: const Text('Reintentar')),
+                  ],
+                ),
+              ),
+            )
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [

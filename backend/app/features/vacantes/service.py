@@ -1,7 +1,7 @@
 import logging
 import math
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -40,7 +40,7 @@ from app.models.institucion import CompanyInstitution
 from app.models.seguridad import AuditLog
 from app.models.vacante import JobPosting, JobSkill, JobStatus, ScreeningOption, ScreeningQuestion
 from app.security.dependencies import CurrentUser
-from app.security.tenant import empresa_habilitada_en, institucion_de_candidato
+from app.security.tenant import alcance_staff, empresa_habilitada_en, institucion_de_candidato
 from app.shared.email_service import EmailService
 
 logger = logging.getLogger(__name__)
@@ -68,27 +68,46 @@ class VacanteService:
 
     def _obtener_empresa_y_miembro_de_usuario(
         self, usuario_id: uuid.UUID
-    ) -> tuple[Company, CompanyMember | None]:
-        """Recupera la empresa y la membresía del usuario autenticado."""
+    ) -> tuple[Company, CompanyMember]:
+        """Recupera la empresa y la membresía activa del usuario autenticado.
+
+        Un miembro dado de baja por su empresa (is_active=False) ya no gestiona vacantes.
+        """
         stmt = (
             select(Company, CompanyMember)
             .join(CompanyMember, CompanyMember.company_id == Company.id)
             .where(CompanyMember.user_id == usuario_id, CompanyMember.is_active.is_(True))
         )
         resultado = self.db.execute(stmt).first()
-
         if resultado is None:
-            stmt_alt = select(Company).join(CompanyMember, CompanyMember.company_id == Company.id).where(CompanyMember.user_id == usuario_id)
-            comp = self.db.scalar(stmt_alt)
-            if comp is None:
-                raise ForbiddenException("El usuario no tiene una empresa asociada para gestionar vacantes.")
-            return comp, None
+            raise ForbiddenException("El usuario no tiene una empresa asociada para gestionar vacantes.")
 
         empresa, miembro = resultado
         if empresa.account_status == "suspended":
             raise ForbiddenException("La empresa asociada se encuentra suspendida.")
 
         return empresa, miembro
+
+    def _vinculada_a(self, company_id: uuid.UUID, institution_id: uuid.UUID) -> bool:
+        """La empresa trabaja (o pidió trabajar) con la universidad: el mismo criterio de la cola de moderación."""
+        vinculo = self.db.get(CompanyInstitution, (company_id, institution_id))
+        return vinculo is not None and vinculo.status in ("approved", "pending")
+
+    def _empresa_para_gestionar(self, vacante: JobPosting, current_user: CurrentUser, mensaje: str) -> Company:
+        """Empresa de la vacante si quien la gestiona puede hacerlo; si no, ForbiddenException.
+
+        El superadmin gestiona cualquier vacante; el admin de una universidad, solo las de
+        empresas vinculadas a su universidad; la empresa, solo las suyas.
+        """
+        if current_user.es_admin:
+            institucion = alcance_staff(self.db, current_user)
+            if institucion is not None and not self._vinculada_a(vacante.company_id, institucion):
+                raise ForbiddenException(mensaje)
+            return vacante.company
+        empresa, _ = self._obtener_empresa_y_miembro_de_usuario(current_user.id_usuario)
+        if vacante.company_id != empresa.id:
+            raise ForbiddenException(mensaje)
+        return empresa
 
     def _registrar_auditoria(
         self,
@@ -187,7 +206,7 @@ class VacanteService:
             estado_final = JobStatus.DRAFT.value
         elif estado_final == JobStatus.PUBLISHED.value:
             if current_user.es_admin:
-                published_at = datetime.now()
+                published_at = datetime.now(timezone.utc)
             else:
                 estado_final = JobStatus.PENDING_REVIEW.value
 
@@ -327,13 +346,7 @@ class VacanteService:
         if current_user is None:
             raise ForbiddenException("No tiene permisos para consultar esta vacante.")
 
-        if current_user.es_admin:
-            return self._a_dto(vacante)
-
-        empresa, _ = self._obtener_empresa_y_miembro_de_usuario(current_user.id_usuario)
-        if vacante.company_id != empresa.id:
-            raise ForbiddenException("No tiene permisos para consultar esta vacante.")
-
+        self._empresa_para_gestionar(vacante, current_user, "No tiene permisos para consultar esta vacante.")
         return self._a_dto(vacante)
 
     def actualizar_vacante(
@@ -348,12 +361,7 @@ class VacanteService:
         if vacante is None:
             raise ResourceNotFoundException("La vacante a editar no existe.")
 
-        if current_user.es_admin:
-            empresa = vacante.company
-        else:
-            empresa, _ = self._obtener_empresa_y_miembro_de_usuario(current_user.id_usuario)
-            if vacante.company_id != empresa.id:
-                raise ForbiddenException("No tiene permisos para modificar esta vacante.")
+        empresa = self._empresa_para_gestionar(vacante, current_user, "No tiene permisos para modificar esta vacante.")
 
         estado_anterior = vacante.status
         datos_dict = payload.model_dump(exclude_unset=True, exclude={"skills", "status"})
@@ -370,7 +378,7 @@ class VacanteService:
                     )
                 if current_user.es_admin:
                     if vacante.published_at is None:
-                        datos_dict["published_at"] = datetime.now()
+                        datos_dict["published_at"] = datetime.now(timezone.utc)
                 else:
                     nuevo_estado = JobStatus.PENDING_REVIEW.value
             datos_dict["status"] = nuevo_estado
@@ -417,12 +425,9 @@ class VacanteService:
         if vacante is None:
             raise ResourceNotFoundException("La vacante no existe.")
 
-        if current_user.es_admin:
-            empresa = vacante.company
-        else:
-            empresa, _ = self._obtener_empresa_y_miembro_de_usuario(current_user.id_usuario)
-            if vacante.company_id != empresa.id:
-                raise ForbiddenException("No tiene permisos para cambiar el estado de esta vacante.")
+        empresa = self._empresa_para_gestionar(
+            vacante, current_user, "No tiene permisos para cambiar el estado de esta vacante."
+        )
 
         # Regla: Si se intenta publicar y la empresa no está verificada, rechazar.
         # Si esta verificada y quien pide el cambio no es admin, pasa a revision (HU-12).
@@ -491,10 +496,8 @@ class VacanteService:
         que pueda corregirla y reenviarla.
         """
         vacante = self.repo.obtener_por_id(vacante_id)
-        if vacante is None or (
-            institution_id is not None
-            and self.db.get(CompanyInstitution, (vacante.company_id, institution_id)) is None
-        ):
+        # Igual que la cola de moderación: una empresa rechazada o suspendida por la universidad no se modera ahí.
+        if vacante is None or (institution_id is not None and not self._vinculada_a(vacante.company_id, institution_id)):
             raise ResourceNotFoundException("La vacante a moderar no existe.")
 
         if vacante.status != JobStatus.PENDING_REVIEW.value:
@@ -507,22 +510,6 @@ class VacanteService:
 
         vacante_moderada = self.repo.moderar(vacante, nuevo_estado, motivo)
 
-        destinatario = vacante.company.contact_email if vacante.company else None
-        if destinatario:
-            if aprobado:
-                self.email_service.enviar(
-                    destinatario,
-                    "Vacante aprobada",
-                    f"Tu vacante '{vacante.title}' fue aprobada y ya está publicada en la plataforma.",
-                )
-            else:
-                self.email_service.enviar(
-                    destinatario,
-                    "Vacante rechazada",
-                    f"Tu vacante '{vacante.title}' fue rechazada. Motivo: {motivo}. "
-                    "Podés corregirla y volver a enviarla a revisión.",
-                )
-
         self._registrar_auditoria(
             usuario_id=current_user.id_usuario,
             action="moderate_job_posting",
@@ -532,6 +519,23 @@ class VacanteService:
         )
         self.db.commit()
         self._anotar_si_se_publico(vacante_moderada, JobStatus.PENDING_REVIEW.value)
+
+        # El correo sale recién con la decisión guardada: si el commit fallara, la empresa no recibe un aviso falso.
+        destinatario = vacante_moderada.company.contact_email if vacante_moderada.company else None
+        if destinatario:
+            if aprobado:
+                self.email_service.enviar(
+                    destinatario,
+                    "Vacante aprobada",
+                    f"Tu vacante '{vacante_moderada.title}' fue aprobada y ya está publicada en la plataforma.",
+                )
+            else:
+                self.email_service.enviar(
+                    destinatario,
+                    "Vacante rechazada",
+                    f"Tu vacante '{vacante_moderada.title}' fue rechazada. Motivo: {motivo}. "
+                    "Podés corregirla y volver a enviarla a revisión.",
+                )
 
         return self._a_dto(vacante_moderada)
 
@@ -546,12 +550,7 @@ class VacanteService:
         if vacante is None:
             raise ResourceNotFoundException("La vacante a eliminar no existe.")
 
-        if current_user.es_admin:
-            empresa = vacante.company
-        else:
-            empresa, _ = self._obtener_empresa_y_miembro_de_usuario(current_user.id_usuario)
-            if vacante.company_id != empresa.id:
-                raise ForbiddenException("No tiene permisos para eliminar esta vacante.")
+        empresa = self._empresa_para_gestionar(vacante, current_user, "No tiene permisos para eliminar esta vacante.")
 
         self.repo.eliminar(vacante)
 
@@ -573,11 +572,7 @@ class VacanteService:
         if vacante is None:
             raise ResourceNotFoundException("La vacante no existe.")
 
-        if not current_user.es_admin:
-            empresa, _ = self._obtener_empresa_y_miembro_de_usuario(current_user.id_usuario)
-            if vacante.company_id != empresa.id:
-                raise ForbiddenException("No tiene permisos sobre esta vacante.")
-
+        self._empresa_para_gestionar(vacante, current_user, "No tiene permisos sobre esta vacante.")
         return vacante
 
     def _vacante_tiene_postulaciones(self, vacante_id: uuid.UUID) -> bool:
@@ -838,7 +833,10 @@ class VacanteService:
         if candidato_id is None:
             return None
         try:
-            return motor_afinidad.perfiles_de_candidatos(self.db, {candidato_id})[candidato_id]
+            # En un savepoint: si la consulta falla, la transacción del request sigue usable y la
+            # búsqueda continúa sin afinidad en vez de romperse en la consulta siguiente.
+            with self.db.begin_nested():
+                return motor_afinidad.perfiles_de_candidatos(self.db, {candidato_id})[candidato_id]
         except Exception:
             # Si la IA falla, la búsqueda sigue funcionando sin afinidad (HU-23, CP04).
             logger.exception("No se pudo cargar el perfil de afinidad del usuario %s", usuario_id)

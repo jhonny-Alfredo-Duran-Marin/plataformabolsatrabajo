@@ -52,24 +52,39 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
     }
   }
 
+  /// Corre una acción y recarga la lista; si la pantalla ya se cerró no toca el estado
+  /// (setState después de dispose rompe la app) y un error de red se avisa en vez de quedar suelto.
+  Future<bool> _accion(Future<void> Function() hacer) async {
+    try {
+      await hacer();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$e'), backgroundColor: Colors.red),
+        );
+      }
+      return false;
+    }
+    if (!mounted) return false;
+    _cargar();
+    return true;
+  }
+
   Future<void> _marcarLeida(Notificacion notif) async {
     if (notif.leida) return;
-    await _servicio.marcarComoLeida(widget.accessToken, notif.id);
-    _cargar();
+    await _accion(() => _servicio.marcarComoLeida(widget.accessToken, notif.id));
   }
 
   Future<void> _marcarTodasLeidas() async {
-    await _servicio.marcarTodasComoLeidas(widget.accessToken);
-    _cargar();
-    if (!mounted) return;
+    final ok = await _accion(() => _servicio.marcarTodasComoLeidas(widget.accessToken));
+    if (!ok || !mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Todas las notificaciones marcadas como leídas')),
     );
   }
 
   Future<void> _eliminar(Notificacion notif) async {
-    await _servicio.eliminarNotificacion(widget.accessToken, notif.id);
-    _cargar();
+    await _accion(() => _servicio.eliminarNotificacion(widget.accessToken, notif.id));
   }
 
   IconData _getIcono(String tipo) {

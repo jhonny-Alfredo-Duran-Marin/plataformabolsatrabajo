@@ -6,7 +6,7 @@
  */
 import { Injectable, OnDestroy, inject } from '@angular/core';
 import { fromEvent, merge, Subscription, timer } from 'rxjs';
-import { switchMap, tap } from 'rxjs/operators';
+import { startWith, switchMap, tap } from 'rxjs/operators';
 import { ToastService } from './toast.service';
 import { environment } from '../../../environments/environment';
 
@@ -38,15 +38,15 @@ export class TimeoutService implements OnDestroy {
       ...ACTIVITY_EVENTS.map((evt) => fromEvent(document, evt))
     );
 
+    // startWith arranca la cuenta sin esperar al primer evento, dentro de la misma suscripción:
+    // así cada actividad la reinicia y stop() la cancela (un timer suelto cerraba la sesión a los
+    // 15 minutos aunque el usuario siguiera trabajando).
     this._sub = activity$
       .pipe(
-        // En cada actividad, reinicia los timers
+        startWith(null),
         switchMap(() => this._startTimers())
       )
       .subscribe();
-
-    // Arranque inicial sin esperar al primer evento
-    this._startTimers().subscribe();
   }
 
   stop(): void {

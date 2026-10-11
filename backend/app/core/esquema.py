@@ -5,7 +5,40 @@ catálogo, así un arranque normal no toma candados sobre tablas con tráfico. S
 un despliegue no dependa de que alguien haya corrido antes la migración a mano.
 """
 
+import logging
+
 from sqlalchemy import Connection, text
+
+logger = logging.getLogger(__name__)
+
+# Índices de las consultas frecuentes (campanita, pipeline de la empresa, mis postulaciones,
+# bitácora, tareas diarias, listado de vacantes). Postgres no indexa las claves foráneas solo.
+# (nombre, tabla, sentencia); solo se crean si la tabla existe y el índice no.
+_INDICES = (
+    ("ix_notification_user_created", "notification",
+     "CREATE INDEX IF NOT EXISTS ix_notification_user_created ON notification (user_id, created_at DESC)"),
+    ("ix_notification_type_link", "notification",
+     "CREATE INDEX IF NOT EXISTS ix_notification_type_link ON notification (notification_type, link)"),
+    ("ix_application_job", "application",
+     "CREATE INDEX IF NOT EXISTS ix_application_job ON application (job_id)"),
+    ("ix_application_candidate", "application",
+     "CREATE INDEX IF NOT EXISTS ix_application_candidate ON application (candidate_id)"),
+    ("ix_company_member_user", "company_member",
+     "CREATE INDEX IF NOT EXISTS ix_company_member_user ON company_member (user_id)"),
+    ("ix_company_member_company", "company_member",
+     "CREATE INDEX IF NOT EXISTS ix_company_member_company ON company_member (company_id)"),
+    ("ix_interview_start", "interview",
+     "CREATE INDEX IF NOT EXISTS ix_interview_start ON interview (scheduled_start)"),
+    ("ix_audit_log_created", "audit_log",
+     "CREATE INDEX IF NOT EXISTS ix_audit_log_created ON audit_log (created_at DESC)"),
+    ("ix_audit_log_user_created", "audit_log",
+     "CREATE INDEX IF NOT EXISTS ix_audit_log_user_created ON audit_log (user_id, created_at DESC)"),
+    ("ix_moderation_report_job", "moderation_report",
+     "CREATE INDEX IF NOT EXISTS ix_moderation_report_job ON moderation_report (job_id)"),
+    ("ix_job_posting_published_feed", "job_posting",
+     "CREATE INDEX IF NOT EXISTS ix_job_posting_published_feed ON job_posting (published_at DESC NULLS LAST) "
+     "WHERE status = 'published'"),
+)
 
 _TAREAS = """CREATE TABLE IF NOT EXISTS scheduled_task_run (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -96,4 +129,22 @@ def asegurar_esquema_requisitos(conn: Connection) -> list[str]:
         for sentencia in _GRUPOS:
             conn.execute(text(sentencia))
         cambios.append("user_group, user_group_member, user_group_permission")
+
+    _asegurar_indices(conn, cambios)
     return cambios
+
+
+def _asegurar_indices(conn: Connection, cambios: list[str]) -> None:
+    """Crea los índices que faltan. Cada uno en su savepoint: si uno falla, los demás y el resto
+    del esquema siguen igual."""
+    for nombre, tabla, sentencia in _INDICES:
+        if conn.execute(text("SELECT to_regclass(:t)"), {"t": f"public.{tabla}"}).scalar() is None:
+            continue
+        if conn.execute(text("SELECT to_regclass(:i)"), {"i": f"public.{nombre}"}).scalar() is not None:
+            continue
+        try:
+            with conn.begin_nested():
+                conn.execute(text(sentencia))
+            cambios.append(nombre)
+        except Exception:  # noqa: BLE001 - un índice es una optimización: si no se puede crear, se sigue
+            logger.warning("No se pudo crear el índice %s", nombre, exc_info=True)

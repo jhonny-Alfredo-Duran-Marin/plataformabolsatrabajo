@@ -21,7 +21,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.core.database import SessionLocal
-from app.core.tenancy import INSTITUCION_POR_DEFECTO_ID
+from app.core.tenancy import INSTITUCION_POR_DEFECTO_ID, condicion_institucion
 from app.features.bitacora.service import BitacoraService
 from app.features.ia.services import afinidad as motor_afinidad
 from app.features.moderacion.reglas import no_oculta_por_denuncias
@@ -147,6 +147,9 @@ def _afines(db: Session, vacantes: list[JobPosting]) -> list[tuple[CandidateProf
             )
         ).tuples()
     )
+    universidades = {institucion for _, institucion in habilitadas}
+    if not universidades:
+        return []
     postuladas = set(
         db.execute(
             select(Application.candidate_id, Application.job_id).where(
@@ -154,7 +157,14 @@ def _afines(db: Session, vacantes: list[JobPosting]) -> list[tuple[CandidateProf
             )
         ).tuples()
     )
-    candidatos = db.scalars(select(CandidateProfile).where(CandidateProfile.verification_status == "verified")).all()
+    # Solo los egresados de universidades que habilitaron alguna de estas empresas: no hace falta
+    # puntuar a los de las demás, que de todos modos no pueden postularse.
+    candidatos = db.scalars(
+        select(CandidateProfile).where(
+            CandidateProfile.verification_status == "verified",
+            or_(*(condicion_institucion(CandidateProfile.institution_id, u) for u in universidades)),
+        )
+    ).all()
     perfiles = motor_afinidad.perfiles_de_candidatos(db, {c.id for c in candidatos})
 
     resultado = []

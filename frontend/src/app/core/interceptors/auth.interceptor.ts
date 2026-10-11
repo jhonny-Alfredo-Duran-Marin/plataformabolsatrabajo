@@ -17,8 +17,6 @@ import { ToastService } from '../services/toast.service';
 
 const TOKEN_KEY = 'token';
 const REFRESH_KEY = 'refresh_token';
-const ROL_KEY = 'rol';
-const CORREO_KEY = 'correo';
 
 const _RUTAS_PUBLICAS = ['/auth/login', '/auth/registro', '/auth/refresh'];
 
@@ -38,12 +36,22 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     : req;
 
   const cerrarSesionPorExpiracion = () => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(REFRESH_KEY);
-    localStorage.removeItem(ROL_KEY);
-    localStorage.removeItem(CORREO_KEY);
+    if (!auth.estaAutenticado()) {
+      // Ya se cerró (por ejemplo, la campana sondea y vuelve a fallar): sin avisos repetidos.
+      void router.navigate(['/auth/login']);
+      return;
+    }
     toast.warning('Tu sesión ha expirado. Inicia sesión nuevamente.');
-    router.navigate(['/auth/login']);
+    // Limpia todo (señales, permisos, push, temporizador), no solo el almacenamiento, y va al login.
+    auth.cerrarSesion();
+  };
+
+  const avisarError = (err: HttpErrorResponse) => {
+    if (err.status === 403) {
+      toast.error('No tienes permisos para realizar esta acción.');
+    } else if (err.status === 0) {
+      toast.error('Sin conexión al servidor. Verifica tu red o que el backend esté activo.');
+    }
   };
 
   return next(authReq).pipe(
@@ -56,25 +64,30 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
           );
         }
         return _refrescoEnCurso$.pipe(
-          switchMap((nuevoToken) => {
-            _refrescoEnCurso$ = null;
-            const reintento = req.clone({ setHeaders: { Authorization: `Bearer ${nuevoToken}` } });
-            return next(reintento);
-          }),
+          // Solo un fallo de la renovación es «sesión expirada»: va antes del reintento.
           catchError(() => {
             _refrescoEnCurso$ = null;
             cerrarSesionPorExpiracion();
             return throwError(() => err);
+          }),
+          switchMap((nuevoToken) => {
+            _refrescoEnCurso$ = null;
+            const reintento = req.clone({ setHeaders: { Authorization: `Bearer ${nuevoToken}` } });
+            // Un error del reintento (un 422, un 500) llega tal cual al componente.
+            return next(reintento).pipe(
+              catchError((errReintento: HttpErrorResponse) => {
+                avisarError(errReintento);
+                return throwError(() => errReintento);
+              }),
+            );
           }),
         );
       }
 
       if (err.status === 401 && !esRutaPublica) {
         cerrarSesionPorExpiracion();
-      } else if (err.status === 403) {
-        toast.error('No tienes permisos para realizar esta acción.');
-      } else if (err.status === 0) {
-        toast.error('Sin conexión al servidor. Verifica tu red o que el backend esté activo.');
+      } else {
+        avisarError(err);
       }
       return throwError(() => err);
     })

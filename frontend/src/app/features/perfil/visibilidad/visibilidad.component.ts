@@ -81,11 +81,16 @@ export class VisibilidadComponent implements OnInit {
   }
 
   toggleGlobal() {
+    // Un cambio por vez: así los guardados no llegan desordenados al servidor.
+    if (this.savingStatus() === 'saving') return;
+    const previo = this.visibilidad();
     this.visibilidad.update((actual) => ({ ...actual, perfil_oculto: !actual.perfil_oculto }));
-    this.guardarCambios();
+    this.guardarCambios(previo);
   }
 
   toggleSeccion(seccion: keyof VisibilidadData['secciones_visibles']) {
+    if (this.savingStatus() === 'saving') return;
+    const previo = this.visibilidad();
     this.visibilidad.update((actual) => ({
       ...actual,
       secciones_visibles: {
@@ -93,10 +98,10 @@ export class VisibilidadComponent implements OnInit {
         [seccion]: !actual.secciones_visibles[seccion],
       },
     }));
-    this.guardarCambios();
+    this.guardarCambios(previo);
   }
 
-  guardarCambios() {
+  guardarCambios(previo?: VisibilidadData) {
     this.savingStatus.set('saving');
 
     const payload = {
@@ -112,6 +117,8 @@ export class VisibilidadComponent implements OnInit {
         },
         error: (err) => {
           console.error('Error al guardar', err);
+          // Si no se guardó, la pantalla vuelve a mostrar lo que de verdad ven las empresas.
+          if (previo) this.visibilidad.set(previo);
           this.savingStatus.set('error');
         }
       });

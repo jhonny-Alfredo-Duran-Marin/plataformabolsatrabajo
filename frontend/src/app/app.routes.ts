@@ -1,7 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { passwordPendienteGuard } from './core/guards/password-pendiente.guard';
-import { permisoGuard } from './core/guards/permiso.guard';
+import { permisoGuard, superadminGuard } from './core/guards/permiso.guard';
 
 export const routes: Routes = [
   {
@@ -57,7 +57,9 @@ export const routes: Routes = [
   },
   {
     path: 'admin',
-    canActivate: [passwordPendienteGuard],
+    // Sin sesión de staff no se muestra el panel (el backend igual rechaza los datos).
+    canActivate: [authGuard, passwordPendienteGuard],
+    data: { roles: ['platform_admin', 'moderator'] },
     canActivateChild: [passwordPendienteGuard, permisoGuard],
     loadComponent: () => import('./features/admin/layout/admin-layout').then((m) => m.AdminLayout),
     children: [
@@ -116,10 +118,12 @@ export const routes: Routes = [
       },
       {
         path: 'respaldos',
+        canActivate: [superadminGuard],
         loadComponent: () => import('./features/admin/respaldos/respaldos.component').then((m) => m.RespaldosComponent),
       },
       {
         path: 'tareas',
+        canActivate: [superadminGuard],
         loadComponent: () => import('./features/admin/tareas/tareas.component').then((m) => m.TareasComponent),
       },
       {
@@ -147,7 +151,7 @@ export const routes: Routes = [
   },
   {
     path: 'dashboard',
-    canActivate: [passwordPendienteGuard],
+    canActivate: [authGuard, passwordPendienteGuard],
     loadComponent: () => import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
   },
   {
@@ -191,10 +195,12 @@ export const routes: Routes = [
   },
   {
     path: 'perfil/visibilidad',
+    canActivate: [authGuard],
     loadComponent: () => import('./features/perfil/visibilidad/visibilidad.component').then((m) => m.VisibilidadComponent),
   },
   {
     path: 'perfil/profesional',
+    canActivate: [authGuard],
     loadComponent: () =>
       import('./features/perfil/profesional/profesional.component').then((m) => m.ProfesionalComponent),
   },
