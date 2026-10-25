@@ -21,6 +21,10 @@
     </div>
 
     <div class="topbar__actions">
+      <button type="button" class="btn-logout btn-cuenta" (click)="ia.abrirChatbot()" title="Asistente de orientación (HU-28)">
+        <span aria-hidden="true">🤖</span>
+        <span>Asistente</span>
+      </button>
       <app-notificaciones-campana></app-notificaciones-campana>
       <span class="role-badge role-badge--{{ role().toLowerCase() }}">{{ auth.rolLegible() || '—' }}</span>
       <a routerLink="/cuenta/contrasena" class="btn-logout btn-cuenta" title="Cambiar contraseña">
@@ -139,6 +143,19 @@
                 </svg>
                 <span>Explorar Vacantes</span>
               </a>
+            </div>
+          </div>
+
+          <!-- Módulo 5.1.13: Chatbot de Orientación (HU-28) -->
+          <div class="module-card">
+            <div class="module-card__header">
+              <h2 class="module-title">Asistente de Orientación</h2>
+            </div>
+            <p class="module-desc">Consulta al asistente conversacional tus dudas sobre el uso de EGRESA y el estado en tiempo real de tus postulaciones.</p>
+            <div class="module-actions">
+              <button type="button" class="btn btn--primary" (click)="ia.abrirChatbot()">
+                <span>🤖 Consultar al Asistente</span>
+              </button>
             </div>
           </div>
 

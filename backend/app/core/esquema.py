@@ -81,6 +81,27 @@ _GRUPOS = (
     "ALTER TABLE user_group_permission ENABLE ROW LEVEL SECURITY",
 )
 
+_CHATBOT = (
+    """CREATE TABLE IF NOT EXISTS chatbot_session (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id uuid REFERENCES app_user(id) ON DELETE SET NULL,
+    started_at timestamptz NOT NULL DEFAULT now(),
+    ended_at timestamptz
+)""",
+    """CREATE TABLE IF NOT EXISTS chatbot_message (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id uuid NOT NULL REFERENCES chatbot_session(id) ON DELETE CASCADE,
+    message_role varchar(20) NOT NULL,
+    content text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT ck_chatbot_message_role CHECK (message_role IN ('user', 'assistant', 'system'))
+)""",
+    "CREATE INDEX IF NOT EXISTS ix_chatbot_session_user ON chatbot_session (user_id, started_at DESC)",
+    "CREATE INDEX IF NOT EXISTS ix_chatbot_message_session_created ON chatbot_message (session_id, created_at)",
+    "ALTER TABLE chatbot_session ENABLE ROW LEVEL SECURITY",
+    "ALTER TABLE chatbot_message ENABLE ROW LEVEL SECURITY",
+)
+
 
 def asegurar_esquema_requisitos(conn: Connection) -> list[str]:
     """Bitácora cifrada, copias automáticas, tareas programadas y grupos de usuarios.
@@ -129,6 +150,13 @@ def asegurar_esquema_requisitos(conn: Connection) -> list[str]:
         for sentencia in _GRUPOS:
             conn.execute(text(sentencia))
         cambios.append("user_group, user_group_member, user_group_permission")
+
+    # HU-28: Sesiones y mensajes del chatbot de orientación.
+    falta_chatbot = conn.execute(text("SELECT to_regclass('public.chatbot_message')")).scalar() is None
+    if existe_base and falta_chatbot:
+        for sentencia in _CHATBOT:
+            conn.execute(text(sentencia))
+        cambios.append("chatbot_session, chatbot_message")
 
     _asegurar_indices(conn, cambios)
     return cambios
