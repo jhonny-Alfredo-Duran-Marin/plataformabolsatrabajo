@@ -48,6 +48,7 @@ from app.models.comunicacion import (
     Message,
     MessageAttachment,
 )
+from app.models.encuesta import Survey, SurveyAnswer, SurveyQuestion, SurveyQuestionOption, SurveyResponse
 from app.models.entrevista import Interview
 from app.models.postulacion import (
     Application,
@@ -104,6 +105,11 @@ __all__ = [
     "SeniorityLevel",
     "Skill",
     "SkillProficiencyLevel",
+    "Survey",
+    "SurveyAnswer",
+    "SurveyQuestion",
+    "SurveyQuestionOption",
+    "SurveyResponse",
     "SystemBackup",
     "UniversitySignupRequest",
     "UserGroup",

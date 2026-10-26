@@ -1,0 +1,93 @@
+<div class="pagina">
+  <a routerLink="/encuestas" class="volver">← Mis encuestas</a>
+
+  @if (cargando()) {
+    <div class="estado">
+      <div class="spinner"></div>
+      <p>Cargando la encuesta...</p>
+    </div>
+  } @else if (enviada()) {
+    <div class="estado estado--ok" role="status">
+      <p class="estado-titulo">{{ enviada() }}</p>
+      <p>Con tu respuesta tu universidad mantiene al día la trayectoria de sus egresados.</p>
+      <a routerLink="/encuestas" class="btn btn--primario">Volver a mis encuestas</a>
+    </div>
+  } @else if (bloqueo()) {
+    <div class="estado estado--aviso" role="alert">
+      <p class="estado-titulo">{{ bloqueo() }}</p>
+      <a routerLink="/encuestas" class="btn btn--neutro">Volver a mis encuestas</a>
+    </div>
+  } @else if (formulario(); as f) {
+    <header class="cabecera">
+      <span class="periodo">Período {{ f.periodo }}</span>
+      <h1>{{ f.titulo }}</h1>
+      @if (f.descripcion) {
+        <p class="descripcion">{{ f.descripcion }}</p>
+      }
+      @if (f.vence_el) {
+        <p class="vence">Podés responder hasta el {{ f.vence_el | date: 'd MMM y' }}.</p>
+      }
+    </header>
+
+    <form class="formulario" (ngSubmit)="enviar()" novalidate>
+      @for (p of preguntas(); track p.id) {
+        <fieldset class="pregunta">
+          <legend>
+            {{ p.texto }}
+            @if (obligatoria(p)) {
+              <span class="requerido" aria-hidden="true">*</span>
+              <span class="sr-only">(obligatoria)</span>
+            } @else {
+              <span class="opcional">(opcional)</span>
+            }
+          </legend>
+
+          @switch (p.tipo) {
+            @case ('single_choice') {
+              <div class="opciones">
+                @for (o of p.opciones; track o.id) {
+                  <label class="opcion" [class.opcion--elegida]="opcionElegida(p) === o.id">
+                    <input type="radio" [name]="'p-' + p.id" [value]="o.id"
+                      [checked]="opcionElegida(p) === o.id" (change)="elegirOpcion(p, o.id)" />
+                    <span>{{ o.texto }}</span>
+                  </label>
+                }
+              </div>
+            }
+            @case ('scale') {
+              <div class="escala" role="radiogroup" [attr.aria-label]="p.texto">
+                @for (n of escala; track n) {
+                  <label class="escala-opcion" [class.escala-opcion--elegida]="numero(p) === n">
+                    <input type="radio" [name]="'p-' + p.id" [value]="n" [checked]="numero(p) === n" (change)="poner(p, n)" />
+                    <span>{{ n }}</span>
+                  </label>
+                }
+              </div>
+              <div class="escala-ayuda"><span>Nada relacionado</span><span>Totalmente relacionado</span></div>
+            }
+            @case ('number') {
+              <input class="campo campo--corto" type="number" inputmode="numeric" min="0" max="600" step="1"
+                [attr.aria-label]="p.texto" [ngModel]="numero(p)" (ngModelChange)="poner(p, $event)" [ngModelOptions]="{ standalone: true }" />
+              <span class="unidad">meses</span>
+            }
+            @default {
+              <input class="campo" type="text" maxlength="200" autocomplete="off" [attr.aria-label]="p.texto"
+                [ngModel]="texto(p)" (ngModelChange)="escribir(p, $event)" [ngModelOptions]="{ standalone: true }" />
+            }
+          }
+        </fieldset>
+      }
+
+      @if (errorEnvio()) {
+        <p class="error" role="alert">{{ errorEnvio() }}</p>
+      }
+
+      <div class="acciones">
+        <a routerLink="/encuestas" class="btn btn--neutro">Ahora no</a>
+        <button type="submit" class="btn btn--primario" [disabled]="!puedeEnviar()">
+          {{ enviando() ? 'Enviando...' : 'Enviar mi respuesta' }}
+        </button>
+      </div>
+    </form>
+  }
+</div>

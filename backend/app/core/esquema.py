@@ -130,8 +130,32 @@ def asegurar_esquema_requisitos(conn: Connection) -> list[str]:
             conn.execute(text(sentencia))
         cambios.append("user_group, user_group_member, user_group_permission")
 
+    _asegurar_columnas_de_encuestas(conn, cambios)
     _asegurar_indices(conn, cambios)
     return cambios
+
+
+# Las tablas de encuestas ya existen en Supabase con el diseño original: la HU-30 les suma el
+# período de la encuesta y un código estable en preguntas y opciones (los lee el tablero de la HU-31).
+_COLUMNAS_DE_ENCUESTAS = (
+    ("survey", "period", "ALTER TABLE survey ADD COLUMN IF NOT EXISTS period varchar(40) NOT NULL DEFAULT ''"),
+    ("survey_question", "code", "ALTER TABLE survey_question ADD COLUMN IF NOT EXISTS code varchar(40)"),
+    ("survey_question_option", "code", "ALTER TABLE survey_question_option ADD COLUMN IF NOT EXISTS code varchar(40)"),
+)
+
+
+def _asegurar_columnas_de_encuestas(conn: Connection, cambios: list[str]) -> None:
+    """Agrega las columnas que faltan. En una base nueva las tablas las crea create_all ya completas."""
+    for tabla, columna, sentencia in _COLUMNAS_DE_ENCUESTAS:
+        if conn.execute(text("SELECT to_regclass(:t)"), {"t": f"public.{tabla}"}).scalar() is None:
+            continue
+        tiene = conn.execute(
+            text("SELECT 1 FROM information_schema.columns WHERE table_name = :t AND column_name = :c"),
+            {"t": tabla, "c": columna},
+        ).first()
+        if tiene is None:
+            conn.execute(text(sentencia))
+            cambios.append(f"{tabla}.{columna}")
 
 
 def _asegurar_indices(conn: Connection, cambios: list[str]) -> None:

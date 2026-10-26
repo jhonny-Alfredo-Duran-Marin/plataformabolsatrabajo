@@ -191,6 +191,31 @@ export const TEMAS_AYUDA: TemaAyuda[] = [
     ],
   },
   {
+    id: 'encuestas',
+    titulo: 'Encuesta de situación laboral',
+    audiencia: 'egresado',
+    rutas: ['/encuestas'],
+    resumen:
+      'Tu universidad te pide cada tanto que le cuentes cómo estás laboralmente. Es una encuesta corta, una por período.',
+    pasos: [
+      'Cuando llega una encuesta, te avisa la campanita y la ves en «Mis encuestas».',
+      'Contá tu situación actual. Si trabajás, indicá también dónde, en qué cargo y qué tan relacionado está con tu carrera.',
+      'Enviá tu respuesta: tu universidad solo ve totales, no tus respuestas sueltas.',
+    ],
+    preguntas: [
+      {
+        pregunta: 'No me llegó ninguna encuesta',
+        respuesta:
+          'Solo les llega a los egresados con el perfil validado por la universidad. Si ya estás validado, esperá a que tu universidad envíe la próxima.',
+      },
+      {
+        pregunta: 'Dice que ya respondí o que la encuesta está cerrada',
+        respuesta:
+          'Se responde una vez por período. Cuando tu universidad envíe la del período siguiente vas a poder responder de nuevo.',
+      },
+    ],
+  },
+  {
     id: 'perfil',
     titulo: 'Tu perfil profesional y tu CV',
     audiencia: 'egresado',
@@ -400,6 +425,38 @@ export const TEMAS_AYUDA: TemaAyuda[] = [
       'La empresa y quienes denunciaron reciben el aviso de tu decisión.',
     ],
     preguntas: [],
+  },
+  {
+    id: 'encuestas-admin',
+    titulo: 'Encuestas de situación laboral',
+    audiencia: 'universidad',
+    rutas: ['/admin/encuestas'],
+    resumen:
+      'Enviás una encuesta por período a tus egresados validados y ves cuántos respondieron. Con eso la universidad mantiene al día dónde trabaja cada promoción.',
+    pasos: [
+      'Tocá «Nueva encuesta», poné el período que mide (por ejemplo 2026-2) y elegí si va a toda la universidad o a una carrera.',
+      'Si querés, indicá hasta cuándo se puede responder y dejá un mensaje para los egresados.',
+      'Al enviarla, cada egresado recibe el aviso en su campanita y por push, y la ve en «Mis encuestas».',
+      'En cada tarjeta ves el porcentaje que respondió; «Ver detalle» muestra cómo se reparte la situación laboral.',
+      'Cuando termine el período, usá «Cerrar encuesta» para que no entren más respuestas.',
+    ],
+    preguntas: [
+      {
+        pregunta: 'No me deja enviar: dice que ya hay una encuesta abierta',
+        respuesta:
+          'Para el mismo período y el mismo grupo solo puede haber una encuesta abierta. Cerrá la anterior o usá otro período.',
+      },
+      {
+        pregunta: 'Dice que no hay egresados a los que enviarla',
+        respuesta:
+          'La encuesta solo llega a egresados validados. Revisá la validación de egresados o elegí otra carrera.',
+      },
+      {
+        pregunta: '¿Puedo ver qué respondió cada egresado?',
+        respuesta:
+          'No: acá ves solo totales y porcentajes. Las respuestas individuales alimentan los indicadores de inserción laboral, sin exponer a nadie.',
+      },
+    ],
   },
   {
     id: 'bitacora',

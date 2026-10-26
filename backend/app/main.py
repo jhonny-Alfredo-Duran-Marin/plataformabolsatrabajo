@@ -16,6 +16,7 @@ from app.features.auth import router as auth
 from app.features.bitacora import router as bitacora
 from app.features.catalogo import router as catalogos
 from app.features.comunicacion import router as comunicacion
+from app.features.encuestas import router as encuestas
 from app.features.entrevistas import router as entrevistas
 from app.features.grupos import router as grupos
 from app.features.ia import router as ia
@@ -100,6 +101,7 @@ routers = [
     comunicacion.router,
     notificaciones.router,
     moderacion.router,
+    encuestas.router,
     reportes.router,
     respaldos.router,
     tareas.router,

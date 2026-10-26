@@ -17,6 +17,7 @@ interface ItemMenu {
     | 'empresas'
     | 'moderacion'
     | 'denuncias'
+    | 'encuestas'
     | 'reportes'
     | 'bitacora'
     | 'respaldos'
@@ -38,6 +39,7 @@ const ITEMS_MENU: ItemMenu[] = [
   { ruta: '/admin/empresas', tipoIcono: 'empresas', etiqueta: 'Gestión de empresas', exacta: false, permiso: 'menu.empresas' },
   { ruta: '/admin/moderacion-vacantes', tipoIcono: 'moderacion', etiqueta: 'Moderación de ofertas', exacta: false, permiso: 'menu.moderacion' },
   { ruta: '/admin/denuncias', tipoIcono: 'denuncias', etiqueta: 'Denuncias de ofertas', exacta: false, permiso: 'menu.denuncias' },
+  { ruta: '/admin/encuestas', tipoIcono: 'encuestas', etiqueta: 'Encuestas laborales', exacta: false, permiso: 'menu.encuestas' },
   { ruta: '/admin/reportes', tipoIcono: 'reportes', etiqueta: 'Reportes personalizados', exacta: false, permiso: 'menu.reportes' },
   { ruta: '/admin/bitacora', tipoIcono: 'bitacora', etiqueta: 'Bitácora del sistema', exacta: false, permiso: 'menu.bitacora' },
   { ruta: '/admin/respaldos', tipoIcono: 'respaldos', etiqueta: 'Copias de seguridad', exacta: false, soloSuperadmin: true },

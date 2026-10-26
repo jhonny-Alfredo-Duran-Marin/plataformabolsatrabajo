@@ -353,6 +353,15 @@ El correo completo es el usuario más el dominio de su universidad: `@uagrm.egre
   20 caracteres), la oferta se oculta sola. El admin de la universidad las revisa en
   "Denuncias de ofertas" y decide mantenerla, suspenderla o eliminarla; la empresa y quienes
   denunciaron reciben el aviso. No necesita migración: usa la tabla `moderation_report`.
+- **Encuesta de situación laboral (HU-30):** con el admin de una universidad, menú "Encuestas
+  laborales" → "Nueva encuesta": período (ej. `2026-2`), a toda la universidad o a una carrera
+  y, si querés, fecha de cierre. Les llega a los egresados validados como aviso en la campanita y
+  por push, y la ven en "Mis encuestas" (`/encuestas`). Responden una vez por período; el admin
+  ve el porcentaje que respondió y cómo se reparte la situación laboral (solo totales) y puede
+  cerrarla. Las preguntas son fijas (situación, empresa, cargo, relación con la carrera, meses
+  hasta el primer empleo) y cada una tiene un `code` estable para el tablero de la HU-31. Usa las
+  tablas `survey*` del diseño; el backend les agrega al arrancar `survey.period` y
+  `survey_question(.option).code` (aditivo e idempotente, ver `core/esquema.py`).
 
 **Requisitos generales de la materia:**
 
