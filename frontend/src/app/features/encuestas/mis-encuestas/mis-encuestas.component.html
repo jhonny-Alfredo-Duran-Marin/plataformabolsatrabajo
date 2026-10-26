@@ -1,0 +1,65 @@
+<div class="pagina">
+  <a routerLink="/dashboard" class="volver">← Volver al panel</a>
+
+  <header class="cabecera">
+    <h1>Mis encuestas</h1>
+    <p>
+      Tu universidad te pide, de vez en cuando, que le cuentes cómo estás laboralmente. Es breve y le sirve para
+      saber cómo les va a sus egresados.
+    </p>
+  </header>
+
+  @if (cargando()) {
+    <div class="estado">
+      <div class="spinner"></div>
+      <p>Cargando tus encuestas...</p>
+    </div>
+  } @else if (error()) {
+    <div class="estado estado--error" role="alert">
+      <p>{{ error() }}</p>
+      <button type="button" class="btn btn--neutro" (click)="cargar()">Reintentar</button>
+    </div>
+  } @else if (encuestas().length === 0) {
+    <div class="estado">
+      <p class="estado-titulo">No tenés encuestas por ahora</p>
+      <p>Cuando tu universidad te envíe una, te avisamos en las notificaciones y aparece acá.</p>
+    </div>
+  } @else {
+    @if (pendientes().length > 0) {
+      <h2 class="seccion">Pendientes</h2>
+      <ul class="lista">
+        @for (e of pendientes(); track e.id) {
+          <li class="tarjeta tarjeta--pendiente">
+            <div class="tarjeta-datos">
+              <span class="periodo">Período {{ e.periodo }}</span>
+              <h3>{{ e.titulo }}</h3>
+              @if (e.descripcion) {
+                <p class="descripcion">{{ e.descripcion }}</p>
+              }
+              @if (e.vence_el) {
+                <p class="vence">Hasta el {{ e.vence_el | date: 'd MMM y' }}</p>
+              }
+            </div>
+            <a [routerLink]="['/encuestas', e.id]" class="btn btn--primario">Responder</a>
+          </li>
+        }
+      </ul>
+    }
+
+    @if (respondidas().length > 0) {
+      <h2 class="seccion">Ya respondidas</h2>
+      <ul class="lista">
+        @for (e of respondidas(); track e.id) {
+          <li class="tarjeta">
+            <div class="tarjeta-datos">
+              <span class="periodo">Período {{ e.periodo }}</span>
+              <h3>{{ e.titulo }}</h3>
+              <p class="respondida">Respondida el {{ e.respondida_el | date: 'd MMM y' }}</p>
+            </div>
+            <span class="chip">Respondida</span>
+          </li>
+        }
+      </ul>
+    }
+  }
+</div>

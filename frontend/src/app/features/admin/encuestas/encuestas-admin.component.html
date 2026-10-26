@@ -1,0 +1,183 @@
+<div class="admin-container">
+  <header class="admin-header">
+    <div>
+      <div class="header-badge">{{ auth.institucion() || 'Todas las universidades' }}</div>
+      <h1>Encuestas de situación laboral</h1>
+      <p class="subtitle">
+        Enviá una encuesta por período a tus egresados validados para mantener al día dónde trabajan. Cada egresado
+        responde una vez por encuesta y vos ves cuántos respondieron.
+      </p>
+    </div>
+    <div class="header-acciones">
+      <button type="button" class="btn-refresh" (click)="cargar()" [disabled]="cargando()">Actualizar</button>
+      <button *appPermiso="'boton.encuestas.enviar'" type="button" class="btn btn--primario" (click)="abrirFormulario()">
+        Nueva encuesta
+      </button>
+    </div>
+  </header>
+
+  @if (cargando()) {
+    <div class="estado">
+      <div class="spinner"></div>
+      <p>Cargando encuestas...</p>
+    </div>
+  } @else if (error()) {
+    <div class="estado estado--error">
+      <p>{{ error() }}</p>
+      <button type="button" class="btn-refresh" (click)="cargar()">Reintentar</button>
+    </div>
+  } @else {
+    @if (encuestas().length === 0) {
+      <div class="estado">
+        <p class="vacio-titulo">Todavía no enviaste ninguna encuesta</p>
+        <p>Cuando envíes la primera, acá ves cuántos egresados la respondieron.</p>
+      </div>
+    }
+
+    <div class="lista">
+      @for (e of encuestas(); track e.id) {
+        <article class="tarjeta" [class.tarjeta--cerrada]="!e.abierta">
+          <div class="tarjeta-cabecera">
+            <div>
+              <h2 class="titulo">{{ e.titulo }}</h2>
+              <p class="meta">
+                Período <strong>{{ e.periodo }}</strong> · {{ alcanceLegible[e.alcance] }}@if (e.carrera) { : {{ e.carrera }} }
+                · enviada el {{ e.enviada_el | date: 'd MMM y' }}@if (e.vence_el) { · hasta el {{ e.vence_el | date: 'd MMM y' }} }
+              </p>
+            </div>
+            @if (e.abierta) {
+              <span class="chip chip--abierta">Abierta</span>
+            } @else if (!e.activa) {
+              <span class="chip">Cerrada</span>
+            } @else {
+              <span class="chip">Venció</span>
+            }
+          </div>
+
+          <div class="avance">
+            <div class="avance-texto">
+              <strong>{{ e.porcentaje }}%</strong> respondió
+              <span class="avance-detalle">{{ e.respondieron }} de {{ e.destinatarios }} egresados</span>
+            </div>
+            <div class="barra" role="progressbar" [attr.aria-valuenow]="e.porcentaje" aria-valuemin="0" aria-valuemax="100"
+              [attr.aria-label]="'Respuestas de la encuesta del período ' + e.periodo">
+              <div class="barra-relleno" [style.width.%]="e.porcentaje"></div>
+            </div>
+          </div>
+
+          <div class="acciones">
+            <button type="button" class="btn btn--neutro" (click)="alternarAvance(e)" [disabled]="cargandoAvance() === e.id">
+              {{ cargandoAvance() === e.id ? 'Cargando...' : avance()?.encuesta?.id === e.id ? 'Ocultar detalle' : 'Ver detalle' }}
+            </button>
+            @if (e.activa) {
+              <button *appPermiso="'boton.encuestas.enviar'" type="button" class="btn btn--aviso" (click)="pedirCierre(e)">
+                Cerrar encuesta
+              </button>
+            }
+          </div>
+
+          @if (avance(); as a) {
+            @if (a.encuesta.id === e.id) {
+              <section class="detalle" aria-label="Situación laboral de quienes respondieron">
+                <h3>Situación laboral de quienes respondieron</h3>
+                @if (a.encuesta.respondieron === 0) {
+                  <p class="detalle-vacio">Todavía nadie respondió.</p>
+                } @else {
+                  <ul class="reparto">
+                    @for (s of a.situacion_laboral; track s.codigo) {
+                      <li>
+                        <span class="reparto-etiqueta">{{ s.etiqueta }}</span>
+                        <span class="reparto-barra"><span [style.width.%]="anchoBarra(s.cantidad)"></span></span>
+                        <span class="reparto-cantidad">{{ s.cantidad }}</span>
+                      </li>
+                    }
+                  </ul>
+                }
+                <p class="detalle-pie">
+                  {{ a.pendientes }} {{ a.pendientes === 1 ? 'egresado todavía no respondió' : 'egresados todavía no respondieron' }}.
+                  Acá ves solo totales: las respuestas de cada egresado no se muestran.
+                </p>
+              </section>
+            }
+          }
+        </article>
+      }
+    </div>
+
+    <app-paginador
+      [total]="total()"
+      [pagina]="pagina()"
+      (paginaChange)="irAPagina($event)"
+      [tamanio]="tamanio()"
+      (tamanioChange)="cambiarTamanio($event)"
+      etiqueta="encuestas"
+    />
+  }
+
+  @if (formularioAbierto()) {
+    <div class="modal-overlay" (click)="cerrarFormulario()">
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="encuesta-titulo" (click)="$event.stopPropagation()">
+        <h2 id="encuesta-titulo">Nueva encuesta de situación laboral</h2>
+        <p class="modal-desc">
+          Les llega a los egresados validados de tu universidad (o de la carrera que elijas) como aviso en su campanita
+          y por push. Las preguntas son las mismas de siempre: situación actual, empresa, cargo, relación con la carrera
+          y meses hasta el primer empleo.
+        </p>
+
+        <label for="enc-titulo">Título <span class="requerido">*</span></label>
+        <input id="enc-titulo" type="text" maxlength="250" [ngModel]="titulo()" (ngModelChange)="titulo.set($event)" />
+
+        <label for="enc-periodo">Período que mide <span class="requerido">*</span></label>
+        <input id="enc-periodo" type="text" maxlength="40" placeholder="Ej.: 2026-2 o Gestión 2026"
+          [ngModel]="periodo()" (ngModelChange)="periodo.set($event)" />
+
+        <label for="enc-carrera">¿A quién se la enviás?</label>
+        <select id="enc-carrera" [ngModel]="carreraId()" (ngModelChange)="carreraId.set($event)">
+          <option value="">Todos los egresados de la universidad</option>
+          @for (c of carreras(); track c.id) {
+            <option [value]="c.id">Solo egresados de {{ c.nombre }}</option>
+          }
+        </select>
+
+        <label for="enc-vence">Se puede responder hasta (opcional)</label>
+        <input id="enc-vence" type="date" [min]="hoy" [ngModel]="venceEl()" (ngModelChange)="venceEl.set($event)" />
+
+        <label for="enc-descripcion">Mensaje para los egresados (opcional)</label>
+        <textarea id="enc-descripcion" rows="3" maxlength="1000" [ngModel]="descripcion()" (ngModelChange)="descripcion.set($event)"
+          placeholder="Ej.: Nos ayuda a mejorar los planes de estudio. Te toma menos de dos minutos."></textarea>
+
+        @if (errorFormulario()) {
+          <p class="modal-error" role="alert">{{ errorFormulario() }}</p>
+        }
+
+        <div class="modal-acciones">
+          <button type="button" class="btn btn--neutro" (click)="cerrarFormulario()" [disabled]="enviando()">Cancelar</button>
+          <button type="button" class="btn btn--primario" (click)="enviar()" [disabled]="!puedeEnviar()">
+            {{ enviando() ? 'Enviando...' : 'Enviar encuesta' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (porCerrar(); as e) {
+    <div class="modal-overlay" (click)="cancelarCierre()">
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="cierre-titulo" (click)="$event.stopPropagation()">
+        <h2 id="cierre-titulo">Cerrar la encuesta</h2>
+        <p class="modal-desc">
+          Período <strong>{{ e.periodo }}</strong>: los egresados que todavía no respondieron dejan de poder hacerlo.
+          Las respuestas que ya llegaron se conservan.
+        </p>
+        @if (errorCierre()) {
+          <p class="modal-error" role="alert">{{ errorCierre() }}</p>
+        }
+        <div class="modal-acciones">
+          <button type="button" class="btn btn--neutro" (click)="cancelarCierre()" [disabled]="cerrando()">Cancelar</button>
+          <button type="button" class="btn btn--aviso-lleno" (click)="confirmarCierre()" [disabled]="cerrando()">
+            {{ cerrando() ? 'Cerrando...' : 'Cerrar encuesta' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

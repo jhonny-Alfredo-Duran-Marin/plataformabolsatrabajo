@@ -117,6 +117,12 @@ export const routes: Routes = [
           import('./features/admin/denuncias/denuncias.component').then((m) => m.DenunciasComponent),
       },
       {
+        path: 'encuestas',
+        data: { permiso: 'menu.encuestas' },
+        loadComponent: () =>
+          import('./features/admin/encuestas/encuestas-admin.component').then((m) => m.EncuestasAdminComponent),
+      },
+      {
         path: 'respaldos',
         canActivate: [superadminGuard],
         loadComponent: () => import('./features/admin/respaldos/respaldos.component').then((m) => m.RespaldosComponent),
@@ -183,6 +189,23 @@ export const routes: Routes = [
     data: { roles: ['candidate'] },
     loadComponent: () =>
       import('./features/ia/recomendaciones/recomendaciones.component').then((m) => m.RecomendacionesComponent),
+  },
+  {
+    path: 'encuestas',
+    canActivate: [authGuard],
+    data: { roles: ['candidate'] },
+    loadComponent: () =>
+      import('./features/encuestas/mis-encuestas/mis-encuestas.component').then((m) => m.MisEncuestasComponent),
+  },
+  {
+    // A esta ruta apunta el aviso de la campanita cuando llega una encuesta.
+    path: 'encuestas/:id',
+    canActivate: [authGuard],
+    data: { roles: ['candidate'] },
+    loadComponent: () =>
+      import('./features/encuestas/responder-encuesta/responder-encuesta.component').then(
+        (m) => m.ResponderEncuestaComponent,
+      ),
   },
   {
     path: 'seleccion',
