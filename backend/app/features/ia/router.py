@@ -1,4 +1,4 @@
-"""Módulos 5.1.11 a 5.1.14 — IA: recomendación de vacantes (HU-23) y sugerencia de candidatos (HU-24)."""
+"""Módulos 5.1.11 a 5.1.14 — IA: recomendación de vacantes (HU-23), sugerencia de candidatos (HU-24) y asistente generativo (HU-26)."""
 
 import uuid
 
@@ -7,11 +7,14 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.features.ia.schema import (
+    GenerarResumenRequest,
+    GenerarResumenResponse,
     RecomendacionesResponse,
     SugerenciasCandidatosResponse,
     VacanteRecomendadaResponse,
 )
 from app.features.ia.services.afinidad import ia_activa
+from app.features.ia.services.asistente_generativo_service import AsistenteGenerativoService
 from app.features.ia.services.candidato_sugerencia_service import CandidatoSugerenciaService
 from app.features.ia.services.recomendacion_service import RecomendacionService
 from app.security.dependencies import CurrentUser, get_current_user, require_roles
@@ -27,6 +30,23 @@ _solo_empresa_o_admin = require_roles("empresa", "platform_admin")
 @router.get("/_status")
 def estado_modulo() -> dict:
     return {"modulo": "inteligencia_artificial", "recomendaciones": "activo" if ia_activa() else "apagado"}
+
+
+# --- HU-26: ASISTENTE GENERATIVO DE RESUMEN PROFESIONAL (EGRESADO) ---
+@router.post("/resumen-profesional/generar", response_model=GenerarResumenResponse)
+def generar_resumen_profesional(
+    payload: GenerarResumenRequest | None = None,
+    current_user: CurrentUser = Depends(_solo_egresado),
+    db: Session = Depends(get_db),
+):
+    """HU-26: Genera un borrador de resumen profesional con IA a partir de los datos cargados en el perfil."""
+    variante = payload.variante if payload else 1
+    enfoque = payload.enfoque if payload else "general"
+    return AsistenteGenerativoService(db).generar_resumen_profesional(
+        usuario_id=current_user.id_usuario,
+        variante=variante,
+        enfoque=enfoque,
+    )
 
 
 # --- HU-23: RECOMENDACIÓN DE VACANTES PARA EGRESADOS ---
@@ -58,4 +78,3 @@ def sugerir_candidatos_vacante(
         user_id=current_user.id_usuario,
         umbral_minimo=umbral_minimo,
     )
-

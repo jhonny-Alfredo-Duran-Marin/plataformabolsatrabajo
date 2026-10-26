@@ -122,12 +122,158 @@
             </div>
           </div>
 
-          <!-- RESUMEN PROFESIONAL CON PLANTILLAS DIRECTAS -->
+          <!-- RESUMEN PROFESIONAL CON ASISTENTE IA Y PLANTILLAS DIRECTAS -->
           <div class="field-group full-width">
-            <div class="label-with-hint">
-              <label for="p-resumen">Resumen Profesional</label>
-              <span class="field-tip">Puedes redactar libremente o aplicar una plantilla con 1 clic</span>
+            <div class="label-with-hint label-with-ia">
+              <div>
+                <label for="p-resumen">Resumen Profesional</label>
+                <span class="field-tip">Puedes redactar libremente, usar el asistente generativo con IA o aplicar una plantilla directa</span>
+              </div>
+              <button
+                type="button"
+                class="btn-ia-action"
+                (click)="solicitarResumenIa()"
+                [disabled]="generandoResumenIa()"
+                title="Generar propuesta de resumen profesional basada en tu perfil con Inteligencia Artificial"
+              >
+                @if (generandoResumenIa()) {
+                  <span class="mini-spinner"></span>
+                  <span>Generando con IA...</span>
+                } @else {
+                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                  </svg>
+                  <span>Redactar con Asistente IA</span>
+                }
+              </button>
             </div>
+
+            <!-- PANEL ASISTENTE IA: ERROR (CP04) -->
+            @if (errorIa()) {
+              <div class="ia-alert-banner ia-alert-error" role="alert">
+                <div class="ia-alert-icon">
+                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                  </svg>
+                </div>
+                <div class="ia-alert-content">
+                  <p class="ia-alert-text">{{ errorIa() }}</p>
+                  <p class="ia-alert-subtext">Puedes continuar redactando tu resumen profesional manualmente en el campo inferior sin perder ningún dato.</p>
+                </div>
+                <button type="button" class="btn-ia-close" (click)="errorIa.set(null)" aria-label="Cerrar aviso">
+                  <svg class="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+            }
+
+            <!-- PANEL ASISTENTE IA: BORRADOR PROPUESTO (CP01, CP02, CP03) -->
+            @if (mostrarBorradorIa()) {
+              <div class="ia-draft-panel">
+                <div class="ia-draft-header">
+                  <div class="ia-draft-title">
+                    <svg class="icon-sm text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                    </svg>
+                    <div>
+                      <span class="ia-title-text">Borrador sugerido por Asistente IA</span>
+                      <span class="ia-variant-tag">Variante {{ varianteActualIa() }} de 3</span>
+                    </div>
+                  </div>
+                  <span class="ia-badge-review">
+                    <svg class="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                    </svg>
+                    <span>Editable antes de guardar</span>
+                  </span>
+                </div>
+
+                @if (advertenciaIa()) {
+                  <div class="ia-alert-banner ia-alert-info">
+                    <svg class="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span>{{ advertenciaIa() }}</span>
+                  </div>
+                }
+
+                @if (datosUtilizadosIa(); as meta) {
+                  <div class="ia-meta-chips">
+                    <span class="ia-chips-title">Datos sintetizados de tu perfil:</span>
+                    <span class="ia-meta-chip">
+                      <svg class="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                      </svg>
+                      {{ meta.total_experiencias }} experiencias
+                    </span>
+                    <span class="ia-meta-chip">
+                      <svg class="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                      </svg>
+                      {{ meta.total_habilidades }} habilidades
+                    </span>
+                    <span class="ia-meta-chip">
+                      <svg class="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/>
+                      </svg>
+                      {{ meta.total_idiomas }} idiomas
+                    </span>
+                  </div>
+                }
+
+                <div class="ia-editor-wrapper">
+                  <textarea
+                    class="textarea-field ia-draft-textarea"
+                    rows="4"
+                    [value]="borradorIa() ?? ''"
+                    (input)="actualizarBorradorIa($any($event.target).value)"
+                    placeholder="Puedes modificar cualquier palabra de este borrador antes de aplicarlo..."
+                  ></textarea>
+                </div>
+
+                <div class="ia-draft-actions">
+                  <div class="ia-actions-left">
+                    <button
+                      type="button"
+                      class="btn btn-primary btn-sm"
+                      (click)="aplicarBorradorIa()"
+                      [disabled]="!borradorIa()?.trim()"
+                      title="Aplicar este borrador y guardarlo directamente en tu perfil"
+                    >
+                      <svg class="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                      </svg>
+                      <span>Aplicar y guardar en mi perfil</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-outline btn-sm"
+                      (click)="solicitarResumenIa(true)"
+                      [disabled]="generandoResumenIa()"
+                      title="Generar una versión alternativa con diferente enfoque"
+                    >
+                      <svg class="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                      </svg>
+                      <span>Generar otra versión</span>
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    class="btn btn-outline btn-sm btn-ia-dismiss"
+                    (click)="cancelarBorradorIa()"
+                    title="Descartar este borrador sin modificar tu perfil"
+                  >
+                    <svg class="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                    <span>Descartar</span>
+                  </button>
+                </div>
+              </div>
+            }
+
             <textarea
               id="p-resumen"
               class="textarea-field"

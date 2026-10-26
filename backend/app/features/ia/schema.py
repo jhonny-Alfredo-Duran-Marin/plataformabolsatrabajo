@@ -1,8 +1,24 @@
 import uuid
 from datetime import datetime
+from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.features.vacantes.schema import CriterioAfinidadResponse, VacanteResumenResponse
+
+
+# --- MODELOS PARA HU-26 (Asistente Generativo de Resumen Profesional) ---
+class GenerarResumenRequest(BaseModel):
+    variante: int = Field(default=1, ge=1, le=5, description="Índice de la variante de redacción deseada (para regenerar versiones alternativas)")
+    enfoque: str | None = Field(default="general", description="Enfoque de redacción: general, tecnico, ejecutivo")
+
+
+class GenerarResumenResponse(BaseModel):
+    borrador: str
+    generado_por_ia: bool = True
+    advertencia: str = "Borrador generado por IA. Requiere revisión del egresado antes de guardarlo en el perfil."
+    variante: int
+    total_variantes: int = 3
+    datos_utilizados: dict[str, Any] = {}
 
 
 # --- MODELOS PARA HU-23 (Egresado -> Vacantes) ---
@@ -61,4 +77,3 @@ class SugerenciasCandidatosResponse(BaseModel):
     total_postulantes: int
     total_coincidentes: int
     items: list[CandidatoSugeridoDTO]
-

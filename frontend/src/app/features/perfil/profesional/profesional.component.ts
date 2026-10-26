@@ -85,6 +85,15 @@ export class ProfesionalComponent implements OnInit {
   /** La carga del perfil falló (no un 404): no se muestra ni se guarda nada hasta reintentar. */
   readonly errorCarga = signal(false);
 
+  // HU-26: Asistente generativo de resumen profesional con IA
+  readonly generandoResumenIa = signal(false);
+  readonly borradorIa = signal<string | null>(null);
+  readonly mostrarBorradorIa = signal(false);
+  readonly varianteActualIa = signal(1);
+  readonly advertenciaIa = signal<string | null>(null);
+  readonly datosUtilizadosIa = signal<any | null>(null);
+  readonly errorIa = signal<string | null>(null);
+
   disponibilidadOpciones = [
     { valor: 'inmediata', etiqueta: 'Inmediata' },
     { valor: '1_semana', etiqueta: '1 semana' },
@@ -254,8 +263,6 @@ export class ProfesionalComponent implements OnInit {
     const headers = this.headers();
 
     forkJoin({
-      // Solo un 404 (todavía sin perfil) arma el perfil en blanco. Ante otro error no se carga nada:
-      // el formulario se guarda solo y pisaría los datos reales con los vacíos.
       perfil: this.http
         .get<Perfil>(this.apiBase, { headers })
         .pipe(catchError((err: HttpErrorResponse) => of(err.status === 404 ? null : ERROR_DE_CARGA))),
@@ -334,6 +341,64 @@ export class ProfesionalComponent implements OnInit {
           this.toast.error('No se pudo guardar la información del perfil.');
         },
       });
+  }
+
+  // --- HU-26: ASISTENTE GENERATIVO DE RESUMEN PROFESIONAL ---
+  solicitarResumenIa(rotarVariante: boolean = false): void {
+    let variante = this.varianteActualIa();
+    if (rotarVariante) {
+      variante = (variante % 3) + 1;
+      this.varianteActualIa.set(variante);
+    }
+    this.generandoResumenIa.set(true);
+    this.errorIa.set(null);
+
+    this.http
+      .post<any>(
+        `${environment.apiUrl}/ia/resumen-profesional/generar`,
+        { variante, enfoque: 'general' },
+        { headers: this.headers() },
+      )
+      .subscribe({
+        next: (resp) => {
+          this.generandoResumenIa.set(false);
+          this.borradorIa.set(resp.borrador);
+          this.advertenciaIa.set(resp.advertencia);
+          this.datosUtilizadosIa.set(resp.datos_utilizados);
+          this.mostrarBorradorIa.set(true);
+          this.toast.info('Borrador generado por IA. Recuerda revisarlo antes de guardarlo.');
+        },
+        error: (err: HttpErrorResponse) => {
+          this.generandoResumenIa.set(false);
+          const detalle =
+            err.error?.detail ||
+            'El microservicio de IA no está disponible en este momento. Puedes redactar tu resumen manualmente.';
+          this.errorIa.set(detalle);
+          this.toast.warning(detalle);
+        },
+      });
+  }
+
+  actualizarBorradorIa(texto: string): void {
+    this.borradorIa.set(texto);
+  }
+
+  aplicarBorradorIa(): void {
+    const texto = this.borradorIa();
+    if (!texto || !texto.trim()) {
+      this.toast.warning('El borrador está vacío.');
+      return;
+    }
+    this.actualizarPerfil({ resumen_profesional: texto.trim() });
+    this.guardarDatosBasicos();
+    this.mostrarBorradorIa.set(false);
+    this.toast.success('Resumen profesional actualizado y guardado en tu perfil.');
+  }
+
+  cancelarBorradorIa(): void {
+    this.mostrarBorradorIa.set(false);
+    this.borradorIa.set(null);
+    this.errorIa.set(null);
   }
 
   agregarFormacion(): void {
