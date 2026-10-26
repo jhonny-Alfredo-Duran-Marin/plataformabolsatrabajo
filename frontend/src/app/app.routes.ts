@@ -123,6 +123,12 @@ export const routes: Routes = [
           import('./features/admin/encuestas/encuestas-admin.component').then((m) => m.EncuestasAdminComponent),
       },
       {
+        path: 'colocaciones',
+        data: { permiso: 'menu.colocaciones' },
+        loadComponent: () =>
+          import('./features/admin/colocaciones/colocaciones-admin.component').then((m) => m.ColocacionesAdminComponent),
+      },
+      {
         path: 'respaldos',
         canActivate: [superadminGuard],
         loadComponent: () => import('./features/admin/respaldos/respaldos.component').then((m) => m.RespaldosComponent),

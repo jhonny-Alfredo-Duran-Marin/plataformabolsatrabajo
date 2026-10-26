@@ -1,0 +1,299 @@
+<div class="admin-container">
+  <header class="admin-header">
+    <div>
+      <div class="header-badge">{{ auth.institucion() || 'Todas las universidades' }}</div>
+      <h1>Registro de colocaciones</h1>
+      <p class="subtitle">
+        Registrá las contrataciones de tus egresados. Cuando una empresa pasa a un postulante a «Contratado», la
+        plataforma te sugiere la colocación para que la confirmes con la fecha real de inicio.
+      </p>
+    </div>
+    <div class="header-acciones">
+      <button type="button" class="btn-refresh" (click)="cargar()" [disabled]="cargando()">Actualizar</button>
+      <button *appPermiso="'boton.colocaciones.registrar'" type="button" class="btn btn--primario" (click)="abrirAlta()">
+        Registrar colocación
+      </button>
+    </div>
+  </header>
+
+  @if (sugeridas() > 0) {
+    <div class="aviso" role="status">
+      <span>
+        <strong>{{ sugeridas() }}</strong>
+        {{ sugeridas() === 1 ? 'colocación sugerida espera' : 'colocaciones sugeridas esperan' }} tu confirmación.
+      </span>
+      @if (filtroEstado() !== 'suggested') {
+        <button type="button" class="btn btn--aviso" (click)="verPorConfirmar()">Ver las pendientes</button>
+      }
+    </div>
+  }
+
+  <form class="filtros" (ngSubmit)="buscar()">
+    <input
+      name="q"
+      type="search"
+      placeholder="Buscar por egresado, cargo o empresa"
+      aria-label="Buscar colocaciones"
+      maxlength="100"
+      [ngModel]="texto()"
+      (ngModelChange)="texto.set($event)"
+    />
+    <select
+      name="estado"
+      aria-label="Estado"
+      [ngModel]="filtroEstado()"
+      (ngModelChange)="filtroEstado.set($event); buscar()"
+    >
+      <option value="">Por confirmar y confirmadas</option>
+      <option value="suggested">Solo por confirmar</option>
+      <option value="confirmed">Solo confirmadas</option>
+      <option value="cancelled">Eliminadas</option>
+    </select>
+    <button type="submit" class="btn btn--neutro">Buscar</button>
+  </form>
+
+  @if (cargando()) {
+    <div class="estado">
+      <div class="spinner"></div>
+      <p>Cargando colocaciones...</p>
+    </div>
+  } @else if (error()) {
+    <div class="estado estado--error">
+      <p>{{ error() }}</p>
+      <button type="button" class="btn-refresh" (click)="cargar()">Reintentar</button>
+    </div>
+  } @else if (colocaciones().length === 0) {
+    <div class="estado">
+      <p class="vacio-titulo">No hay colocaciones para mostrar</p>
+      <p>Registrá la primera o espera a que una empresa marque a un postulante como contratado.</p>
+    </div>
+  } @else {
+    <div class="tabla-contenedor">
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th>Egresado</th>
+            <th>Empresa y cargo</th>
+            <th>Inicio</th>
+            <th>Salario</th>
+            <th>Estado</th>
+            <th class="col-acciones">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of colocaciones(); track c.id) {
+            <tr [class.fila--sugerida]="c.estado === 'suggested'" [class.fila--eliminada]="c.estado === 'cancelled'">
+              <td>
+                <strong>{{ c.egresado }}</strong>
+                @if (!auth.institucion() && c.universidad) {
+                  <span class="meta">{{ c.universidad }}</span>
+                }
+              </td>
+              <td>
+                <strong>{{ c.cargo }}</strong>
+                <span class="meta">{{ c.empresa }}</span>
+              </td>
+              <td>{{ c.fecha_inicio | date: 'd MMM y' }}</td>
+              <td>{{ monto(c) }}</td>
+              <td>
+                <span class="chip" [class.chip--sugerida]="c.estado === 'suggested'" [class.chip--confirmada]="c.estado === 'confirmed'">
+                  {{ estadoLegible[c.estado] }}
+                </span>
+                <span class="meta">{{ origenLegible[c.origen] }}</span>
+                @if (c.estado === 'cancelled' && c.motivo_eliminacion) {
+                  <span class="meta">Motivo: {{ c.motivo_eliminacion }}</span>
+                } @else if (c.motivo_ultimo_cambio) {
+                  <span class="meta">Último cambio: {{ c.motivo_ultimo_cambio }}</span>
+                }
+              </td>
+              <td class="col-acciones">
+                @if (c.estado !== 'cancelled') {
+                  <div class="acciones">
+                    @if (c.estado === 'suggested') {
+                      <button
+                        *appPermiso="'boton.colocaciones.registrar'"
+                        type="button"
+                        class="btn btn--confirmar"
+                        (click)="confirmar(c)"
+                        [disabled]="confirmando() !== null"
+                      >
+                        {{ confirmando() === c.id ? 'Confirmando...' : 'Confirmar' }}
+                      </button>
+                    }
+                    <button
+                      *appPermiso="'boton.colocaciones.registrar'"
+                      type="button"
+                      class="btn-icono"
+                      title="Editar"
+                      [attr.aria-label]="'Editar la colocación de ' + c.egresado"
+                      (click)="abrirEdicion(c)"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l-1 4 4-1 8.5-8.5a2.5 2.5 0 00-3.536-3.536L8.5 12.5" />
+                      </svg>
+                    </button>
+                    <button
+                      *appPermiso="'boton.colocaciones.eliminar'"
+                      type="button"
+                      class="btn-icono btn-icono--peligro"
+                      title="Eliminar"
+                      [attr.aria-label]="'Eliminar la colocación de ' + c.egresado"
+                      (click)="pedirEliminacion(c)"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3" />
+                      </svg>
+                    </button>
+                  </div>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <app-paginador
+      [total]="total()"
+      [pagina]="pagina()"
+      (paginaChange)="irAPagina($event)"
+      [tamanio]="tamanio()"
+      (tamanioChange)="cambiarTamanio($event)"
+      etiqueta="colocaciones"
+    />
+  }
+
+  @if (formularioAbierto()) {
+    <div class="modal-overlay" (click)="cerrarFormulario()">
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="colocacion-titulo" (click)="$event.stopPropagation()">
+        <h2 id="colocacion-titulo">{{ editando() ? 'Editar colocación' : 'Registrar colocación' }}</h2>
+        <p class="modal-desc">
+          @if (editando()) {
+            Corregí los datos de la contratación de <strong>{{ editando()!.egresado }}</strong>. Los cambios quedan en la
+            bitácora junto con el motivo.
+          } @else {
+            Un egresado puede tener más de una colocación. Los datos marcados con * son obligatorios.
+          }
+        </p>
+
+        @if (!editando()) {
+          <label for="col-egresado">Egresado <span class="requerido">*</span></label>
+          @if (egresado(); as elegido) {
+            <div class="elegido">
+              <span><strong>{{ elegido.nombre }}</strong> @if (elegido.correo) { · {{ elegido.correo }} }</span>
+              <button type="button" class="enlace" (click)="egresado.set(null)">Cambiar</button>
+            </div>
+          } @else {
+            <input id="col-egresado" type="search" placeholder="Buscá por nombre o correo" autocomplete="off"
+              [ngModel]="busquedaEgresado()" (ngModelChange)="alEscribirEgresado($event)" />
+            <ul class="opciones" role="listbox" aria-label="Egresados encontrados">
+              @for (o of opcionesEgresado(); track o.id) {
+                <li>
+                  <button type="button" role="option" (click)="egresado.set(o)">
+                    {{ o.nombre }} <span class="meta">{{ o.correo }}</span>
+                  </button>
+                </li>
+              } @empty {
+                <li class="opciones-vacio">No se encontraron egresados.</li>
+              }
+            </ul>
+          }
+        }
+
+        <label for="col-empresa">Empresa <span class="requerido">*</span></label>
+        <div class="alternar">
+          <label class="radio"><input type="radio" name="tipo-empresa" [checked]="empresaRegistrada()" (change)="empresaRegistrada.set(true)" /> Registrada en la plataforma</label>
+          <label class="radio"><input type="radio" name="tipo-empresa" [checked]="!empresaRegistrada()" (change)="empresaRegistrada.set(false)" /> No está registrada</label>
+        </div>
+        @if (empresaRegistrada()) {
+          @if (empresa(); as elegida) {
+            <div class="elegido">
+              <span><strong>{{ elegida.nombre }}</strong></span>
+              <button type="button" class="enlace" (click)="empresa.set(null)">Cambiar</button>
+            </div>
+          } @else {
+            <input id="col-empresa" type="search" placeholder="Buscá la empresa por nombre" autocomplete="off"
+              [ngModel]="busquedaEmpresa()" (ngModelChange)="alEscribirEmpresa($event)" />
+            <ul class="opciones" role="listbox" aria-label="Empresas encontradas">
+              @for (o of opcionesEmpresa(); track o.id) {
+                <li><button type="button" role="option" (click)="empresa.set(o)">{{ o.nombre }}</button></li>
+              } @empty {
+                <li class="opciones-vacio">No se encontraron empresas. Podés escribir su nombre en «No está registrada».</li>
+              }
+            </ul>
+          }
+        } @else {
+          <input id="col-empresa" type="text" maxlength="250" placeholder="Nombre de la empresa"
+            [ngModel]="empresaNombre()" (ngModelChange)="empresaNombre.set($event)" />
+        }
+
+        <label for="col-cargo">Cargo <span class="requerido">*</span></label>
+        <input id="col-cargo" type="text" maxlength="200" [ngModel]="cargo()" (ngModelChange)="cargo.set($event)" />
+
+        <label for="col-inicio">Fecha de inicio <span class="requerido">*</span></label>
+        <input id="col-inicio" type="date" [ngModel]="fechaInicio()" (ngModelChange)="fechaInicio.set($event)" />
+
+        <div class="fila-doble">
+          <div>
+            <label for="col-salario">Salario (opcional)</label>
+            <input id="col-salario" type="number" min="0" step="0.01" inputmode="decimal"
+              [ngModel]="salario()" (ngModelChange)="salario.set($event === null ? '' : '' + $event)" />
+          </div>
+          <div>
+            <label for="col-moneda">Moneda</label>
+            <select id="col-moneda" [ngModel]="moneda()" (ngModelChange)="moneda.set($event)">
+              @for (m of monedas; track m) {
+                <option [value]="m">{{ m }}</option>
+              }
+            </select>
+          </div>
+        </div>
+        @if (!salarioValido()) {
+          <p class="modal-error" role="alert">El salario tiene que ser un número igual o mayor a cero.</p>
+        }
+
+        @if (editando()) {
+          <label for="col-motivo">Motivo del cambio <span class="requerido">*</span></label>
+          <textarea id="col-motivo" rows="2" maxlength="1000" placeholder="Ej.: El contrato indica otra fecha de inicio"
+            [ngModel]="motivo()" (ngModelChange)="motivo.set($event)"></textarea>
+        }
+
+        @if (errorFormulario()) {
+          <p class="modal-error" role="alert">{{ errorFormulario() }}</p>
+        }
+
+        <div class="modal-acciones">
+          <button type="button" class="btn btn--neutro" (click)="cerrarFormulario()" [disabled]="guardando()">Cancelar</button>
+          <button type="button" class="btn btn--primario" (click)="guardar()" [disabled]="!puedeGuardar()">
+            {{ guardando() ? 'Guardando...' : editando() ? 'Guardar cambios' : 'Registrar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (porEliminar(); as c) {
+    <div class="modal-overlay" (click)="cancelarEliminacion()">
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="eliminar-titulo" (click)="$event.stopPropagation()">
+        <h2 id="eliminar-titulo">Eliminar la colocación</h2>
+        <p class="modal-desc">
+          <strong>{{ c.egresado }}</strong> · {{ c.cargo }} en {{ c.empresa }}. La colocación deja de contar en los
+          indicadores, pero queda guardada con el motivo.
+        </p>
+        <label for="col-motivo-baja">Motivo de la eliminación <span class="requerido">*</span></label>
+        <textarea id="col-motivo-baja" rows="3" maxlength="1000" placeholder="Ej.: Se registró por error"
+          [ngModel]="motivoEliminacion()" (ngModelChange)="motivoEliminacion.set($event)"></textarea>
+        @if (errorEliminacion()) {
+          <p class="modal-error" role="alert">{{ errorEliminacion() }}</p>
+        }
+        <div class="modal-acciones">
+          <button type="button" class="btn btn--neutro" (click)="cancelarEliminacion()" [disabled]="eliminando()">Cancelar</button>
+          <button type="button" class="btn btn--peligro" (click)="confirmarEliminacion()"
+            [disabled]="eliminando() || motivoEliminacion().trim().length < 3">
+            {{ eliminando() ? 'Eliminando...' : 'Eliminar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

@@ -1,9 +1,11 @@
+import logging
 import uuid
 from datetime import date, datetime
 from sqlalchemy.orm import Session
 
 from app.common.exceptions import BadRequestException, ForbiddenException, NotFoundException
 from app.features.bitacora.service import BitacoraService
+from app.features.colocaciones.service import ColocacionService
 from app.features.ia.services import afinidad as motor_afinidad
 from app.features.postulaciones.schema import ESTADOS_INFO, MODALIDADES_INFO, TIPOS_EMPLEO_INFO
 from app.features.seleccion.repository import SeleccionRepository
@@ -30,6 +32,8 @@ from app.models.empresa import CompanyMember
 from app.models.postulacion import Application
 from app.models.vacante import JobPosting, JobSelectionStage
 
+logger = logging.getLogger(__name__)
+
 
 class SeleccionService:
     def __init__(self, db: Session) -> None:
@@ -42,6 +46,14 @@ class SeleccionService:
         if not miembro or not miembro.company:
             raise ForbiddenException("El usuario no pertenece a una empresa registrada o activa.")
         return miembro
+
+    def _sugerir_colocacion(self, app: Application, user_id: uuid.UUID) -> None:
+        """Crea la colocación sugerida sin poner en riesgo el avance de la etapa si algo falla."""
+        try:
+            with self.db.begin_nested():
+                ColocacionService(self.db).sugerir_desde_postulacion(app, user_id)
+        except Exception:  # noqa: BLE001 - el Kanban sigue aunque la sugerencia no se pueda crear
+            logger.exception("No se pudo sugerir la colocación de la postulación %s.", app.id)
 
     def _inferir_status_por_etapa(self, etapa: JobSelectionStage) -> str:
         nombre_lower = etapa.name.lower()
@@ -352,6 +364,7 @@ class SeleccionService:
             raise BadRequestException("La etapa seleccionada no pertenece al proceso de esta vacante.")
 
         nuevo_status = self._inferir_status_por_etapa(etapa_destino)
+        estado_anterior = app.current_status
 
         # Ejecutar avance en base de datos
         self.repo.avanzar_etapa_postulacion(
@@ -361,6 +374,10 @@ class SeleccionService:
             user_id=user_id,
             observacion=data.observacion,
         )
+
+        # HU-29 (CP02): al pasar a Contratado la plataforma sugiere la colocación a la universidad.
+        if nuevo_status == "hired" and estado_anterior != "hired":
+            self._sugerir_colocacion(app, user_id)
 
         # Disparar notificación automática al egresado (Criterio de Aceptación)
         empresa_nombre = miembro.company.trade_name or miembro.company.legal_name
