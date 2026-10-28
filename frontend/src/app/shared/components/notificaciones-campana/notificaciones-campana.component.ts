@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, HostListener, OnInit, inject } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { Notificacion } from '../../../core/models/notificacion.models';
 import { NotificacionService } from '../../../core/services/notificacion.service';
@@ -18,9 +18,10 @@ export class NotificacionesCampanaComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly elementRef = inject(ElementRef);
 
-  isOpen = false;
-  isLoading = false;
-  notificaciones: Notificacion[] = [];
+  // Signals: la app no usa zone.js, así que un campo común no repinta al llegar la respuesta.
+  readonly isOpen = signal(false);
+  readonly isLoading = signal(false);
+  readonly notificaciones = signal<Notificacion[]>([]);
 
   readonly noLeidas = this.notifService.noLeidasCount;
 
@@ -31,21 +32,21 @@ export class NotificacionesCampanaComponent implements OnInit {
   }
 
   toggleDropdown(): void {
-    this.isOpen = !this.isOpen;
-    if (this.isOpen) {
+    this.isOpen.update((abierto) => !abierto);
+    if (this.isOpen()) {
       this.cargarNotificaciones();
     }
   }
 
   cargarNotificaciones(): void {
-    this.isLoading = true;
+    this.isLoading.set(true);
     this.notifService.listarNotificaciones(8, 0).subscribe({
       next: (res) => {
-        this.notificaciones = res.items;
-        this.isLoading = false;
+        this.notificaciones.set(res.items);
+        this.isLoading.set(false);
       },
       error: () => {
-        this.isLoading = false;
+        this.isLoading.set(false);
       },
     });
   }
@@ -54,13 +55,15 @@ export class NotificacionesCampanaComponent implements OnInit {
     if (!notif.leida) {
       this.notifService.marcarComoLeida(notif.id).subscribe({
         next: () => {
-          notif.leida = true;
-          notif.read_at = new Date().toISOString();
+          const ahora = new Date().toISOString();
+          this.notificaciones.update((lista) =>
+            lista.map((n) => (n.id === notif.id ? { ...n, leida: true, read_at: ahora } : n)),
+          );
         },
       });
     }
 
-    this.isOpen = false;
+    this.isOpen.set(false);
     if (notif.link) {
       this.router.navigateByUrl(notif.link);
     }
@@ -70,10 +73,8 @@ export class NotificacionesCampanaComponent implements OnInit {
     event.stopPropagation();
     this.notifService.marcarTodasComoLeidas().subscribe({
       next: () => {
-        this.notificaciones.forEach((n) => {
-          n.leida = true;
-          n.read_at = new Date().toISOString();
-        });
+        const ahora = new Date().toISOString();
+        this.notificaciones.update((lista) => lista.map((n) => ({ ...n, leida: true, read_at: n.read_at ?? ahora })));
       },
     });
   }
@@ -95,6 +96,8 @@ export class NotificacionesCampanaComponent implements OnInit {
         return '📅';
       case 'message_received':
         return '💬';
+      case 'encuesta_laboral':
+        return '📋';
       default:
         return '🔔';
     }
@@ -103,7 +106,7 @@ export class NotificacionesCampanaComponent implements OnInit {
   @HostListener('document:click', ['$event'])
   onClickOutside(event: Event): void {
     if (!this.elementRef.nativeElement.contains(event.target)) {
-      this.isOpen = false;
+      this.isOpen.set(false);
     }
   }
 }

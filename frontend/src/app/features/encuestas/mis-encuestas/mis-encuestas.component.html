@@ -31,7 +31,9 @@
         @for (e of pendientes(); track e.id) {
           <li class="tarjeta tarjeta--pendiente">
             <div class="tarjeta-datos">
-              <span class="periodo">Período {{ e.periodo }}</span>
+              @if (e.periodo) {
+                <span class="periodo">Período {{ e.periodo }}</span>
+              }
               <h3>{{ e.titulo }}</h3>
               @if (e.descripcion) {
                 <p class="descripcion">{{ e.descripcion }}</p>
@@ -52,7 +54,9 @@
         @for (e of respondidas(); track e.id) {
           <li class="tarjeta">
             <div class="tarjeta-datos">
-              <span class="periodo">Período {{ e.periodo }}</span>
+              @if (e.periodo) {
+                <span class="periodo">Período {{ e.periodo }}</span>
+              }
               <h3>{{ e.titulo }}</h3>
               <p class="respondida">Respondida el {{ e.respondida_el | date: 'd MMM y' }}</p>
             </div>

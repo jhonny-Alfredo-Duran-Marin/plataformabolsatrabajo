@@ -19,7 +19,9 @@
     </div>
   } @else if (formulario(); as f) {
     <header class="cabecera">
-      <span class="periodo">Período {{ f.periodo }}</span>
+      @if (f.periodo) {
+        <span class="periodo">Período {{ f.periodo }}</span>
+      }
       <h1>{{ f.titulo }}</h1>
       @if (f.descripcion) {
         <p class="descripcion">{{ f.descripcion }}</p>

@@ -38,7 +38,7 @@ export interface SegmentoTexto {
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
-    @if (auth.estaAutenticado() && !ia.chatbotAbierto()) {
+    @if (auth.estaAutenticado() && !ia.chatbotAbierto() && !ayuda.abierto()) {
       <button
         type="button"
         class="boton-chatbot"
@@ -711,7 +711,7 @@ export interface SegmentoTexto {
 export class ChatbotFlotanteComponent {
   readonly auth = inject(AuthService);
   readonly ia = inject(IaService);
-  private readonly ayuda = inject(AyudaService);
+  readonly ayuda = inject(AyudaService);
   private readonly router = inject(Router);
 
   @ViewChild('contenedorMensajes')

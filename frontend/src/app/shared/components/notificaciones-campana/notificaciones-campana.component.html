@@ -4,7 +4,7 @@
     type="button"
     class="btn-bell"
     (click)="toggleDropdown()"
-    [attr.aria-expanded]="isOpen"
+    [attr.aria-expanded]="isOpen()"
     title="Notificaciones"
   >
     <span class="bell-icon">🔔</span>
@@ -14,7 +14,7 @@
   </button>
 
   <!-- Menú Desplegable Flotante -->
-  @if (isOpen) {
+  @if (isOpen()) {
     <div class="notif-dropdown">
       <div class="dropdown-header">
         <div class="header-title">
@@ -31,23 +31,23 @@
       </div>
 
       <div class="dropdown-body">
-        @if (isLoading) {
+        @if (isLoading()) {
           <div class="loading-box">
             <span class="spinner-small"></span>
             <span>Cargando avisos...</span>
           </div>
         }
 
-        @if (!isLoading && notificaciones.length === 0) {
+        @if (!isLoading() && notificaciones().length === 0) {
           <div class="empty-notif">
             <span class="empty-icon">📭</span>
             <p>No tienes notificaciones pendientes</p>
           </div>
         }
 
-        @if (!isLoading && notificaciones.length > 0) {
+        @if (!isLoading() && notificaciones().length > 0) {
           <ul class="notif-list">
-            @for (notif of notificaciones; track notif.id) {
+            @for (notif of notificaciones(); track notif.id) {
               <li
                 class="notif-item"
                 [class.unread]="!notif.leida"
@@ -73,7 +73,7 @@
       </div>
 
       <div class="dropdown-footer">
-        <a routerLink="/notificaciones" (click)="isOpen = false" class="link-view-all">
+        <a routerLink="/notificaciones" (click)="isOpen.set(false)" class="link-view-all">
           Ver todas las notificaciones y preferencias →
         </a>
       </div>

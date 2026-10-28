@@ -41,7 +41,7 @@
             <div>
               <h2 class="titulo">{{ e.titulo }}</h2>
               <p class="meta">
-                Período <strong>{{ e.periodo }}</strong> · {{ alcanceLegible[e.alcance] }}@if (e.carrera) { : {{ e.carrera }} }
+                @if (e.periodo) { Período <strong>{{ e.periodo }}</strong> · }{{ alcanceLegible[e.alcance] }}@if (e.carrera) { : {{ e.carrera }} }
                 · enviada el {{ e.enviada_el | date: 'd MMM y' }}@if (e.vence_el) { · hasta el {{ e.vence_el | date: 'd MMM y' }} }
               </p>
             </div>
@@ -165,7 +165,8 @@
       <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="cierre-titulo" (click)="$event.stopPropagation()">
         <h2 id="cierre-titulo">Cerrar la encuesta</h2>
         <p class="modal-desc">
-          Período <strong>{{ e.periodo }}</strong>: los egresados que todavía no respondieron dejan de poder hacerlo.
+          @if (e.periodo) { Período <strong>{{ e.periodo }}</strong>: }los egresados que todavía no respondieron dejan de
+          poder hacerlo.
           Las respuestas que ya llegaron se conservan.
         </p>
         @if (errorCierre()) {
