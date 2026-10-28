@@ -52,6 +52,8 @@ class Settings(BaseSettings):
     # Interruptor del servicio de IA (recomendaciones y afinidad). En false la plataforma
     # sigue funcionando y solo avisa que las recomendaciones no están disponibles.
     ia_recomendaciones_activas: bool = True
+    # HU-28: interruptor del microservicio/asistente conversacional de orientación.
+    ia_chatbot_activo: bool = True
 
     # Tareas automáticas diarias (copia de seguridad, cierre de vacantes vencidas, boletín
     # de ofertas). Se ejecutan una vez por día desde la hora indicada (hora de Bolivia).

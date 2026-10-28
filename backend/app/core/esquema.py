@@ -9,6 +9,8 @@ import logging
 
 from sqlalchemy import Connection, text
 
+from app.core.tenancy import INSTITUCION_POR_DEFECTO_ID
+
 logger = logging.getLogger(__name__)
 
 # Índices de las consultas frecuentes (campanita, pipeline de la empresa, mis postulaciones,
@@ -81,6 +83,27 @@ _GRUPOS = (
     "ALTER TABLE user_group_permission ENABLE ROW LEVEL SECURITY",
 )
 
+_CHATBOT = (
+    """CREATE TABLE IF NOT EXISTS chatbot_session (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id uuid REFERENCES app_user(id) ON DELETE SET NULL,
+    started_at timestamptz NOT NULL DEFAULT now(),
+    ended_at timestamptz
+)""",
+    """CREATE TABLE IF NOT EXISTS chatbot_message (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id uuid NOT NULL REFERENCES chatbot_session(id) ON DELETE CASCADE,
+    message_role varchar(20) NOT NULL,
+    content text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT ck_chatbot_message_role CHECK (message_role IN ('user', 'assistant', 'system'))
+)""",
+    "CREATE INDEX IF NOT EXISTS ix_chatbot_session_user ON chatbot_session (user_id, started_at DESC)",
+    "CREATE INDEX IF NOT EXISTS ix_chatbot_message_session_created ON chatbot_message (session_id, created_at)",
+    "ALTER TABLE chatbot_session ENABLE ROW LEVEL SECURITY",
+    "ALTER TABLE chatbot_message ENABLE ROW LEVEL SECURITY",
+)
+
 
 def asegurar_esquema_requisitos(conn: Connection) -> list[str]:
     """Bitácora cifrada, copias automáticas, tareas programadas y grupos de usuarios.
@@ -130,7 +153,15 @@ def asegurar_esquema_requisitos(conn: Connection) -> list[str]:
             conn.execute(text(sentencia))
         cambios.append("user_group, user_group_member, user_group_permission")
 
+    # HU-28: Sesiones y mensajes del chatbot de orientación.
+    falta_chatbot = conn.execute(text("SELECT to_regclass('public.chatbot_message')")).scalar() is None
+    if existe_base and falta_chatbot:
+        for sentencia in _CHATBOT:
+            conn.execute(text(sentencia))
+        cambios.append("chatbot_session, chatbot_message")
+
     _asegurar_columnas_de_encuestas(conn, cambios)
+    _adaptar_colocaciones(conn, cambios)
     _asegurar_indices(conn, cambios)
     return cambios
 
@@ -156,6 +187,72 @@ def _asegurar_columnas_de_encuestas(conn: Connection, cambios: list[str]) -> Non
         if tiene is None:
             conn.execute(text(sentencia))
             cambios.append(f"{tabla}.{columna}")
+
+
+# La tabla placement ya existe en Supabase con el diseño V3: siempre atada a una postulación y con
+# estados active/completed/cancelled. La HU-29 también registra contrataciones hechas fuera de la
+# plataforma, por universidad, sugeridas o confirmadas y con baja lógica.
+_COLOCACIONES = (
+    "ALTER TABLE placement ADD COLUMN IF NOT EXISTS candidate_id uuid "
+    "REFERENCES candidate_profile(id) ON DELETE RESTRICT",
+    "ALTER TABLE placement ADD COLUMN IF NOT EXISTS institution_id uuid "
+    "REFERENCES educational_institution(id) ON DELETE RESTRICT",
+    "ALTER TABLE placement ADD COLUMN IF NOT EXISTS company_id uuid REFERENCES company(id) ON DELETE RESTRICT",
+    "ALTER TABLE placement ADD COLUMN IF NOT EXISTS company_name varchar(250)",
+    "ALTER TABLE placement ADD COLUMN IF NOT EXISTS source varchar(20) NOT NULL DEFAULT 'manual'",
+    "ALTER TABLE placement ADD COLUMN IF NOT EXISTS updated_reason text",
+    "ALTER TABLE placement ADD COLUMN IF NOT EXISTS deleted_at timestamptz",
+    "ALTER TABLE placement ADD COLUMN IF NOT EXISTS deleted_reason text",
+    "ALTER TABLE placement ADD COLUMN IF NOT EXISTS created_by uuid REFERENCES app_user(id) ON DELETE SET NULL",
+    "ALTER TABLE placement ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now()",
+    # Una colocación cargada a mano no tiene postulación ni una fecha de contratación aparte.
+    "ALTER TABLE placement ALTER COLUMN application_id DROP NOT NULL",
+    "ALTER TABLE placement ALTER COLUMN hire_date DROP NOT NULL",
+    # Las filas del diseño anterior vienen de una postulación: se completan con sus datos.
+    """UPDATE placement p
+       SET candidate_id = a.candidate_id, company_id = j.company_id,
+           start_date = COALESCE(p.start_date, p.hire_date), source = 'platform'
+       FROM application a JOIN job_posting j ON j.id = a.job_id
+       WHERE a.id = p.application_id AND p.candidate_id IS NULL""",
+    """UPDATE placement p
+       SET institution_id = COALESCE(c.institution_id,
+                                     (SELECT i.id FROM educational_institution i WHERE i.id = :por_defecto))
+       FROM candidate_profile c
+       WHERE c.id = p.candidate_id AND p.institution_id IS NULL""",
+    "ALTER TABLE placement DROP CONSTRAINT IF EXISTS ck_placement_status",
+    "UPDATE placement SET status = 'confirmed' WHERE status IN ('active', 'completed')",
+    "ALTER TABLE placement ALTER COLUMN status SET DEFAULT 'confirmed'",
+    "ALTER TABLE placement ADD CONSTRAINT ck_placement_status "
+    "CHECK (status IN ('suggested', 'confirmed', 'cancelled'))",
+    "ALTER TABLE placement ADD CONSTRAINT ck_placement_source CHECK (source IN ('platform', 'manual'))",
+    "ALTER TABLE placement ADD CONSTRAINT ck_placement_company "
+    "CHECK (company_id IS NOT NULL OR company_name IS NOT NULL) NOT VALID",
+    "ALTER TABLE placement ADD CONSTRAINT ck_placement_salary "
+    "CHECK (salary_amount IS NULL OR salary_amount >= 0) NOT VALID",
+    "CREATE INDEX IF NOT EXISTS ix_placement_candidate ON placement (candidate_id)",
+    "CREATE INDEX IF NOT EXISTS ix_placement_institution ON placement (institution_id)",
+)
+
+
+def _adaptar_colocaciones(conn: Connection, cambios: list[str]) -> None:
+    """Lleva placement del diseño V3 al de la HU-29. En una base nueva la crea create_all ya completa.
+
+    Va en su savepoint: si algo falla, el resto del esquema sigue y el módulo queda como estaba.
+    """
+    if conn.execute(text("SELECT to_regclass('public.placement')")).scalar() is None:
+        return
+    adaptada = conn.execute(
+        text("SELECT 1 FROM information_schema.columns WHERE table_name = 'placement' AND column_name = 'source'")
+    ).first()
+    if adaptada is not None:
+        return
+    try:
+        with conn.begin_nested():
+            for sentencia in _COLOCACIONES:
+                conn.execute(text(sentencia), {"por_defecto": INSTITUCION_POR_DEFECTO_ID})
+        cambios.append("placement (diseño de la HU-29)")
+    except Exception:  # noqa: BLE001 - sin la adaptación solo falla el módulo de colocaciones
+        logger.exception("No se pudo adaptar la tabla placement a la HU-29")
 
 
 def _asegurar_indices(conn: Connection, cambios: list[str]) -> None:

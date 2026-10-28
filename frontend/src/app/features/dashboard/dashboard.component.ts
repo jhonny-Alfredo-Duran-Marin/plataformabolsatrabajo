@@ -7,6 +7,7 @@ import { VacanteService } from '../../core/services/vacante.service';
 import { environment } from '../../../environments/environment';
 import { PostulacionService, PostulacionListResponse } from '../../core/services/postulacion.service';
 import { SeleccionService } from '../seleccion/seleccion.service';
+import { IaService } from '../ia/ia.service';
 
 import { NotificacionesCampanaComponent } from '../../shared/components/notificaciones-campana/notificaciones-campana.component';
 
@@ -27,6 +28,7 @@ interface InstitucionEmpresa {
 })
 export class DashboardComponent implements OnInit {
   auth = inject(AuthService);
+  readonly ia = inject(IaService);
   private readonly vacanteService = inject(VacanteService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly http = inject(HttpClient);

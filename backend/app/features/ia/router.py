@@ -1,4 +1,5 @@
-"""Módulos 5.1.11 a 5.1.14 — IA: recomendación de vacantes (HU-23), sugerencia de candidatos (HU-24) y asistente generativo (HU-26)."""
+"""Módulos 5.1.11 a 5.1.14 — IA: recomendación de vacantes (HU-23), sugerencia de candidatos (HU-24),
+asistente generativo (HU-26) y chatbot de orientación (HU-28)."""
 
 import uuid
 
@@ -7,6 +8,9 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.features.ia.schema import (
+    ChatbotConsultaRequest,
+    ChatbotRespuestaResponse,
+    ChatbotSesionResponse,
     GenerarResumenRequest,
     GenerarResumenResponse,
     RecomendacionesResponse,
@@ -16,6 +20,7 @@ from app.features.ia.schema import (
 from app.features.ia.services.afinidad import ia_activa
 from app.features.ia.services.asistente_generativo_service import AsistenteGenerativoService
 from app.features.ia.services.candidato_sugerencia_service import CandidatoSugerenciaService
+from app.features.ia.services.chatbot_service import ChatbotService, chatbot_activo
 from app.features.ia.services.recomendacion_service import RecomendacionService
 from app.security.dependencies import CurrentUser, get_current_user, require_roles
 
@@ -29,7 +34,11 @@ _solo_empresa_o_admin = require_roles("empresa", "platform_admin")
 
 @router.get("/_status")
 def estado_modulo() -> dict:
-    return {"modulo": "inteligencia_artificial", "recomendaciones": "activo" if ia_activa() else "apagado"}
+    return {
+        "modulo": "inteligencia_artificial",
+        "recomendaciones": "activo" if ia_activa() else "apagado",
+        "chatbot": "activo" if chatbot_activo() else "apagado",
+    }
 
 
 # --- HU-26: ASISTENTE GENERATIVO DE RESUMEN PROFESIONAL (EGRESADO) ---
@@ -78,3 +87,34 @@ def sugerir_candidatos_vacante(
         user_id=current_user.id_usuario,
         umbral_minimo=umbral_minimo,
     )
+
+
+# --- HU-28: CHATBOT DE ORIENTACIÓN ---
+@router.get("/chatbot/sesion", response_model=ChatbotSesionResponse)
+def abrir_sesion_chatbot(
+    session_id: uuid.UUID | None = Query(default=None, description="ID de sesión existente"),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """HU-28: Abre el chatbot para cualquier usuario autenticado y recupera su sesión activa (o informa 503 si no está disponible, CP04)."""
+    return ChatbotService(db).abrir_sesion(current_user, session_id=session_id)
+
+
+@router.post("/chatbot/nueva-sesion", response_model=ChatbotSesionResponse)
+def nueva_sesion_chatbot(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """HU-28: Cierra la conversación anterior y comienza una nueva sesión del chatbot."""
+    return ChatbotService(db).abrir_sesion(current_user, nueva=True)
+
+
+@router.post("/chatbot/mensajes", response_model=ChatbotRespuestaResponse)
+@router.post("/chatbot", response_model=ChatbotRespuestaResponse)
+def consultar_chatbot(
+    data: ChatbotConsultaRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """HU-28: Envía una consulta en lenguaje natural al chatbot y registra toda la interacción."""
+    return ChatbotService(db).consultar(current_user, data)

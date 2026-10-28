@@ -22,7 +22,7 @@ class Placement(Base):
         CheckConstraint("status IN ('suggested', 'confirmed', 'cancelled')", name="ck_placement_status"),
         CheckConstraint("source IN ('platform', 'manual')", name="ck_placement_source"),
         CheckConstraint("company_id IS NOT NULL OR company_name IS NOT NULL", name="ck_placement_company"),
-        CheckConstraint("salary IS NULL OR salary >= 0", name="ck_placement_salary"),
+        CheckConstraint("salary_amount IS NULL OR salary_amount >= 0", name="ck_placement_salary"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -42,7 +42,8 @@ class Placement(Base):
     company_name: Mapped[str | None] = mapped_column(String(250), nullable=True)
     position_title: Mapped[str] = mapped_column(String(200), nullable=False)
     start_date: Mapped[date] = mapped_column(Date, nullable=False)
-    salary: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    # La columna conserva el nombre del diseño V3 (la tabla ya existe en Supabase).
+    salary: Mapped[Decimal | None] = mapped_column("salary_amount", Numeric(12, 2), nullable=True)
     currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
     # suggested (la plataforma la propone), confirmed (la universidad la validó) o cancelled (eliminada).
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="confirmed")

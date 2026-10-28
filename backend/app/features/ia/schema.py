@@ -77,3 +77,52 @@ class SugerenciasCandidatosResponse(BaseModel):
     total_postulantes: int
     total_coincidentes: int
     items: list[CandidatoSugeridoDTO]
+
+
+# --- MODELOS PARA HU-28 (Chatbot de orientación) ---
+class ChatbotConsultaRequest(BaseModel):
+    mensaje: str = Field(..., min_length=1, max_length=1000, description="Pregunta en lenguaje natural del usuario")
+    session_id: uuid.UUID | None = Field(default=None, description="ID de la sesión activa del chatbot")
+
+
+class EnlaceUtilChatbotDTO(BaseModel):
+    texto: str
+    ruta: str
+
+
+class PostulacionResumenChatbotDTO(BaseModel):
+    application_id: uuid.UUID
+    job_id: uuid.UUID
+    job_title: str
+    company_name: str
+    current_status: str
+    status_label: str
+    etapa_actual: str | None = None
+    applied_at: datetime
+
+
+class ChatbotMensajeDTO(BaseModel):
+    id: uuid.UUID
+    role: str
+    content: str
+    created_at: datetime
+
+
+class ChatbotRespuestaResponse(BaseModel):
+    session_id: uuid.UUID
+    mensaje_usuario: ChatbotMensajeDTO
+    respuesta: ChatbotMensajeDTO
+    intencion: str
+    en_alcance: bool
+    postulaciones: list[PostulacionResumenChatbotDTO] = []
+    sugerencias: list[str] = []
+    enlaces_utiles: list[EnlaceUtilChatbotDTO] = []
+
+
+class ChatbotSesionResponse(BaseModel):
+    session_id: uuid.UUID
+    started_at: datetime
+    ended_at: datetime | None = None
+    saludo: str
+    sugerencias: list[str] = []
+    mensajes: list[ChatbotMensajeDTO] = []

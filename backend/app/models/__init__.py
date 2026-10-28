@@ -13,6 +13,7 @@ from app.models.candidato import (
     WorkExperience,
 )
 from app.models.catalogo import FieldOfStudy, JobCategory, Language, Skill
+from app.models.chatbot import ChatbotMessage, ChatbotSession
 from app.models.empresa import Company, CompanyMember, CompanyVerification, Sector
 from app.models.grupo import UserGroup, UserGroupMember, UserGroupPermission
 from app.models.institucion import (
@@ -77,6 +78,8 @@ __all__ = [
     "CandidateProfile",
     "CandidateSkill",
     "Certification",
+    "ChatbotMessage",
+    "ChatbotSession",
     "Company",
     "CompanyInstitution",
     "CompanyMember",
