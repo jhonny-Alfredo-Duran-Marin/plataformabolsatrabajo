@@ -42,6 +42,7 @@ from app.models.vacante import (
     SkillProficiencyLevel,
     WorkModality,
 )
+from app.models.colocacion import Placement
 from app.models.comunicacion import (
     Conversation,
     ConversationMember,
@@ -96,6 +97,7 @@ __all__ = [
     "Notification",
     "NotificationPreference",
     "PlanPayment",
+    "Placement",
     "Role",
     "SaasPlan",
     "ScheduledTaskRun",
