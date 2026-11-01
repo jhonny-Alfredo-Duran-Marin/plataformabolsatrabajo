@@ -23,6 +23,7 @@ from app.features.grupos import router as grupos
 from app.features.ia import router as ia
 from app.features.ia.router import ai_router
 from app.features.ia.search_router import router as search_router
+from app.features import indicadores
 from app.features.reportes.indicators_router import router as indicators_router, indicadores_reportes_router
 from app.features.instituciones import router as instituciones
 from app.features.moderacion import router as moderacion
@@ -113,6 +114,7 @@ routers = [
     ia.router,
     ai_router,
     search_router,
+    indicadores.router,
     indicators_router,
     indicadores_reportes_router,
 ]

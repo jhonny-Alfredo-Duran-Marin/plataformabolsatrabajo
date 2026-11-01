@@ -129,6 +129,12 @@ export const routes: Routes = [
           import('./features/admin/colocaciones/colocaciones-admin.component').then((m) => m.ColocacionesAdminComponent),
       },
       {
+        path: 'indicadores',
+        data: { permiso: 'menu.indicadores' },
+        loadComponent: () =>
+          import('./features/admin/indicadores/indicadores.component').then((m) => m.IndicadoresComponent),
+      },
+      {
         path: 'respaldos',
         canActivate: [superadminGuard],
         loadComponent: () => import('./features/admin/respaldos/respaldos.component').then((m) => m.RespaldosComponent),

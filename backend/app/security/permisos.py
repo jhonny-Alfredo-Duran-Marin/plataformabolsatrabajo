@@ -93,6 +93,8 @@ CATALOGO: tuple[Componente, ...] = (
        "Configurar una encuesta, enviarla a los egresados y cerrarla.", _SOLO_ADMIN, _SOLO_ADMIN),
     _c("menu.colocaciones", "menu", "Colocaciones", "Registro de colocaciones",
        "Contrataciones de egresados registradas y las que la plataforma sugiere.", _SOLO_ADMIN, _SOLO_ADMIN),
+    _c("menu.indicadores", "menu", "Tablero de indicadores", "Tablero de indicadores",
+       "Monitoreo de empleabilidad, tasa de colocación, pertinencia y demanda de habilidades."),
     _c("boton.colocaciones.registrar", "boton", "Colocaciones", "Registrar / editar / confirmar colocación",
        "Registrar una contratación, corregirla o confirmar la que sugiere la plataforma.", _SOLO_ADMIN, _SOLO_ADMIN),
     _c("boton.colocaciones.eliminar", "boton", "Colocaciones", "Eliminar colocación",
