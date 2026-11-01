@@ -19,6 +19,7 @@ interface ItemMenu {
     | 'denuncias'
     | 'encuestas'
     | 'colocaciones'
+    | 'indicadores'
     | 'reportes'
     | 'bitacora'
     | 'respaldos'
@@ -42,6 +43,7 @@ const ITEMS_MENU: ItemMenu[] = [
   { ruta: '/admin/denuncias', tipoIcono: 'denuncias', etiqueta: 'Denuncias de ofertas', exacta: false, permiso: 'menu.denuncias' },
   { ruta: '/admin/encuestas', tipoIcono: 'encuestas', etiqueta: 'Encuestas laborales', exacta: false, permiso: 'menu.encuestas' },
   { ruta: '/admin/colocaciones', tipoIcono: 'colocaciones', etiqueta: 'Colocaciones', exacta: false, permiso: 'menu.colocaciones' },
+  { ruta: '/admin/indicadores', tipoIcono: 'indicadores', etiqueta: 'Tablero de indicadores', exacta: false, permiso: 'menu.indicadores' },
   { ruta: '/admin/reportes', tipoIcono: 'reportes', etiqueta: 'Reportes personalizados', exacta: false, permiso: 'menu.reportes' },
   { ruta: '/admin/bitacora', tipoIcono: 'bitacora', etiqueta: 'Bitácora del sistema', exacta: false, permiso: 'menu.bitacora' },
   { ruta: '/admin/respaldos', tipoIcono: 'respaldos', etiqueta: 'Copias de seguridad', exacta: false, soloSuperadmin: true },
