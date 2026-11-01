@@ -250,17 +250,26 @@ class VacanteService:
 
         vacante_creada = self.repo.crear(vacante, skills)
 
+        detalles_auditoria = {"title": vacante_creada.title, "status": vacante_creada.status}
+        if payload.asistida_por_ia:
+            detalles_auditoria["asistida_por_ia"] = True
+            detalles_auditoria["marca"] = "Asistida por IA"
+            detalles_auditoria["indicacion_ia"] = payload.indicacion_ia
+
         self._registrar_auditoria(
             usuario_id=current_user.id_usuario,
             action="create_job_posting",
             entity_id=vacante_creada.id,
-            details={"title": vacante_creada.title, "status": vacante_creada.status},
+            details=detalles_auditoria,
             ip_address=ip_address,
         )
         self.db.commit()
         self._anotar_si_se_publico(vacante_creada, None)
 
-        return self._a_dto(vacante_creada)
+        dto = self._a_dto(vacante_creada)
+        if payload.asistida_por_ia:
+            dto.asistida_por_ia = True
+        return dto
 
     def listar_mis_vacantes(
         self,

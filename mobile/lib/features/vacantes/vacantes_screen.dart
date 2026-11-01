@@ -31,11 +31,44 @@ class _VacantesScreenState extends State<VacantesScreen> {
   late Future<List<Vacante>> _futuro = _buscar();
   late final Future<EstadisticasPublicas>? _estadisticas = _anonimo ? _servicio.estadisticasPublicas() : null;
   String _orden = 'fecha';
+  bool _modoSemantico = false;
+  List<String> _sugerenciasIa = [];
+  bool _iaDisponible = true;
 
   bool get _anonimo => widget.accessToken == null;
 
-  Future<List<Vacante>> _buscar() =>
-      _servicio.buscar(widget.accessToken, q: _busquedaCtrl.text, ordenarPor: _orden);
+  Future<List<Vacante>> _buscar() async {
+    final query = _busquedaCtrl.text.trim();
+    if (_modoSemantico && query.isNotEmpty) {
+      try {
+        final res = await _servicio.buscarSemantica(widget.accessToken, consulta: query);
+        if (mounted) {
+          setState(() {
+            _sugerenciasIa = res.sugerencias;
+            _iaDisponible = res.iaDisponible;
+          });
+        }
+        return res.items;
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _sugerenciasIa = [];
+            _iaDisponible = false;
+          });
+        }
+        // Fallback elegante a búsqueda tradicional
+        return _servicio.buscar(widget.accessToken, q: query, ordenarPor: _orden);
+      }
+    } else {
+      if (mounted && _sugerenciasIa.isNotEmpty) {
+        setState(() {
+          _sugerenciasIa = [];
+          _iaDisponible = true;
+        });
+      }
+      return _servicio.buscar(widget.accessToken, q: query, ordenarPor: _orden);
+    }
+  }
 
   @override
   void dispose() {
@@ -90,7 +123,7 @@ class _VacantesScreenState extends State<VacantesScreen> {
                 textInputAction: TextInputAction.search,
                 onSubmitted: (_) => _recargar(),
                 decoration: InputDecoration(
-                  hintText: 'Cargo, palabra clave o tecnología',
+                  hintText: _modoSemantico ? 'Describí en lenguaje natural (ej. programador remoto)' : 'Cargo, palabra clave o tecnología',
                   prefixIcon: const Icon(Icons.search_rounded),
                   suffixIcon: valor.text.isEmpty
                       ? null
@@ -106,14 +139,111 @@ class _VacantesScreenState extends State<VacantesScreen> {
               ),
             ),
           ),
-          if (!_anonimo)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _ChipOrden('Más recientes', seleccionado: _orden == 'fecha', onTap: () => _ordenarPor('fecha')),
-                  const SizedBox(width: 8),
-                  _ChipOrden('Mayor afinidad', seleccionado: _orden == 'afinidad', onTap: () => _ordenarPor('afinidad')),
+                  FilterChip(
+                    avatar: Icon(
+                      Icons.auto_awesome,
+                      size: 15,
+                      color: _modoSemantico ? Colors.white : const Color(0xFF1D4ED8),
+                    ),
+                    label: const Text('Búsqueda Semántica IA'),
+                    selected: _modoSemantico,
+                    onSelected: (val) {
+                      setState(() {
+                        _modoSemantico = val;
+                        _sugerenciasIa = [];
+                      });
+                      _recargar();
+                    },
+                    selectedColor: const Color(0xFF1D4ED8),
+                    backgroundColor: const Color(0xFFEFF6FF),
+                    side: const BorderSide(color: Color(0xFFBFDBFE)),
+                    showCheckmark: false,
+                    labelStyle: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12.5,
+                      fontWeight: _modoSemantico ? FontWeight.w600 : FontWeight.w500,
+                      color: _modoSemantico ? Colors.white : const Color(0xFF1D4ED8),
+                    ),
+                  ),
+                  if (!_modoSemantico && !_anonimo) ...[
+                    const SizedBox(width: 8),
+                    _ChipOrden('Más recientes', seleccionado: _orden == 'fecha', onTap: () => _ordenarPor('fecha')),
+                    const SizedBox(width: 8),
+                    _ChipOrden('Mayor afinidad', seleccionado: _orden == 'afinidad', onTap: () => _ordenarPor('afinidad')),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          if (_modoSemantico && !_iaDisponible)
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 4, 16, 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: Color(0xFFB45309)),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Servicio IA temporalmente inactivo. Usando coincidencia estructurada.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF92400E)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (_modoSemantico && _sugerenciasIa.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 4, 16, 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFBFDBFE)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.lightbulb_outline, size: 16, color: Color(0xFF1D4ED8)),
+                      SizedBox(width: 6),
+                      Text(
+                        'Sugerencias para ampliar tu búsqueda:',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF1E3A8A)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  for (final s in _sugerenciasIa)
+                    GestureDetector(
+                      onTap: () {
+                        _busquedaCtrl.text = s;
+                        _recargar();
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          '• $s',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF2563EB),
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),

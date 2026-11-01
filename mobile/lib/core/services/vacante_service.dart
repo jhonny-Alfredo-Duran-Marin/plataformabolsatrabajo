@@ -25,6 +25,46 @@ class VacanteService {
     return items.map((e) => Vacante.fromJson(e as Map<String, dynamic>)).toList();
   }
 
+  /// GET /search/semantic (HU-25): Búsqueda Semántica de Vacantes con IA.
+  /// Interpreta lenguaje natural, evalúa relevancia semántica (0-100) y explicabilidad.
+  Future<BusquedaSemanticaResultado> buscarSemantica(
+    String? accessToken, {
+    required String consulta,
+    String? ciudad,
+    String? modalidad,
+    int limit = 30,
+  }) async {
+    final params = <String, String>{
+      'q': consulta.trim(),
+      'limit': limit.toString(),
+    };
+    if (ciudad != null && ciudad.trim().isNotEmpty) params['ciudad'] = ciudad.trim();
+    if (modalidad != null && modalidad.trim().isNotEmpty) params['modalidad'] = modalidad.trim();
+
+    final respuesta = await obtener(
+      Uri.parse('/search/semantic').replace(queryParameters: params),
+      accessToken: accessToken,
+    );
+    if (respuesta.statusCode != 200) {
+      throw ApiException(
+        mensajeDeError(respuesta, 'No se pudo completar la búsqueda semántica.'),
+        codigo: respuesta.statusCode,
+      );
+    }
+    final data = decodificar(respuesta) as Map<String, dynamic>;
+    final itemsJson = (data['items'] as List<dynamic>? ?? []);
+    final items = itemsJson.map((e) => Vacante.fromJson(e as Map<String, dynamic>)).toList();
+    final sugerencias = (data['sugerencias'] as List<dynamic>? ?? []).map((e) => e.toString()).toList();
+    final iaDisponible = data['ia_disponible'] as bool? ?? true;
+
+    return BusquedaSemanticaResultado(
+      items: items,
+      total: data['total'] as int? ?? items.length,
+      sugerencias: sugerencias,
+      iaDisponible: iaDisponible,
+    );
+  }
+
   /// GET /vacantes/estadisticas-publicas (HU-34): no requiere sesión.
   Future<EstadisticasPublicas> estadisticasPublicas() async {
     final respuesta = await obtener(Uri.parse('${ApiConfig.baseUrl}/vacantes/estadisticas-publicas'));
@@ -48,4 +88,20 @@ class VacanteService {
         .map((e) => PreguntaFiltro.fromJson(e as Map<String, dynamic>))
         .toList();
   }
+}
+
+
+/// Resultado de búsqueda semántica con IA (HU-25).
+class BusquedaSemanticaResultado {
+  final List<Vacante> items;
+  final int total;
+  final List<String> sugerencias;
+  final bool iaDisponible;
+
+  const BusquedaSemanticaResultado({
+    required this.items,
+    required this.total,
+    this.sugerencias = const [],
+    this.iaDisponible = true,
+  });
 }

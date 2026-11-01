@@ -18,6 +18,74 @@
     </div>
   </header>
 
+  <!-- ══ Asistente Generativo de Vacantes con IA (HU-27) ═══════════════════════ -->
+  <div class="ia-banner" [class.ia-banner--activo]="asistidaPorIa">
+    <div class="ia-banner-content">
+      <div class="ia-badge">
+        <span class="sparkle">✨</span> Asistente IA (HU-27)
+      </div>
+      @if (!asistidaPorIa) {
+        <h3>¿Quieres redactar tu vacante más rápido?</h3>
+        <p>Ingresa una indicación breve (ej. "Desarrollador backend junior remoto en Python") y la IA generará un borrador completo y editable.</p>
+        <button type="button" class="btn-ia" (click)="abrirModalIa()">
+          ✨ Redactar con IA
+        </button>
+      } @else {
+        <div class="ia-activa-info">
+          <h3>Vacante redactada con asistencia de IA</h3>
+          <p class="ia-aviso">{{ advertenciaIa || 'Borrador generado por IA. Puedes editar libremente las secciones antes de enviar.' }}</p>
+          <div class="ia-acciones">
+            <button type="button" class="btn-ia-secundario" (click)="abrirModalIa()">
+              🔄 Regenerar otra variante
+            </button>
+            <span class="pill-ia-status">Asistida por IA</span>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Modal Asistente IA -->
+  @if (mostrarModalIa) {
+    <div class="modal-overlay" (click)="cerrarModalIa()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <header class="modal-header">
+          <h3>✨ Redacción Asistida de Vacante con IA</h3>
+          <button type="button" class="btn-cerrar" (click)="cerrarModalIa()">✕</button>
+        </header>
+        <div class="modal-body">
+          <p class="modal-desc">
+            Describe brevemente el puesto que necesitas cubrir, tecnologías y condiciones básicas:
+          </p>
+          <div class="form-group">
+            <label for="indicacionIa">Indicación breve para la IA <span class="required">*</span></label>
+            <textarea
+              id="indicacionIa"
+              [(ngModel)]="indicacionIa"
+              [ngModelOptions]="{standalone: true}"
+              rows="3"
+              placeholder="Ej. Desarrollador Python backend junior, modalidad remota, experiencia en FastAPI y PostgreSQL..."
+            ></textarea>
+          </div>
+          <div class="form-group">
+            <label for="varianteIa">Estilo / Tono de redacción</label>
+            <select id="varianteIa" [(ngModel)]="varianteIa" [ngModelOptions]="{standalone: true}">
+              <option [ngValue]="1">Variante 1: Corporativa y orientada a resultados</option>
+              <option [ngValue]="2">Variante 2: Ágil, innovadora y de alto impacto</option>
+              <option [ngValue]="3">Variante 3: Formativa, mentoría y desarrollo profesional</option>
+            </select>
+          </div>
+        </div>
+        <footer class="modal-footer">
+          <button type="button" class="btn-cancelar" (click)="cerrarModalIa()" [disabled]="generandoIa">Cancelar</button>
+          <button type="button" class="btn-generar" (click)="generarConIa()" [disabled]="generandoIa || !indicacionIa.trim()">
+            {{ generandoIa ? 'Generando borrador con IA…' : '✨ Generar borrador' }}
+          </button>
+        </footer>
+      </div>
+    </div>
+  }
+
   <!-- ══ Formulario Principal ════════════════════════════════════════════════ -->
   <form [formGroup]="form" class="vacante-form">
 

@@ -11,6 +11,7 @@ import { ETIQUETAS_ROL } from '../gestion-roles/gestion-roles.model';
 import { PANTALLAS_ADMIN } from '../../../core/guards/permiso.guard';
 import { PermisosService } from '../../../core/services/permisos.service';
 import { PermisoDirective } from '../../../shared/directives/permiso.directive';
+import { ReportesService } from '../../reportes/reportes.service';
 
 interface ResumenUniversidad {
   id: string;
@@ -216,6 +217,30 @@ export class Dashboard implements OnInit {
   private readonly bitacoraClave = inject(BitacoraClaveService);
   readonly auth = inject(AuthService);
   private readonly permisos = inject(PermisosService);
+
+  private readonly reportesService = inject(ReportesService);
+  readonly exportandoIndicadores = signal(false);
+
+  exportarIndicadores(formato: 'pdf' | 'xlsx'): void {
+    this.exportandoIndicadores.set(true);
+    this.reportesService.exportarIndicadores(formato).subscribe({
+      next: (resp) => {
+        this.exportandoIndicadores.set(false);
+        const blob = resp.body;
+        if (!blob) return;
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const ext = formato === 'pdf' ? 'pdf' : 'xlsx';
+        link.download = `indicadores_insercion_${new Date().toISOString().slice(0, 10)}.${ext}`;
+        link.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => {
+        this.exportandoIndicadores.set(false);
+      },
+    });
+  }
 
   readonly panel = signal<PanelAdmin | null>(null);
   readonly cargando = signal(true);

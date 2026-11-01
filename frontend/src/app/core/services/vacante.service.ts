@@ -47,6 +47,42 @@ export class VacanteService {
    * Publica o registra una nueva vacante en el sistema.
    * @param data Datos de la vacante y habilidades requeridas.
    */
+  /**
+   * HU-27: Redacción Asistida de Vacante con IA.
+   * Genera un borrador editable estructurado en descripción, requisitos y beneficios.
+   */
+  generarBorradorIa(indicacion: string, variante = 1, cargo?: string): Observable<any> {
+    return this.http.post<any>(`${environment.apiUrl}/ia/job-description`, {
+      indicacion,
+      variante,
+      cargo: cargo || null,
+    }, { headers: this._headers() }).pipe(
+      catchError((error: HttpErrorResponse) =>
+        this._handleError(error, 'El servicio de IA no está disponible en este momento. Puedes redactar manualmente.')
+      )
+    );
+  }
+
+  /**
+   * HU-25: Búsqueda Semántica de Vacantes.
+   * Interpreta consultas en lenguaje natural y clasifica por relevancia semántica.
+   */
+  busquedaSemantica(q: string, filtros?: any): Observable<any> {
+    let params = new HttpParams().set('q', q);
+    if (filtros) {
+      if (filtros.ciudad) params = params.set('ciudad', filtros.ciudad);
+      if (filtros.modalidad) params = params.set('modalidad', filtros.modalidad);
+      if (filtros.carrera_id) params = params.set('carrera_id', filtros.carrera_id);
+      if (filtros.salario_min) params = params.set('salario_min', filtros.salario_min);
+      if (filtros.seniority) params = params.set('seniority', filtros.seniority);
+    }
+    return this.http.get<any>(`${environment.apiUrl}/search/semantic`, { params }).pipe(
+      catchError((error: HttpErrorResponse) =>
+        this._handleError(error, 'Error en la búsqueda semántica')
+      )
+    );
+  }
+
   crearVacante(data: VacanteCreateRequest): Observable<Vacante> {
     return this.http.post<Vacante>(this.apiUrl, data, { headers: this._headers() }).pipe(
       catchError((error: HttpErrorResponse) => this._handleError(error, 'Error al crear la vacante'))

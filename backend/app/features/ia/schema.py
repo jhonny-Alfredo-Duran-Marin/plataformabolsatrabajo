@@ -126,3 +126,55 @@ class ChatbotSesionResponse(BaseModel):
     saludo: str
     sugerencias: list[str] = []
     mensajes: list[ChatbotMensajeDTO] = []
+
+
+# --- MODELOS PARA HU-27 (Redacción Asistida de Vacante con IA) ---
+class GenerarBorradorVacanteRequest(BaseModel):
+    indicacion: str = Field(..., min_length=3, max_length=1000, description="Indicación breve sobre la vacante (ej. 'Desarrollador backend junior, remoto, python')")
+    cargo: str | None = Field(default=None, description="Cargo sugerido u opcional")
+    modalidad: str | None = Field(default=None, description="Modalidad de trabajo deseada: remote, hybrid, onsite")
+    requisitos_clave: str | None = Field(default=None, description="Requisitos o habilidades clave")
+    variante: int = Field(default=1, ge=1, le=5, description="Variante para generar redacciones alternativas")
+
+
+class GenerarBorradorVacanteResponse(BaseModel):
+    titulo: str
+    descripcion: str
+    requisitos: list[str]
+    beneficios: list[str]
+    modalidad: str
+    seniority: str
+    generado_por_ia: bool = True
+    marca_auditoria: str = "Asistida por IA"
+    indicacion_original: str
+    fecha: datetime
+    advertencia: str = "Borrador generado por IA. La empresa debe revisar y editar las secciones antes de enviar a moderación."
+
+
+# --- MODELOS PARA HU-25 (Búsqueda Semántica de Vacantes) ---
+class VacanteSemanticaItemDTO(BaseModel):
+    id: uuid.UUID
+    title: str
+    company_name: str
+    city: str
+    work_modality: str
+    seniority_level: str
+    employment_type: str
+    salary_min: Any | None = None
+    salary_max: Any | None = None
+    currency: str | None = "BOB"
+    description: str
+    score_relevancia: int = Field(..., ge=0, le=100, description="Puntaje de relevancia semántica (0-100)")
+    razon_coincidencia: str = Field(..., description="Explicación del criterio de coincidencia semántica")
+    published_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class BusquedaSemanticaResponse(BaseModel):
+    total: int
+    consulta_original: str
+    intencion_interpretada: dict[str, Any] = {}
+    ia_disponible: bool = True
+    sugerencia: str | None = None
+    items: list[VacanteSemanticaItemDTO] = []

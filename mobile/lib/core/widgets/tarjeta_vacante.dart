@@ -15,6 +15,8 @@ class TarjetaVacante extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final afinidad = vacante.afinidadPorcentaje;
+    final scoreRelevancia = vacante.scoreRelevancia;
+    final razon = vacante.razonCoincidencia;
     final cierre = vacante.cierre;
 
     return Card(
@@ -54,7 +56,14 @@ class TarjetaVacante extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (afinidad != null) ...[
+                  if (scoreRelevancia != null) ...[
+                    const SizedBox(width: 8),
+                    Insignia(
+                      '$scoreRelevancia% Relevancia IA',
+                      colores: (color: const Color(0xFF1D4ED8), fondo: const Color(0xFFEFF6FF)),
+                      icono: Icons.auto_awesome_rounded,
+                    ),
+                  ] else if (afinidad != null) ...[
                     const SizedBox(width: 8),
                     Insignia('$afinidad%', colores: coloresDeAfinidad(afinidad), icono: Icons.bolt_rounded),
                   ],
@@ -72,6 +81,36 @@ class TarjetaVacante extends StatelessWidget {
                   if (vacante.nivelLegible.isNotEmpty) DatoConIcono(Icons.trending_up_rounded, vacante.nivelLegible),
                 ],
               ),
+              if (razon != null && razon.trim().isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFBBF7D0)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.auto_awesome, size: 14, color: Color(0xFF16A34A)),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          razon.trim(),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF15803D),
+                            fontWeight: FontWeight.w500,
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               const Divider(),
               const SizedBox(height: 10),

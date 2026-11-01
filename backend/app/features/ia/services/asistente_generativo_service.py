@@ -1,24 +1,32 @@
-"""Asistente generativo de redacción con Inteligencia Artificial (HU-26).
+"""Asistente generativo de redacción con Inteligencia Artificial (HU-26 y HU-27).
 
 Permite a los egresados generar borradores de resumen profesional adaptados a los
-datos académicos, laborales y de habilidades ya cargados en su perfil.
+datos académicos, laborales y de habilidades ya cargados en su perfil (HU-26).
+Permite a las empresas generar borradores de ofertas laborales a partir de una indicación breve (HU-27).
 """
 
+import re
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy.orm import Session
 
 from app.common.exceptions import ResourceNotFoundException, ServiceUnavailableException
 from app.core.config import get_settings
-from app.features.ia.schema import GenerarResumenResponse
+from app.features.ia.schema import GenerarBorradorVacanteResponse, GenerarResumenResponse
 from app.features.perfil.repository import EgresadoRepository
+from app.models.seguridad import AuditLog
 
 
 class AsistenteGenerativoService:
     def __init__(self, db: Session) -> None:
         self.db = db
         self.repo = EgresadoRepository(db)
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # HU-26: ASISTENTE GENERATIVO DE RESUMEN PROFESIONAL (EGRESADO)
+    # ──────────────────────────────────────────────────────────────────────────
 
     def generar_resumen_profesional(
         self,
@@ -191,3 +199,263 @@ class AsistenteGenerativoService:
                 f"Orientado/a a generar un impacto positivo en los objetivos estratégicos de la organización."
             )
             return f"{p1} {p2}"
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # HU-27: REDACCIÓN ASISTIDA DE VACANTE CON IA (EMPRESA)
+    # ──────────────────────────────────────────────────────────────────────────
+
+    def generar_borrador_vacante(
+        self,
+        indicacion: str,
+        cargo: str | None = None,
+        modalidad: str | None = None,
+        requisitos_clave: str | None = None,
+        variante: int = 1,
+        usuario_id: uuid.UUID | None = None,
+        ip_address: str | None = None,
+    ) -> GenerarBorradorVacanteResponse:
+        """Genera un borrador editable de oferta laboral estructurado en descripción, requisitos y beneficios.
+
+        Criterios de aceptación HU-27:
+        - CP01: La empresa ingresa indicación breve y recibe borrador con 3 secciones editables.
+        - CP02: Si la empresa no está conforme, genera variantes alternativas rotando redacción y tono.
+        - CP03: El borrador queda marcado con 'Asistida por IA' y se audita fecha, usuario e indicación.
+        - CP04: Si el servicio de IA no está disponible, lanza 503 con mensaje claro para redacción manual.
+        """
+        if not get_settings().ia_recomendaciones_activas:
+            raise ServiceUnavailableException(
+                "El microservicio de IA no está disponible en este momento. Puedes redactar la vacante manualmente."
+            )
+
+        texto_limpio = indicacion.strip()
+        texto_lower = texto_limpio.lower()
+
+        # 1. Determinar título / cargo del puesto
+        if cargo and cargo.strip():
+            titulo = cargo.strip()
+        else:
+            titulo = self._inferir_titulo_puesto(texto_limpio)
+
+        # 2. Determinar modalidad (remote, hybrid, onsite)
+        if modalidad and modalidad.strip() in ("remote", "hybrid", "onsite"):
+            mod_val = modalidad.strip()
+        else:
+            if "remot" in texto_lower or "desde casa" in texto_lower or "home office" in texto_lower:
+                mod_val = "remote"
+            elif "hibrid" in texto_lower or "híbrid" in texto_lower or "mixt" in texto_lower:
+                mod_val = "hybrid"
+            else:
+                mod_val = "onsite"
+
+        mod_texto = {
+            "remote": "100% Remoto",
+            "hybrid": "Híbrida (flexible)",
+            "onsite": "Presencial",
+        }.get(mod_val, "Presencial")
+
+        # 3. Determinar seniority
+        if any(w in texto_lower for w in ("senior", "sr", "líder", "lead", "avanzad")):
+            seniority = "senior"
+        elif any(w in texto_lower for w in ("semi-senior", "semi senior", "ssr", "mid", "intermedio")):
+            seniority = "mid"
+        elif any(w in texto_lower for w in ("pasante", "intern", "pasantía", "trainee")):
+            seniority = "internship"
+        else:
+            seniority = "junior"
+
+        # 4. Extraer o sintetizar habilidades y requisitos clave
+        habilidades_clave = self._extraer_habilidades_de_indicacion(texto_limpio, requisitos_clave)
+
+        # 5. Generar las 3 secciones según la variante solicitada (ciclo 1 a 3)
+        v_idx = ((variante - 1) % 3) + 1
+        descripcion, requisitos, beneficios = self._construir_secciones_vacante(
+            titulo=titulo,
+            modalidad_texto=mod_texto,
+            seniority=seniority,
+            habilidades=habilidades_clave,
+            variante=v_idx,
+        )
+
+        # 6. Registrar en bitácora de auditoría (CP03)
+        ahora = datetime.now(timezone.utc)
+        if usuario_id is not None:
+            log = AuditLog(
+                user_id=usuario_id,
+                action="generar_borrador_vacante_ia",
+                entity_type="ia",
+                result="success",
+                ip_address=ip_address,
+                details_json={
+                    "indicacion": texto_limpio[:200],
+                    "cargo": titulo,
+                    "modalidad": mod_val,
+                    "variante": variante,
+                    "marca": "Asistida por IA",
+                    "fecha": ahora.isoformat(),
+                },
+            )
+            self.db.add(log)
+            self.db.commit()
+
+        return GenerarBorradorVacanteResponse(
+            titulo=titulo,
+            descripcion=descripcion,
+            requisitos=requisitos,
+            beneficios=beneficios,
+            modalidad=mod_val,
+            seniority=seniority,
+            generado_por_ia=True,
+            marca_auditoria="Asistida por IA",
+            indicacion_original=texto_limpio,
+            fecha=ahora,
+            advertencia="Borrador generado por IA. La empresa debe revisar y editar las secciones antes de enviar a moderación.",
+        )
+
+    def _inferir_titulo_puesto(self, texto: str) -> str:
+        """Extrae un título profesional legible a partir de la indicación."""
+        patrones = [
+            (r"(desarrollador[a]?\s+(?:backend|frontend|fullstack|móvil|mobile|python|java|web|flutter))", True),
+            (r"(analista\s+de\s+(?:datos|sistemas|qa|calidad|negocio|marketing))", True),
+            (r"(ingeniero[a]?\s+de\s+(?:software|datos|redes|sistemas|seguridad))", True),
+            (r"(diseñador[a]?\s+(?:ui\/ux|gráfico|web))", True),
+            (r"(especialista\s+en\s+(?:marketing|ventas|rrhh|recursos humanos|finanzas))", True),
+            (r"(asistente\s+(?:administrativo|contable|técnico))", True),
+            (r"(administrador[a]?\s+de\s+(?:sistemas|base de datos|redes))", True),
+        ]
+        texto_limpio = texto.strip()
+        for patron, _ in patrones:
+            match = re.search(patron, texto_limpio, re.IGNORECASE)
+            if match:
+                return match.group(1).strip().title()
+
+        # Si no coincide con un rol común, limpiar palabras auxiliares
+        palabras = texto_limpio.split(",")
+        primer_fragmento = palabras[0].strip()
+        # Eliminar prefijos comunes tipo "buscamos", "necesito", "se busca"
+        primer_fragmento = re.sub(
+            r"^(?:busco|buscamos|se busca|necesito|necesitamos|contratar|requerimos)\s+(?:un|una|a)?\s*",
+            "",
+            primer_fragmento,
+            flags=re.IGNORECASE,
+        ).strip()
+        if primer_fragmento:
+            return primer_fragmento[:60].capitalize()
+        return "Profesional Calificado"
+
+    def _extraer_habilidades_de_indicacion(
+        self, indicacion: str, requisitos_clave: str | None
+    ) -> list[str]:
+        """Identifica tecnologías, herramientas o conceptos clave presentes en el texto."""
+        catalogo_conocido = [
+            "Python", "JavaScript", "TypeScript", "Node.js", "React", "Angular", "Vue", "Java", "C#",
+            ".NET", "SQL", "PostgreSQL", "MySQL", "MongoDB", "Git", "Docker", "AWS", "Azure", "GCP",
+            "FastAPI", "Django", "Spring Boot", "HTML", "CSS", "Tailwind", "Scrum", "Agile", "Linux",
+            "Power BI", "Excel", "Figma", "Redes", "Contabilidad", "Marketing Digital",
+        ]
+        encontradas: list[str] = []
+        texto_busqueda = f"{indicacion} {requisitos_clave or ''}".lower()
+
+        for hab in catalogo_conocido:
+            if hab.lower() in texto_busqueda and hab not in encontradas:
+                encontradas.append(hab)
+
+        # Si el usuario pasó requisitos clave explícitos, agregarlos
+        if requisitos_clave:
+            partes = [p.strip() for p in re.split(r"[,;\n•]+", requisitos_clave) if p.strip()]
+            for p in partes:
+                if p not in encontradas and len(p) > 1:
+                    encontradas.append(p)
+
+        if not encontradas:
+            encontradas = ["Resolución de problemas", "Trabajo en equipo", "Buenas prácticas de documentación"]
+
+        return encontradas
+
+    def _construir_secciones_vacante(
+        self,
+        titulo: str,
+        modalidad_texto: str,
+        seniority: str,
+        habilidades: list[str],
+        variante: int,
+    ) -> tuple[str, list[str], list[str]]:
+        """Construye las 3 secciones (descripción, requisitos, beneficios) con variaciones de tono."""
+        habs_str = ", ".join(habilidades[:5])
+        seniority_label = {
+            "junior": "Junior / Recién Graduado",
+            "mid": "Semi-Senior (Mid)",
+            "senior": "Senior",
+            "internship": "Pasantía / Formación",
+        }.get(seniority, "Junior")
+
+        if variante == 1:
+            # Variante 1: Corporativo, Estructurado y Orientado a Resultados
+            desc = (
+                f"Nos encontramos en la búsqueda de un/a {titulo} ({seniority_label}) para incorporarse a nuestro "
+                f"equipo de trabajo bajo la modalidad {modalidad_texto}. "
+                f"En este rol serás responsable de colaborar en el análisis, diseño y ejecución de tareas estratégicas, "
+                f"asegurando altos estándares de calidad, cumplimiento de metodologías y optimización continua de procesos "
+                f"en coordinación estrecha con las diversas áreas de la organización."
+            )
+            reqs = [
+                f"Formación universitaria concluida o en etapa final en carreras afines al cargo ({titulo}).",
+                f"Conocimientos sólidos o experiencia comprobable en: {habs_str}.",
+                "Capacidad demostrada para el pensamiento analítico y la resolución metódica de problemas.",
+                "Compromiso con las buenas prácticas, la documentación técnica y el trabajo colaborativo.",
+                "Proactividad, orientación a resultados y cumplimiento riguroso de objetivos establecidos.",
+            ]
+            bens = [
+                "Remuneración competitiva acorde al mercado y al nivel de competencias.",
+                f"Esquema de trabajo flexible en modalidad {modalidad_texto}.",
+                "Oportunidades concretas de crecimiento y línea de carrera en la empresa.",
+                "Acceso a programas de capacitación técnica y certificaciones profesionales.",
+                "Excelente ambiente de trabajo en una empresa con sólida trayectoria.",
+            ]
+
+        elif variante == 2:
+            # Variante 2: Ágil, Dinámico e Innovador (Enfoque Tech / Startup)
+            desc = (
+                f"¡Buscamos sumar talento apasionado por la innovación! Si te motiva resolver desafíos reales y construir soluciones "
+                f"de alto impacto, sumate como {titulo} ({seniority_label}) en nuestro equipo en modalidad {modalidad_texto}. "
+                f"Trabajarás en un entorno dinámico con metodologías ágiles, donde tus ideas tienen valor desde el primer día "
+                f"y colaborarás directamente en productos que transforman la experiencia de nuestros usuarios."
+            )
+            reqs = [
+                f"Experiencia práctica o proyectos académicos/personales aplicando herramientas clave como {habs_str}.",
+                "Mentalidad ágil, adaptabilidad y entusiasmo por explorar nuevas tecnologías y enfoques.",
+                "Habilidad para colaborar en equipos multidisciplinarios con comunicación clara y transparente.",
+                "Foco en la calidad del producto final y en la experiencia de usuario.",
+                "Curiosidad intelectual y motivación constante por la mejora continua.",
+            ]
+            bens = [
+                f"Modalidad {modalidad_texto} con horario flexible y enfoque en objetivos, no en horas fijas.",
+                "Cultura horizontal, abierta al feedback constructivo y a propuestas de innovación.",
+                "Presupuesto asignado para cursos, conferencias y recursos de aprendizaje.",
+                "Espacios de integración, celebraciones de equipo y actividades de bienestar.",
+                "Equipamiento de trabajo moderno para desempeñar tus funciones con comodidad.",
+            ]
+
+        else:
+            # Variante 3: Formativo, Desarrollo de Potencial y Mentoría
+            desc = (
+                f"¿Estás listo/a para dar un impulso decisivo a tu trayectoria profesional? Te invitamos a postular al puesto de "
+                f"{titulo} ({seniority_label}). Ofrecemos un espacio diseñado para potenciar tu desarrollo profesional mediante "
+                f"un plan estructurado de mentoría y acompañamiento personalizado en modalidad {modalidad_texto}. "
+                f"Valoramos tu talento, tu curiosidad y tus ganas de aprender para alcanzar tu máximo potencial con nosotros."
+            )
+            reqs = [
+                f"Egresado/a o estudiante en último año universitario con vocación e interés genuino en {titulo}.",
+                f"Base técnica sólida y nociones prácticas en: {habs_str}.",
+                "Alta disposición para recibir retroalimentación y aprender de profesionales de mayor experiencia.",
+                "Responsabilidad, puntualidad, ética laboral y espíritu de servicio.",
+                "Facilidad para comunicarse de forma asertiva y trabajar en equipo.",
+            ]
+            bens = [
+                "Programa integral de mentoría directa con líderes y especialistas del área.",
+                f"Modalidad {modalidad_texto} adaptable que facilita el balance con compromisos personales/académicos.",
+                "Evaluaciones periódicas de desempeño con retroalimentación para acelerar tu desarrollo.",
+                "Seguro de salud corporativo y beneficios complementarios de salud mental.",
+                "Posibilidad real de estabilidad y promoción interna basada en mérito y compromiso.",
+            ]
+
+        return desc, reqs, bens

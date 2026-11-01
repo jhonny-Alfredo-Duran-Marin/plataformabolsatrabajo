@@ -907,3 +907,86 @@
     }
   }
 }
+
+
+// ─── Búsqueda Semántica IA (HU-25) ──────────────────────────────────────────
+
+.btn-toggle-semantico {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+  }
+
+  &--activo {
+    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+    color: #ffffff;
+    border-color: #4338ca;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
+
+    &:hover {
+      background: #4338ca;
+    }
+  }
+}
+
+.semantica-alerta {
+  margin-top: 1rem;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  color: #1e40af;
+
+  &--mantenimiento {
+    background: #fffbeb;
+    border-color: #fde68a;
+    color: #92400e;
+  }
+
+  p {
+    margin: 0;
+    line-height: 1.4;
+  }
+}
+
+.semantic-badge {
+  background: #ecfdf5 !important;
+  color: #065f46 !important;
+  border: 1px solid #a7f3d0 !important;
+}
+
+.semantic-reason {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  background: #f8fafc;
+  border-left: 3px solid #6366f1;
+  border-radius: 0 6px 6px 0;
+  padding: 0.4rem 0.6rem;
+  margin: 0.5rem 0 0.75rem 0;
+  font-size: 0.8rem;
+  color: #475569;
+  line-height: 1.35;
+
+  .reason-icon {
+    font-size: 0.85rem;
+  }
+}

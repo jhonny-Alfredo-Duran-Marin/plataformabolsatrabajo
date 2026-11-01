@@ -55,6 +55,55 @@ export class CrearVacanteComponent implements OnInit {
   habilidadesCatalogo: CatalogoItem[] = [];
   habilidadesSeleccionadas: HabilidadSeleccionada[] = [];
 
+  // HU-27: Redacción Asistida con IA
+  mostrarModalIa = false;
+  indicacionIa = '';
+  varianteIa = 1;
+  generandoIa = false;
+  asistidaPorIa = false;
+  indicacionOriginalIa: string | null = null;
+  advertenciaIa: string | null = null;
+
+  abrirModalIa(): void {
+    this.mostrarModalIa = true;
+  }
+
+  cerrarModalIa(): void {
+    this.mostrarModalIa = false;
+  }
+
+  generarConIa(): void {
+    if (!this.indicacionIa || this.indicacionIa.trim().length < 3) {
+      this.toast.warning('Por favor ingresa una indicación breve para generar la vacante.');
+      return;
+    }
+
+    this.generandoIa = true;
+    this.vacanteService.generarBorradorIa(this.indicacionIa, this.varianteIa).subscribe({
+      next: (resp) => {
+        this.generandoIa = false;
+        this.mostrarModalIa = false;
+        this.asistidaPorIa = true;
+        this.indicacionOriginalIa = resp.indicacion_original;
+        this.advertenciaIa = resp.advertencia;
+
+        this.form.patchValue({
+          title: resp.titulo,
+          description: resp.descripcion,
+          requirements_json: (resp.requisitos || []).join('\n'),
+          responsibilities_json: (resp.beneficios || []).join('\n'),
+          work_modality: resp.modalidad,
+          seniority_level: resp.seniority,
+        });
+
+        this.toast.success('¡Borrador generado por IA! Puedes revisar y editar cualquier sección.');
+      },
+      error: () => {
+        this.generandoIa = false;
+      },
+    });
+  }
+
   // Controles auxiliares para agregar habilidades
   skillSeleccionadaId = '';
   skillNivelSeleccionado: SkillProficiencyLevel = 'intermediate';
@@ -236,6 +285,8 @@ export class CrearVacanteComponent implements OnInit {
       status: comoBorrador ? 'draft' : 'published',
       application_deadline: formVal.application_deadline ? new Date(formVal.application_deadline).toISOString() : null,
       skills: skillsDto,
+      asistida_por_ia: this.asistidaPorIa,
+      indicacion_ia: this.indicacionOriginalIa,
     };
 
     this.vacanteService.crearVacante(payload).subscribe({

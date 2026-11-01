@@ -78,7 +78,16 @@ class VacanteDetalleScreen extends StatelessWidget {
             const SizedBox(height: 12),
             DatoConIcono(Icons.location_on_outlined, vacante.city),
           ],
-          if (afinidad != null) ...[const SizedBox(height: 18), _Afinidad(afinidad)],
+          if (vacante.scoreRelevancia != null) ...[
+            const SizedBox(height: 18),
+            _RelevanciaSemantica(
+              score: vacante.scoreRelevancia!,
+              razon: vacante.razonCoincidencia,
+            ),
+          ] else if (afinidad != null) ...[
+            const SizedBox(height: 18),
+            _Afinidad(afinidad),
+          ],
           const SizedBox(height: 18),
           Card(
             child: Padding(
@@ -247,6 +256,56 @@ class _BarraAccion extends StatelessWidget {
                   ],
                 ),
         ),
+      ),
+    );
+  }
+}
+
+
+class _RelevanciaSemantica extends StatelessWidget {
+  final int score;
+  final String? razon;
+
+  const _RelevanciaSemantica({required this.score, this.razon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(AppTheme.radio),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome, color: Color(0xFF1D4ED8), size: 20),
+              const SizedBox(width: 8),
+              Text(
+                '$score% Relevancia Semántica (IA)',
+                style: const TextStyle(
+                  color: Color(0xFF1E3A8A),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                ),
+              ),
+            ],
+          ),
+          if (razon != null && razon!.trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              razon!.trim(),
+              style: const TextStyle(
+                color: Color(0xFF1E40AF),
+                fontSize: 13,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

@@ -75,6 +75,7 @@ export interface Vacante {
   created_at: string;
   updated_at: string;
   skills: JobSkillItemResponse[];
+  asistida_por_ia?: boolean;
 }
 
 export interface VacanteCreateRequest {
@@ -101,6 +102,8 @@ export interface VacanteCreateRequest {
   status?: JobStatus;
   application_deadline?: string | null;
   skills?: JobSkillItemRequest[];
+  asistida_por_ia?: boolean;
+  indicacion_ia?: string | null;
 }
 
 export interface VacanteUpdateRequest {
@@ -212,6 +215,8 @@ export interface VacanteResumen {
   skills: HabilidadEnVacante[];
   education_preferences: CarreraEnVacante[];
   afinidad_porcentaje?: number | null;
+  score_relevancia?: number;
+  razon_coincidencia?: string;
 }
 
 export interface VacanteDetalle extends VacanteResumen {

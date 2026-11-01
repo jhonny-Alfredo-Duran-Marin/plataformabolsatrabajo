@@ -17,6 +17,8 @@ class Vacante {
   final String? applicationDeadline;
   final List<VacanteSkill> skills;
   final int? afinidadPorcentaje;
+  final int? scoreRelevancia;
+  final String? razonCoincidencia;
 
   const Vacante({
     required this.id,
@@ -35,6 +37,8 @@ class Vacante {
     required this.applicationDeadline,
     required this.skills,
     this.afinidadPorcentaje,
+    this.scoreRelevancia,
+    this.razonCoincidencia,
   });
 
   /// Acepta tanto el shape de GET /vacantes (company_name plano) como el de
@@ -61,10 +65,15 @@ class Vacante {
       salaryVisible: json['salary_visible'] as bool? ?? false,
       positionsAvailable: json['positions_available'] as int? ?? 1,
       applicationDeadline: json['application_deadline'] as String?,
-      skills: (json['skills'] as List<dynamic>? ?? [])
-          .map((e) => VacanteSkill.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      skills: (json['skills'] as List<dynamic>? ?? []).map((e) {
+        if (e is String) {
+          return VacanteSkill(skillName: e, importance: 'required', minProficiency: 'intermediate');
+        }
+        return VacanteSkill.fromJson(e as Map<String, dynamic>);
+      }).toList(),
       afinidadPorcentaje: json['afinidad_porcentaje'] as int?,
+      scoreRelevancia: (json['score_relevancia'] as num?)?.toInt(),
+      razonCoincidencia: json['razon_coincidencia'] as String?,
     );
   }
 

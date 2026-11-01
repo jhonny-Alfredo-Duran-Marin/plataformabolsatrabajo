@@ -58,6 +58,17 @@ export class BusquedaVacantesComponent implements OnInit {
   filtroSalarioMax: number | null = null;
   filtroOrdenarPor: 'fecha' | 'afinidad' = 'fecha';
 
+  // HU-25: Búsqueda Semántica con IA
+  modoSemantico = false;
+  sugerenciaSemantica: string | null = null;
+  iaDisponible = true;
+
+  alternarModoSemantico(): void {
+    this.modoSemantico = !this.modoSemantico;
+    this.sugerenciaSemantica = null;
+    this.ejecutarBusqueda();
+  }
+
   // Modal de detalle de vacante
   vacanteSeleccionada: VacanteDetalle | null = null;
   readonly isLoadingDetalle = signal(false);
@@ -106,6 +117,59 @@ export class BusquedaVacantesComponent implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     this.cdr.markForCheck();
+
+    if (this.modoSemantico) {
+      this.vacanteService.busquedaSemantica(this.filtroTexto || 'vacantes vigentes', {
+        ciudad: this.filtroCiudad || undefined,
+        modalidad: this.filtroModalidad || undefined,
+        carrera_id: this.filtroCarreraId || undefined,
+        salario_min: this.filtroSalarioMin !== null ? this.filtroSalarioMin : undefined,
+        seniority: this.filtroSeniority || undefined,
+      }).subscribe({
+        next: (resp) => {
+          this.sugerenciaSemantica = resp.sugerencia;
+          this.iaDisponible = resp.ia_disponible;
+          const transformados: VacanteResumen[] = (resp.items || []).map((it: any) => ({
+            id: it.id,
+            company: {
+              id: it.id,
+              legal_name: it.company_name,
+              trade_name: it.company_name,
+              city: it.city,
+            },
+            title: it.title,
+            description: it.description,
+            seniority_level: it.seniority_level,
+            employment_type: it.employment_type,
+            work_modality: it.work_modality,
+            country_code: 'BO',
+            city: it.city,
+            salary_min: it.salary_min,
+            salary_max: it.salary_max,
+            currency: it.currency || 'BOB',
+            salary_visible: true,
+            positions_available: 1,
+            status: 'published',
+            published_at: it.published_at,
+            view_count: 0,
+            skills: [],
+            education_preferences: [],
+            score_relevancia: it.score_relevancia,
+            razon_coincidencia: it.razon_coincidencia,
+          }));
+          this.vacantes.set(transformados);
+          this.totalVacantes.set(resp.total);
+          this.isLoading.set(false);
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.isLoading.set(false);
+          this.errorMessage.set('Error en la búsqueda semántica. Intenta nuevamente.');
+          this.cdr.markForCheck();
+        },
+      });
+      return;
+    }
 
     const filtros: FiltrosBusquedaVacantes = {
       q: this.filtroTexto,

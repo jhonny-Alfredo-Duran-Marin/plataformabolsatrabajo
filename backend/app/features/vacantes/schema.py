@@ -75,6 +75,8 @@ class VacanteCreateRequest(BaseModel):
     )
     application_deadline: datetime | None = None
     skills: list[JobSkillItemRequest] = Field(default_factory=list)
+    asistida_por_ia: bool = Field(default=False, description="Marca si la vacante fue redactada con asistencia de IA (HU-27)")
+    indicacion_ia: str | None = Field(default=None, description="Indicación de origen usada para generar con IA")
 
     @model_validator(mode="after")
     def validar_coherencia(self) -> "VacanteCreateRequest":
@@ -270,6 +272,7 @@ class VacanteResponse(BaseModel):
     skills: list[JobSkillItemResponse] = Field(default_factory=list)
     # HU-22: publicada pero oculta a los egresados hasta que la universidad revise sus denuncias.
     oculta_por_denuncias: bool = False
+    asistida_por_ia: bool = False
 
     model_config = {"from_attributes": True}
 

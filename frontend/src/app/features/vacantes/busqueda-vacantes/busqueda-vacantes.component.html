@@ -55,17 +55,28 @@
 
       <div class="search-bar-container">
         <div class="search-input-wrapper">
-          <span class="search-icon">🔍</span>
+          <span class="search-icon">{{ modoSemantico ? '✨' : '🔍' }}</span>
           <input type="text" [(ngModel)]="filtroTexto" (keyup.enter)="ejecutarBusqueda()"
-            placeholder="Buscar por cargo, palabra clave o tecnología (ej. Desarrollador, Contador, Python)..." />
+            [placeholder]="modoSemantico ? 'Describe en lenguaje natural tu trabajo deseado (ej. quiero programar sin atención al público)...' : 'Buscar por cargo, palabra clave o tecnología (ej. Desarrollador, Contador, Python)...'" />
           @if (filtroTexto) {
           <button class="btn-clear-search" (click)="filtroTexto = ''; ejecutarBusqueda()" title="Borrar">✕</button>
           }
         </div>
+        <button type="button" class="btn-toggle-semantico" [class.btn-toggle-semantico--activo]="modoSemantico" (click)="alternarModoSemantico()" title="Activar/desactivar búsqueda semántica con IA (HU-25)">
+          ✨ {{ modoSemantico ? 'Búsqueda Semántica IA (Activa)' : 'Búsqueda Semántica IA' }}
+        </button>
         <button class="btn-search" (click)="ejecutarBusqueda()">
           Buscar Ofertas
         </button>
       </div>
+
+      <!-- Alerta o sugerencia de búsqueda semántica (CP02, CP04) -->
+      @if (modoSemantico && sugerenciaSemantica) {
+        <div class="semantica-alerta" [class.semantica-alerta--mantenimiento]="!iaDisponible">
+          <span class="semantica-alerta-icono">{{ iaDisponible ? '💡' : 'ℹ️' }}</span>
+          <p>{{ sugerenciaSemantica }}</p>
+        </div>
+      }
   </section>
 
   <!-- Contenedor Principal con Sidebar y Resultados -->
@@ -216,12 +227,23 @@
                 </div>
               </div>
 
-              @if (vacante.afinidad_porcentaje !== null && vacante.afinidad_porcentaje !== undefined) {
+              @if (vacante.score_relevancia !== null && vacante.score_relevancia !== undefined) {
+              <div class="affinity-badge semantic-badge" [class.high-affinity]="vacante.score_relevancia >= 70">
+                ✨ {{ vacante.score_relevancia }}% Relevancia IA
+              </div>
+              } @else if (vacante.afinidad_porcentaje !== null && vacante.afinidad_porcentaje !== undefined) {
               <div class="affinity-badge" [class.high-affinity]="vacante.afinidad_porcentaje >= 70">
                 ⚡ {{ vacante.afinidad_porcentaje }}% Afinidad
               </div>
               }
             </div>
+
+            @if (vacante.razon_coincidencia) {
+            <div class="semantic-reason">
+              <span class="reason-icon">💡</span>
+              <span class="reason-text">{{ vacante.razon_coincidencia }}</span>
+            </div>
+            }
 
             <!-- Badges de Atributos -->
             <div class="card-badges">

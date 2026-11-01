@@ -93,7 +93,21 @@
       </div>
     </section>
 
-    <!-- 2. Indicadores generales -->
+    <!-- 2. Indicadores generales y Exportación (HU-31, HU-32) -->
+    <div class="indicadores-cabecera-flex" *appPermiso="'etiqueta.dashboard.indicadores'">
+      <div>
+        <h2 class="subtitulo-indicadores">Indicadores de Inserción Laboral (HU-31)</h2>
+        <p class="desc-indicadores">Métricas consolidadas de colocación, pertinencia y demanda de competencias.</p>
+      </div>
+      <div class="acciones-exportar">
+        <button type="button" class="btn-exportar btn-exportar--pdf" (click)="exportarIndicadores('pdf')" [disabled]="exportandoIndicadores()" title="Exportar indicadores a PDF oficial (HU-32)">
+          📄 {{ exportandoIndicadores() ? 'Exportando…' : 'Exportar PDF' }}
+        </button>
+        <button type="button" class="btn-exportar btn-exportar--excel" (click)="exportarIndicadores('xlsx')" [disabled]="exportandoIndicadores()" title="Exportar indicadores a Excel (HU-32)">
+          📊 {{ exportandoIndicadores() ? 'Exportando…' : 'Exportar Excel' }}
+        </button>
+      </div>
+    </div>
     <section class="kpis" *appPermiso="'etiqueta.dashboard.indicadores'">
       @for (k of kpis(); track k.etiqueta) {
         <article class="kpi">

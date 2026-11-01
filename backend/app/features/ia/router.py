@@ -1,16 +1,21 @@
 """Módulos 5.1.11 a 5.1.14 — IA: recomendación de vacantes (HU-23), sugerencia de candidatos (HU-24),
-asistente generativo (HU-26) y chatbot de orientación (HU-28)."""
+búsqueda semántica (HU-25), asistente generativo (HU-26, HU-27) y chatbot de orientación (HU-28)."""
 
 import uuid
+from decimal import Decimal
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 
+from app.common.request_context import get_client_ip
 from app.core.database import get_db
 from app.features.ia.schema import (
+    BusquedaSemanticaResponse,
     ChatbotConsultaRequest,
     ChatbotRespuestaResponse,
     ChatbotSesionResponse,
+    GenerarBorradorVacanteRequest,
+    GenerarBorradorVacanteResponse,
     GenerarResumenRequest,
     GenerarResumenResponse,
     RecomendacionesResponse,
@@ -22,13 +27,15 @@ from app.features.ia.services.asistente_generativo_service import AsistenteGener
 from app.features.ia.services.candidato_sugerencia_service import CandidatoSugerenciaService
 from app.features.ia.services.chatbot_service import ChatbotService, chatbot_activo
 from app.features.ia.services.recomendacion_service import RecomendacionService
-from app.security.dependencies import CurrentUser, get_current_user, require_roles
+from app.features.ia.services.semantic_search_service import SemanticSearchService
+from app.security.dependencies import CurrentUser, get_current_user, get_current_user_optional, require_roles
 
 router = APIRouter(prefix="/ia", tags=["inteligencia-artificial"])
+ai_router = APIRouter(prefix="/ai", tags=["inteligencia-artificial"])
 
 _solo_egresado = require_roles("candidate")
 # Igual que el pipeline de selección: además del rol, el servicio exige ser
-# miembro de la empresa dueña de la vacante.
+# miembro de la empresa dueña de la vacante o admin de plataforma.
 _solo_empresa_o_admin = require_roles("empresa", "platform_admin")
 
 
@@ -39,6 +46,65 @@ def estado_modulo() -> dict:
         "recomendaciones": "activo" if ia_activa() else "apagado",
         "chatbot": "activo" if chatbot_activo() else "apagado",
     }
+
+
+# --- HU-27: REDACCIÓN ASISTIDA DE VACANTE CON IA (EMPRESA) ---
+@router.post("/job-description", response_model=GenerarBorradorVacanteResponse)
+@router.post("/borrador-vacante", response_model=GenerarBorradorVacanteResponse)
+def generar_borrador_vacante(
+    payload: GenerarBorradorVacanteRequest,
+    request: Request,
+    current_user: CurrentUser = Depends(_solo_empresa_o_admin),
+    db: Session = Depends(get_db),
+):
+    """HU-27: Genera un borrador estructurado de vacante (descripción, requisitos y beneficios) con IA."""
+    return AsistenteGenerativoService(db).generar_borrador_vacante(
+        indicacion=payload.indicacion,
+        cargo=payload.cargo,
+        modalidad=payload.modalidad,
+        requisitos_clave=payload.requisitos_clave,
+        variante=payload.variante,
+        usuario_id=current_user.id_usuario,
+        ip_address=get_client_ip(request),
+    )
+
+
+@ai_router.post("/job-description", response_model=GenerarBorradorVacanteResponse)
+def generar_borrador_vacante_ai(
+    payload: GenerarBorradorVacanteRequest,
+    request: Request,
+    current_user: CurrentUser = Depends(_solo_empresa_o_admin),
+    db: Session = Depends(get_db),
+):
+    """HU-27: Alias bajo /api/ai/job-description."""
+    return generar_borrador_vacante(payload, request, current_user, db)
+
+
+# --- HU-25: BÚSQUEDA SEMÁNTICA DE VACANTES ---
+@router.get("/busqueda-semantica", response_model=BusquedaSemanticaResponse)
+def buscar_semantico_ia(
+    q: str = Query(..., min_length=1, max_length=500, description="Consulta en lenguaje natural"),
+    ciudad: str | None = Query(default=None, max_length=100),
+    modalidad: str | None = Query(default=None),
+    carrera_id: uuid.UUID | None = Query(default=None),
+    salario_min: Decimal | None = Query(default=None, ge=0),
+    seniority: str | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    current_user: CurrentUser | None = Depends(get_current_user_optional),
+    db: Session = Depends(get_db),
+):
+    """HU-25: Búsqueda Semántica de Vacantes (alias bajo /ia)."""
+    return SemanticSearchService(db).buscar(
+        q=q,
+        ciudad=ciudad,
+        modalidad=modalidad,
+        carrera_id=carrera_id,
+        salario_min=salario_min,
+        seniority=seniority,
+        page=page,
+        page_size=page_size,
+    )
 
 
 # --- HU-26: ASISTENTE GENERATIVO DE RESUMEN PROFESIONAL (EGRESADO) ---

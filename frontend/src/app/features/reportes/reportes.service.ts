@@ -47,4 +47,24 @@ export class ReportesService {
       mensaje,
     });
   }
+
+  /** HU-31: Tablero consolidado de indicadores de inserción laboral. */
+  indicadores(carreraId?: string, periodo?: string): Observable<any> {
+    let params = new HttpParams();
+    if (carreraId) params = params.set('carrera_id', carreraId);
+    if (periodo) params = params.set('periodo', periodo);
+    return this.http.get<any>(`${environment.apiUrl}/indicators`, { params });
+  }
+
+  /** HU-32: Exportación del tablero de indicadores a PDF o Excel. */
+  exportarIndicadores(formato: 'pdf' | 'xlsx', carreraId?: string, periodo?: string): Observable<HttpResponse<Blob>> {
+    let params = new HttpParams().set('format', formato);
+    if (carreraId) params = params.set('carrera_id', carreraId);
+    if (periodo) params = params.set('periodo', periodo);
+    return this.http.get(`${environment.apiUrl}/indicators/export`, {
+      params,
+      observe: 'response',
+      responseType: 'blob',
+    });
+  }
 }

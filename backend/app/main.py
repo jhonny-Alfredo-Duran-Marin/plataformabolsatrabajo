@@ -21,6 +21,9 @@ from app.features.encuestas import router as encuestas
 from app.features.entrevistas import router as entrevistas
 from app.features.grupos import router as grupos
 from app.features.ia import router as ia
+from app.features.ia.router import ai_router
+from app.features.ia.search_router import router as search_router
+from app.features.reportes.indicators_router import router as indicators_router, indicadores_reportes_router
 from app.features.instituciones import router as instituciones
 from app.features.moderacion import router as moderacion
 from app.features.notificaciones import router as notificaciones
@@ -108,6 +111,10 @@ routers = [
     respaldos.router,
     tareas.router,
     ia.router,
+    ai_router,
+    search_router,
+    indicators_router,
+    indicadores_reportes_router,
 ]
 
 for router in routers:

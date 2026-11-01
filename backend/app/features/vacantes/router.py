@@ -384,3 +384,33 @@ def eliminar_pregunta_filtro(
     current_user: CurrentUser = Depends(require_roles("empresa", "platform_admin")),
 ):
     return VacanteService(db).eliminar_pregunta_filtro(vacante_id, pregunta_id, current_user)
+
+
+# ─── Búsqueda Semántica de Vacantes (HU-25 Alias) ───────────────────────────
+from app.features.ia.schema import BusquedaSemanticaResponse
+from app.features.ia.services.semantic_search_service import SemanticSearchService
+
+
+@router.get("/busqueda-semantica", response_model=BusquedaSemanticaResponse, summary="Búsqueda Semántica de Vacantes (HU-25)")
+def busqueda_semantica_vacantes(
+    q: str = Query(..., min_length=1, max_length=500, description="Consulta en lenguaje natural"),
+    ciudad: str | None = Query(default=None, max_length=100),
+    modalidad: str | None = Query(default=None),
+    carrera_id: uuid.UUID | None = Query(default=None),
+    salario_min: Decimal | None = Query(default=None, ge=0),
+    seniority: str | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    """HU-25: Búsqueda Semántica de Vacantes (alias /vacantes/busqueda-semantica)."""
+    return SemanticSearchService(db).buscar(
+        q=q,
+        ciudad=ciudad,
+        modalidad=modalidad,
+        carrera_id=carrera_id,
+        salario_min=salario_min,
+        seniority=seniority,
+        page=page,
+        page_size=page_size,
+    )
