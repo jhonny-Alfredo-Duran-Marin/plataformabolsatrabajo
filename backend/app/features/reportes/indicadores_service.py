@@ -151,6 +151,9 @@ class IndicadoresService:
         )
         if egresados_ids:
             q_meses = q_meses.where(SurveyResponse.candidate_id.in_(egresados_ids))
+        elif institucion_id or carrera_id:
+            # Sin egresados en el filtro no se promedian respuestas de otras universidades.
+            q_meses = q_meses.where(SurveyResponse.id == uuid.UUID(int=0))
 
         valores_meses = [float(v) for v in self.db.scalars(q_meses).all() if v is not None and v >= 0]
         if valores_meses:
@@ -174,6 +177,8 @@ class IndicadoresService:
         )
         if egresados_ids:
             q_pertinencia = q_pertinencia.where(SurveyResponse.candidate_id.in_(egresados_ids))
+        elif institucion_id or carrera_id:
+            q_pertinencia = q_pertinencia.where(SurveyResponse.id == uuid.UUID(int=0))
 
         valores_pertinencia = [float(v) for v in self.db.scalars(q_pertinencia).all() if v is not None and v > 0]
         if valores_pertinencia:

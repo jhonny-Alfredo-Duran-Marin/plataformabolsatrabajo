@@ -1,4 +1,7 @@
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { RegistroEgresado } from './registro-egresado';
 
 describe('RegistroEgresado', () => {
@@ -8,6 +11,7 @@ describe('RegistroEgresado', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [RegistroEgresado],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
 
     fixture = TestBed.createComponent(RegistroEgresado);

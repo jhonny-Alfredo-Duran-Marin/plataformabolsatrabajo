@@ -65,7 +65,7 @@ def empresa_fixture(db_session: Session):
     member = CompanyMember(
         company_id=company.id,
         user_id=user.id,
-        role="admin",
+        member_type="owner",
         is_active=True,
     )
     db_session.add(member)

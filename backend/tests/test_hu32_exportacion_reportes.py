@@ -46,8 +46,7 @@ def admin_universidad_fixture(db_session: Session):
 
     inst = Institution(
         name=f"Universidad Tecnológica {uuid.uuid4().hex[:4]}",
-        code=f"UT-{uuid.uuid4().hex[:4]}",
-        is_active=True,
+        is_tenant=True,
     )
     db_session.add(inst)
     db_session.flush()
@@ -190,8 +189,7 @@ def test_cp04_manejo_muestra_insuficiente(db_session: Session):
     # Crear una institución vacía (0 egresados)
     inst_vacia = Institution(
         name=f"Universidad Nueva {uuid.uuid4().hex[:4]}",
-        code=f"UN-{uuid.uuid4().hex[:4]}",
-        is_active=True,
+        is_tenant=True,
     )
     db_session.add(inst_vacia)
     db_session.flush()

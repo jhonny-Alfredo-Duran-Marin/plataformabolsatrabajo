@@ -45,11 +45,13 @@ def vacantes_semanticas_fixture(db_session: Session):
     db_session.add(empresa)
     db_session.flush()
 
-    # 1. Vacante de programación pura sin atención a clientes
+    # 1. Vacante de programación pura sin atención a clientes. La base es compartida con otros
+    # tests (hay otras vacantes técnicas publicadas): describe exactamente lo que pide la consulta
+    # del CP01 para que sea la de mayor afinidad.
     v_backend = JobPosting(
         company_id=empresa.id,
         title="Desarrollador Backend Python y Microservicios",
-        description="Puesto enfocado en programación, desarrollo de APIs REST, optimización de algoritmos y bases de datos. No requiere interactuar ni atender clientes externos.",
+        description="Trabajarás programando APIs REST, optimización de algoritmos y bases de datos, sin atención al público ni a clientes externos.",
         seniority_level="junior",
         employment_type="permanent",
         work_modality="remote",
