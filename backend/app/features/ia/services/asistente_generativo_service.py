@@ -14,9 +14,9 @@ from sqlalchemy.orm import Session
 
 from app.common.exceptions import ResourceNotFoundException, ServiceUnavailableException
 from app.core.config import get_settings
+from app.features.bitacora.service import BitacoraService
 from app.features.ia.schema import GenerarBorradorVacanteResponse, GenerarResumenResponse
 from app.features.perfil.repository import EgresadoRepository
-from app.models.seguridad import AuditLog
 
 
 class AsistenteGenerativoService:
@@ -283,25 +283,19 @@ class AsistenteGenerativoService:
             variante=v_idx,
         )
 
-        # 6. Registrar en bitácora de auditoría (CP03)
+        # 6. Registrar en bitácora de auditoría (CP03); con la clave configurada la entrada se guarda cifrada.
         ahora = datetime.now(timezone.utc)
         if usuario_id is not None:
-            log = AuditLog(
-                user_id=usuario_id,
-                action="generar_borrador_vacante_ia",
-                entity_type="ia",
-                result="success",
-                ip_address=ip_address,
-                details_json={
-                    "indicacion": texto_limpio[:200],
-                    "cargo": titulo,
-                    "modalidad": mod_val,
-                    "variante": variante,
-                    "marca": "Asistida por IA",
-                    "fecha": ahora.isoformat(),
-                },
+            BitacoraService(self.db).registrar(
+                modulo="ia",
+                accion="generar_borrador_vacante_ia",
+                usuario_id=usuario_id,
+                ip=ip_address,
+                detalles=(
+                    f"marca=Asistida por IA; cargo={titulo}; modalidad={mod_val}; variante={variante}; "
+                    f"indicacion={texto_limpio[:200]}"
+                ),
             )
-            self.db.add(log)
             self.db.commit()
 
         return GenerarBorradorVacanteResponse(

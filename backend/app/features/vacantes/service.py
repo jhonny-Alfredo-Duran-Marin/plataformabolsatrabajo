@@ -12,6 +12,7 @@ from app.common.exceptions import (
     ForbiddenException,
     ResourceNotFoundException,
 )
+from app.features.bitacora.service import BitacoraService
 from app.features.ia.services import afinidad as motor_afinidad
 from app.features.moderacion import reglas as reglas_denuncias
 from app.features.vacantes.repository import VacanteRepository
@@ -37,7 +38,6 @@ from app.features.vacantes.schema import (
 from app.models.candidato import CandidateProfile
 from app.models.empresa import Company, CompanyMember
 from app.models.institucion import CompanyInstitution
-from app.models.seguridad import AuditLog
 from app.models.vacante import JobPosting, JobSkill, JobStatus, ScreeningOption, ScreeningQuestion
 from app.security.dependencies import CurrentUser
 from app.security.tenant import alcance_staff, empresa_habilitada_en, institucion_de_candidato
@@ -117,17 +117,16 @@ class VacanteService:
         details: dict | None = None,
         ip_address: str | None = None,
     ) -> None:
-        """Registra eventos relevantes en la bitácora de auditoría."""
-        log = AuditLog(
-            user_id=usuario_id,
-            action=action,
-            entity_type="vacantes",
-            entity_id=entity_id,
-            result="success",
-            ip_address=ip_address,
-            details_json=details,
+        """Registra eventos relevantes en la bitácora de auditoría (cifrada cuando hay clave configurada)."""
+        partes = [f"vacante_id={entity_id}"] if entity_id else []
+        partes += [f"{clave}={valor}" for clave, valor in (details or {}).items()]
+        BitacoraService(self.db).registrar(
+            modulo="vacantes",
+            accion=action,
+            usuario_id=usuario_id,
+            ip=ip_address,
+            detalles="; ".join(partes) or None,
         )
-        self.db.add(log)
 
     def _a_dto(self, vacante: JobPosting) -> VacanteResponse:
         """Mapea una entidad ORM JobPosting al esquema de respuesta VacanteResponse."""

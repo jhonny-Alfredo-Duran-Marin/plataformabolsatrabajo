@@ -8,6 +8,8 @@ Cubre los 4 casos de prueba especificados en los criterios de aceptación:
 """
 
 import uuid
+from datetime import datetime, timedelta, timezone
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
@@ -18,6 +20,7 @@ from app.main import app
 from app.models.empresa import Company, CompanyMember
 from app.models.seguridad import AuditLog
 from app.models.usuario import AppUser, Role, UserRole
+from app.security import cifrado_bitacora as cifrado
 from app.security.jwt_provider import create_access_token
 
 client = TestClient(app)
@@ -173,20 +176,58 @@ def test_cp03_creacion_vacante_asistida_ia_auditoria(empresa_fixture, db_session
     assert vacante_creada["asistida_por_ia"] is True
 
     # 2. Verificar en la bitácora de auditoría (audit_log)
-    vacante_id = uuid.UUID(vacante_creada["id"])
     log = (
         db_session.query(AuditLog)
         .filter(
-            AuditLog.entity_id == vacante_id,
             AuditLog.action == "create_job_posting",
+            AuditLog.details_json["detalle"].astext.contains(f"vacante_id={vacante_creada['id']}"),
         )
         .first()
     )
     assert log is not None
-    assert log.details_json is not None
-    assert log.details_json.get("asistida_por_ia") is True
-    assert log.details_json.get("marca") == "Asistida por IA"
-    assert log.details_json.get("indicacion_ia") == "Desarrollador Python junior remoto para startup"
+    assert log.user_id == user_id
+    detalle = log.details_json["detalle"]
+    assert "asistida_por_ia=True" in detalle
+    assert "marca=Asistida por IA" in detalle
+    assert "indicacion_ia=Desarrollador Python junior remoto para startup" in detalle
+
+
+def test_la_vacante_asistida_queda_cifrada_en_la_bitacora(empresa_fixture, db_session: Session, monkeypatch):
+    """Con la clave de desarrollador configurada (como en producción) la entrada no queda en texto plano."""
+    token, user_id, _ = empresa_fixture
+    clave = cifrado.generar_clave_desarrollador()
+    publica = cifrado.clave_publica_de(clave)
+    monkeypatch.setattr(get_settings(), "bitacora_clave_publica", publica)
+
+    r = client.post(
+        "/api/vacantes",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "title": "Analista de Datos Junior IA",
+            "description": "Borrador redactado con IA para análisis de datos con SQL y Power BI.",
+            "seniority_level": "junior",
+            "employment_type": "permanent",
+            "work_modality": "hybrid",
+            "city": "Santa Cruz",
+            "status": "draft",
+            "asistida_por_ia": True,
+            "indicacion_ia": "Analista de datos junior híbrido",
+        },
+    )
+    assert r.status_code == 201, r.text
+
+    assert db_session.query(AuditLog).filter(AuditLog.user_id == user_id).count() == 0
+    lector = cifrado.Lector(clave, publica)
+    desde = datetime.now(timezone.utc) - timedelta(days=1)
+    entradas = []
+    for log in db_session.query(AuditLog).filter(AuditLog.payload_cifrado.is_not(None), AuditLog.created_at >= desde):
+        try:
+            entradas.append(lector.descifrar(log.payload_cifrado))
+        except Exception:
+            continue  # cifrada con otra clave
+    assert any(
+        e["a"] == "create_job_posting" and e["u"] == str(user_id) and "marca=Asistida por IA" in e["d"] for e in entradas
+    )
 
 
 def test_cp04_servicio_ia_no_disponible(empresa_fixture, monkeypatch):

@@ -7,13 +7,14 @@ Exporta el tablero completo a PDF y Excel (.xlsx) con auditoría y control de si
 
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Literal
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
+from app.features.bitacora.service import BitacoraService
 from app.features.reportes.indicadores_schema import (
     HabilidadDemandaDTO,
     TableroIndicadoresResponse,
@@ -23,7 +24,7 @@ from app.models.catalogo import FieldOfStudy, Skill
 from app.models.colocacion import Placement
 from app.models.encuesta import Survey, SurveyAnswer, SurveyQuestion, SurveyResponse
 from app.models.institucion import Institution
-from app.models.seguridad import AuditLog
+from app.models.postulacion import Application
 from app.models.usuario import AppUser
 from app.models.vacante import JobPosting, JobSkill, JobStatus
 from app.shared.exportacion import Tabla, a_excel, a_pdf, hora_bolivia
@@ -158,11 +159,9 @@ class IndicadoresService:
         valores_meses = [float(v) for v in self.db.scalars(q_meses).all() if v is not None and v >= 0]
         if valores_meses:
             tiempo_promedio = sum(valores_meses) / len(valores_meses)
-        elif colocaciones:
-            # Estimación razonable por colocaciones si no hay respuestas de encuesta explícitas
-            tiempo_promedio = 4.5
         else:
-            tiempo_promedio = 0.0
+            # Sin respuestas de encuesta: se mide desde el egreso hasta el primer empleo registrado.
+            tiempo_promedio = self._meses_desde_egreso(colocaciones)
 
         # 7. Cálculo de Pertinencia Laboral con la Carrera (%)
         # Pregunta 'relacion_carrera' en escala 1-5
@@ -185,10 +184,9 @@ class IndicadoresService:
             # Escala 1 a 5 convertida a 0 a 100%
             promedio_escala = sum(valores_pertinencia) / len(valores_pertinencia)
             pertinencia_carrera = (promedio_escala / 5.0) * 100.0
-        elif colocaciones:
-            pertinencia_carrera = 80.0
         else:
-            pertinencia_carrera = 0.0
+            # Solo la encuesta mide la relación con la carrera: sin respuestas no hay dato.
+            pertinencia_carrera = None
 
         # 8. Demanda de Habilidades Laborales
         # Se analizan las habilidades requeridas en vacantes activas y colocaciones
@@ -210,21 +208,23 @@ class IndicadoresService:
                 HabilidadDemandaDTO(habilidad=nombre, total_menciones=count, porcentaje=pct)
             )
 
-        # Si aún no hay habilidades en vacantes reales, proveer catálogo base informativo
-        if not top_habilidades:
-            top_habilidades = [
-                HabilidadDemandaDTO(habilidad="Resolución de problemas", total_menciones=12, porcentaje=25.0),
-                HabilidadDemandaDTO(habilidad="Trabajo en equipo", total_menciones=10, porcentaje=20.8),
-                HabilidadDemandaDTO(habilidad="SQL", total_menciones=9, porcentaje=18.7),
-                HabilidadDemandaDTO(habilidad="Python", total_menciones=9, porcentaje=18.7),
-                HabilidadDemandaDTO(habilidad="Inglés intermedio", total_menciones=8, porcentaje=16.8),
-            ]
-
-        # 9. Distribución de modalidades en colocaciones
-        colocaciones_por_modalidad = {"onsite": 0, "hybrid": 0, "remote": 0}
+        # 9. Distribución de modalidades: la de la vacante cuando la colocación vino de una postulación.
+        colocaciones_por_modalidad = {"onsite": 0, "hybrid": 0, "remote": 0, "sin_dato": 0}
+        postulaciones = [col.application_id for col in colocaciones if col.application_id]
+        modalidad_por_postulacion = (
+            dict(
+                self.db.execute(
+                    select(Application.id, JobPosting.work_modality)
+                    .join(JobPosting, JobPosting.id == Application.job_id)
+                    .where(Application.id.in_(postulaciones))
+                ).all()
+            )
+            if postulaciones
+            else {}
+        )
         for col in colocaciones:
-            # Si la colocación tiene vacante o default
-            colocaciones_por_modalidad["onsite"] += 1
+            modalidad = modalidad_por_postulacion.get(col.application_id)
+            colocaciones_por_modalidad[modalidad if modalidad in colocaciones_por_modalidad else "sin_dato"] += 1
 
         # 10. Validación de Significancia Muestral (CP04: < 5 casos)
         muestra_total = max(base_muestra, len(colocaciones), len(valores_meses), len(valores_pertinencia))
@@ -244,8 +244,8 @@ class IndicadoresService:
             periodo=periodo or "Histórico general",
             calculado_en=ahora,
             tasa_colocacion=round(tasa_colocacion, 1),
-            tiempo_promedio_primer_empleo_meses=round(tiempo_promedio, 1),
-            pertinencia_carrera_porcentaje=round(pertinencia_carrera, 1),
+            tiempo_promedio_primer_empleo_meses=round(tiempo_promedio, 1) if tiempo_promedio is not None else None,
+            pertinencia_carrera_porcentaje=round(pertinencia_carrera, 1) if pertinencia_carrera is not None else None,
             total_egresados_muestra=muestra_total,
             total_colocados=total_colocados,
             total_encuestas_respondidas=total_encuestas,
@@ -254,6 +254,31 @@ class IndicadoresService:
             top_habilidades_demandadas=top_habilidades,
             colocaciones_por_modalidad=colocaciones_por_modalidad,
         )
+
+    def _meses_desde_egreso(self, colocaciones: list[Placement]) -> float | None:
+        """Promedio de meses entre la fecha de egreso y el primer empleo; None si ningún colocado tiene fecha de egreso."""
+        primer_empleo: dict[uuid.UUID, date] = {}
+        for col in colocaciones:
+            if col.candidate_id not in primer_empleo or col.start_date < primer_empleo[col.candidate_id]:
+                primer_empleo[col.candidate_id] = col.start_date
+        if not primer_empleo:
+            return None
+        egreso = dict(
+            self.db.execute(
+                select(CandidateEducation.candidate_id, func.max(CandidateEducation.graduation_date))
+                .where(
+                    CandidateEducation.candidate_id.in_(primer_empleo),
+                    CandidateEducation.graduation_date.is_not(None),
+                )
+                .group_by(CandidateEducation.candidate_id)
+            ).all()
+        )
+        meses = [
+            max(0.0, (inicio - egreso[candidato]).days / 30.4375)
+            for candidato, inicio in primer_empleo.items()
+            if candidato in egreso
+        ]
+        return sum(meses) / len(meses) if meses else None
 
     def exportar(
         self,
@@ -293,9 +318,12 @@ class IndicadoresService:
         encabezados = ["Indicador Clave", "Valor Obtenido", "Muestra (N)", "Estado / Interpretación"]
 
         # Formatear filas con explicabilidad
+        tiempo = tablero.tiempo_promedio_primer_empleo_meses
+        pertinencia = tablero.pertinencia_carrera_porcentaje
+        sin_datos = "Sin datos registrados"
         estado_tasa = "Inserción alta" if tablero.tasa_colocacion >= 70 else ("Inserción media" if tablero.tasa_colocacion >= 40 else "Inserción en desarrollo")
-        estado_tiempo = "Inserción rápida" if tablero.tiempo_promedio_primer_empleo_meses <= 6 else "Inserción progresiva"
-        estado_pertinencia = "Alta pertinencia" if tablero.pertinencia_carrera_porcentaje >= 75 else "Pertinencia moderada"
+        estado_tiempo = sin_datos if tiempo is None else ("Inserción rápida" if tiempo <= 6 else "Inserción progresiva")
+        estado_pertinencia = sin_datos if pertinencia is None else ("Alta pertinencia" if pertinencia >= 75 else "Pertinencia moderada")
 
         habs_resumen = ", ".join(f"{h.habilidad} ({h.porcentaje}%)" for h in tablero.top_habilidades_demandadas[:4])
 
@@ -308,21 +336,21 @@ class IndicadoresService:
             ],
             [
                 "Tiempo Promedio al Primer Empleo",
-                f"{tablero.tiempo_promedio_primer_empleo_meses:.1f} meses",
+                f"{tiempo:.1f} meses" if tiempo is not None else "Sin datos",
                 tablero.total_egresados_muestra,
                 estado_tiempo if tablero.muestra_suficiente else "Muestra insuficiente (< 5 casos)",
             ],
             [
                 "Pertinencia con la Carrera Cursada",
-                f"{tablero.pertinencia_carrera_porcentaje:.1f}%",
+                f"{pertinencia:.1f}%" if pertinencia is not None else "Sin datos",
                 tablero.total_egresados_muestra,
                 estado_pertinencia if tablero.muestra_suficiente else "Muestra insuficiente (< 5 casos)",
             ],
             [
                 "Habilidades Más Demandadas",
-                habs_resumen or "Competencias generales",
+                habs_resumen or "Sin datos",
                 len(tablero.top_habilidades_demandadas),
-                "Top habilidades requeridas por empleadores",
+                "Top habilidades requeridas por empleadores" if habs_resumen else "Sin vacantes publicadas con habilidades",
             ],
         ]
 
@@ -345,23 +373,18 @@ class IndicadoresService:
             tipo_mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             nombre_archivo = f"{nombre_base}.xlsx"
 
-        # Registrar en la bitácora de auditoría (CP03)
+        # Registrar en la bitácora de auditoría (CP03); con la clave configurada la entrada se guarda cifrada.
         if usuario_id is not None:
-            log = AuditLog(
-                user_id=usuario_id,
-                action="exportar_reporte_indicadores",
-                entity_type="reportes",
-                result="success",
-                ip_address=ip_address,
-                details_json={
-                    "formato": formato,
-                    "carrera_id": str(carrera_id) if carrera_id else None,
-                    "periodo": periodo,
-                    "total_muestra": tablero.total_egresados_muestra,
-                    "muestra_suficiente": tablero.muestra_suficiente,
-                },
+            BitacoraService(self.db).registrar(
+                modulo="reportes",
+                accion="exportar_reporte_indicadores",
+                usuario_id=usuario_id,
+                ip=ip_address,
+                detalles=(
+                    f"formato={formato}; carrera_id={carrera_id or 'todas'}; periodo={periodo or 'historico'}; "
+                    f"total_muestra={tablero.total_egresados_muestra}; muestra_suficiente={tablero.muestra_suficiente}"
+                ),
             )
-            self.db.add(log)
             self.db.commit()
 
         return ReporteIndicadoresArchivo(

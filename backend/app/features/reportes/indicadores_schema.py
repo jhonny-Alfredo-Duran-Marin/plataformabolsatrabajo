@@ -26,8 +26,12 @@ class TableroIndicadoresResponse(BaseModel):
 
     # Indicadores Clave
     tasa_colocacion: float = Field(..., description="Porcentaje de egresados colocados (0-100)")
-    tiempo_promedio_primer_empleo_meses: float = Field(..., description="Meses promedio hasta el primer empleo")
-    pertinencia_carrera_porcentaje: float = Field(..., description="Porcentaje de pertinencia con la carrera (0-100)")
+    tiempo_promedio_primer_empleo_meses: float | None = Field(
+        ..., description="Meses promedio hasta el primer empleo (null si no hay datos para medirlo)"
+    )
+    pertinencia_carrera_porcentaje: float | None = Field(
+        ..., description="Porcentaje de pertinencia con la carrera, 0-100 (null sin respuestas de encuesta)"
+    )
     
     # Muestras y representatividad estadística (CP04)
     total_egresados_muestra: int

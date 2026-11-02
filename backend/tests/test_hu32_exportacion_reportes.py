@@ -8,20 +8,22 @@ Cubre los 4 casos de prueba especificados en los criterios de aceptación:
 """
 
 import uuid
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.database import SessionLocal
 from app.main import app
-from app.models.candidato import CandidateProfile
+from app.models.candidato import CandidateEducation, CandidateProfile
 from app.models.catalogo import FieldOfStudy
 from app.models.colocacion import Placement
 from app.models.institucion import Institution
 from app.models.seguridad import AuditLog
 from app.models.usuario import AppUser, Role, UserRole
+from app.security import cifrado_bitacora as cifrado
 from app.security.jwt_provider import create_access_token
 
 client = TestClient(app)
@@ -179,9 +181,65 @@ def test_cp03_registro_auditoria_exportacion(admin_universidad_fixture, db_sessi
     assert log is not None
     assert log.entity_type == "reportes"
     assert log.result == "success"
-    assert log.details_json is not None
-    assert log.details_json.get("formato") == "pdf"
-    assert log.details_json.get("periodo") == "2026"
+    detalle = log.details_json["detalle"]
+    assert "formato=pdf" in detalle
+    assert "periodo=2026" in detalle
+
+
+def test_la_exportacion_queda_cifrada_en_la_bitacora(admin_universidad_fixture, db_session: Session, monkeypatch):
+    """Con la clave de desarrollador configurada (como en producción) la exportación no queda en texto plano."""
+    token, user_id, _, _ = admin_universidad_fixture
+    clave = cifrado.generar_clave_desarrollador()
+    publica = cifrado.clave_publica_de(clave)
+    monkeypatch.setattr(get_settings(), "bitacora_clave_publica", publica)
+
+    r = client.get("/api/indicators/export", headers={"Authorization": f"Bearer {token}"}, params={"format": "xlsx"})
+    assert r.status_code == 200
+
+    assert db_session.query(AuditLog).filter(AuditLog.user_id == user_id).count() == 0
+    lector = cifrado.Lector(clave, publica)
+    desde = datetime.now(timezone.utc) - timedelta(days=1)
+    entradas = []
+    for log in db_session.query(AuditLog).filter(AuditLog.payload_cifrado.is_not(None), AuditLog.created_at >= desde):
+        try:
+            entradas.append(lector.descifrar(log.payload_cifrado))
+        except Exception:
+            continue  # cifrada con otra clave
+    assert any(e["a"] == "exportar_reporte_indicadores" and e["u"] == str(user_id) for e in entradas)
+
+
+def test_sin_datos_no_se_inventan_indicadores(admin_universidad_fixture):
+    """Colocaciones manuales sin encuestas ni fecha de egreso: tiempo y pertinencia quedan vacíos (no 4.5 meses ni 80 %)."""
+    token, _, _, _ = admin_universidad_fixture
+
+    r = client.get("/api/indicators", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200, r.text
+    data = r.json()
+
+    assert data["tiempo_promedio_primer_empleo_meses"] is None
+    assert data["pertinencia_carrera_porcentaje"] is None
+    # Las colocaciones manuales no vienen de una vacante: su modalidad no se conoce.
+    assert data["colocaciones_por_modalidad"]["onsite"] == 0
+    assert data["colocaciones_por_modalidad"]["sin_dato"] == 6
+
+
+def test_el_tiempo_al_primer_empleo_se_mide_desde_el_egreso(admin_universidad_fixture, db_session: Session):
+    """Sin respuestas de encuesta, el tiempo sale de la fecha de egreso y el inicio del empleo (15/07/2025 -> 15/01/2026)."""
+    token, _, inst_id, _ = admin_universidad_fixture
+    for perfil in db_session.query(CandidateProfile).filter(CandidateProfile.institution_id == inst_id):
+        db_session.add(
+            CandidateEducation(
+                candidate_id=perfil.id,
+                program_name="Ingeniería de Software",
+                academic_status="graduated",
+                graduation_date=date(2025, 7, 15),
+            )
+        )
+    db_session.commit()
+
+    r = client.get("/api/indicators", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200, r.text
+    assert r.json()["tiempo_promedio_primer_empleo_meses"] == 6.0
 
 
 def test_cp04_manejo_muestra_insuficiente(db_session: Session):
