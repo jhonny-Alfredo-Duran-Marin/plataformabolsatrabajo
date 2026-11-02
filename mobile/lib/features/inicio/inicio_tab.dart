@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../core/models/encuesta.dart';
 import '../../core/models/entrevista.dart';
 import '../../core/models/mensaje.dart';
 import '../../core/models/perfil_egresado.dart';
 import '../../core/models/postulacion.dart';
 import '../../core/models/sesion.dart';
+import '../../core/services/encuesta_service.dart';
 import '../../core/services/entrevista_service.dart';
 import '../../core/services/mensaje_service.dart';
 import '../../core/services/perfil_service.dart';
@@ -14,6 +16,9 @@ import '../../core/utils/formatos.dart';
 import '../../core/widgets/boton_ayuda.dart';
 import '../../core/widgets/insignia.dart';
 import '../../core/widgets/vistas_estado.dart';
+import '../encuestas/encuesta_formulario_screen.dart';
+import '../encuestas/encuestas_screen.dart';
+import '../ia/asistente_screen.dart';
 import '../mensajes/bandeja_mensajes_screen.dart';
 import '../mensajes/chat_screen.dart';
 import '../notificaciones/notificaciones_screen.dart';
@@ -31,7 +36,10 @@ class _DatosInicio {
 
   /// Conversaciones con mensajes sin leer (HU-19), la más reciente primero.
   final List<ResumenConversacion> sinLeer;
-  const _DatosInicio(this.perfil, this.resumen, this.entrevistas, this.sinLeer);
+
+  /// Encuestas laborales todavía abiertas que no respondió (HU-30).
+  final List<MiEncuesta> encuestasPendientes;
+  const _DatosInicio(this.perfil, this.resumen, this.entrevistas, this.sinLeer, this.encuestasPendientes);
 
   int get mensajesNoLeidos => sinLeer.fold(0, (total, c) => total + c.noLeidos);
 
@@ -76,11 +84,22 @@ class _InicioTabState extends State<InicioTab> {
     ]);
     final resumen = resultados[1] as ResumenPostulaciones;
     final activas = resumen.postulaciones.where((p) => !_estadosCerrados.contains(p.estado)).map((p) => p.id);
-    final (entrevistas, sinLeer) = await (
+    final (entrevistas, sinLeer, encuestas) = await (
       EntrevistaService().deVariasPostulaciones(token, activas),
       _conversacionesSinLeer(token),
+      _encuestasPendientes(token),
     ).wait;
-    return _DatosInicio(resultados[0] as PerfilEgresado, resumen, entrevistas, sinLeer);
+    return _DatosInicio(resultados[0] as PerfilEgresado, resumen, entrevistas, sinLeer, encuestas);
+  }
+
+  /// Como los mensajes, el aviso de encuesta es un extra: si la consulta falla, el inicio carga igual.
+  Future<List<MiEncuesta>> _encuestasPendientes(String token) async {
+    try {
+      final encuestas = await EncuestaService().mias(token);
+      return encuestas.where((e) => e.pendiente).toList();
+    } catch (_) {
+      return const [];
+    }
   }
 
   /// El aviso de mensajes es un extra: si la consulta falla, el inicio carga igual.
@@ -158,6 +177,18 @@ class _InicioTabState extends State<InicioTab> {
           ),
           const SizedBox(height: 16),
         ],
+        if (datos.encuestasPendientes.isNotEmpty) ...[
+          _AvisoEncuesta(
+            encuestas: datos.encuestasPendientes,
+            // Si es una sola se abre directo el formulario; si son varias, la lista.
+            onTap: () => _abrir(
+              datos.encuestasPendientes.length == 1
+                  ? EncuestaFormularioScreen(accessToken: token, encuestaId: datos.encuestasPendientes.first.id)
+                  : EncuestasScreen(accessToken: token),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
         if (porResponder.isNotEmpty) ...[
           _AvisoEntrevista(
             entrevista: porResponder.first,
@@ -192,6 +223,30 @@ class _InicioTabState extends State<InicioTab> {
         ),
         const SizedBox(height: 16),
         _TarjetaRecomendadas(onTap: () => _abrir(RecomendacionesScreen(accessToken: token))),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _Acceso(
+                icono: Icons.smart_toy_outlined,
+                titulo: 'Asistente',
+                detalle: 'Resolvé tus dudas',
+                onTap: () => _abrir(AsistenteScreen(accessToken: token)),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _Acceso(
+                icono: Icons.fact_check_outlined,
+                titulo: 'Encuestas',
+                detalle: datos.encuestasPendientes.isEmpty
+                    ? 'Situación laboral'
+                    : '${datos.encuestasPendientes.length} pendiente${datos.encuestasPendientes.length == 1 ? '' : 's'}',
+                onTap: () => _abrir(EncuestasScreen(accessToken: token)),
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 16),
         _TarjetaPerfil(
           perfil: datos.perfil,
@@ -363,6 +418,112 @@ class _AvisoMensajes extends StatelessWidget {
                 ),
               ),
               const Icon(Icons.chevron_right_rounded, color: AppColors.primario),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AvisoEncuesta extends StatelessWidget {
+  final List<MiEncuesta> encuestas;
+  final VoidCallback onTap;
+  const _AvisoEncuesta({required this.encuestas, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final primera = encuestas.first;
+    final vence = primera.venceEl;
+    return Card(
+      color: AppColors.alertaSuave,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.radio),
+        side: BorderSide(color: AppColors.alerta.withValues(alpha: 0.3)),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                child: const Icon(Icons.fact_check_outlined, color: AppColors.alerta),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      encuestas.length == 1
+                          ? 'Tu universidad te pide responder una encuesta'
+                          : 'Tenés ${encuestas.length} encuestas por responder',
+                      style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.texto),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      vence != null
+                          ? '${primera.titulo} · cierra el ${fechaCorta(vence)}'
+                          : primera.titulo,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: AppColors.textoSuave, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: AppColors.alerta),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Acceso rápido a una sección del egresado (asistente, encuestas).
+class _Acceso extends StatelessWidget {
+  final IconData icono;
+  final String titulo;
+  final String detalle;
+  final VoidCallback onTap;
+  const _Acceso({required this.icono, required this.titulo, required this.detalle, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppTheme.radio),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: const BoxDecoration(color: AppColors.primarioSuave, shape: BoxShape.circle),
+                child: Icon(icono, color: AppColors.primario, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(titulo, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    Text(
+                      detalle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: AppColors.textoSuave, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),

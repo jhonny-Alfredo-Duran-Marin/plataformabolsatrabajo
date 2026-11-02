@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/models/notificacion.dart';
 import '../../core/services/notificacion_service.dart';
 import '../../core/widgets/boton_ayuda.dart';
+import '../encuestas/encuesta_formulario_screen.dart';
 import 'preferencias_notificaciones_screen.dart';
 
 class NotificacionesScreen extends StatefulWidget {
@@ -83,6 +84,21 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
     );
   }
 
+  /// Marca el aviso como leído y, si es de una encuesta laboral (HU-30), abre su formulario.
+  Future<void> _abrirAviso(Notificacion notif) async {
+    await _marcarLeida(notif);
+    final link = notif.link ?? '';
+    if (!mounted || notif.notificationType != 'encuesta_laboral' || !link.startsWith('/encuestas/')) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => EncuestaFormularioScreen(
+          accessToken: widget.accessToken,
+          encuestaId: link.substring('/encuestas/'.length),
+        ),
+      ),
+    );
+  }
+
   Future<void> _eliminar(Notificacion notif) async {
     await _accion(() => _servicio.eliminarNotificacion(widget.accessToken, notif.id));
   }
@@ -98,6 +114,8 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
         return Icons.event;
       case 'message_received':
         return Icons.chat_bubble;
+      case 'encuesta_laboral':
+        return Icons.fact_check;
       default:
         return Icons.notifications;
     }
@@ -114,6 +132,8 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
         return Colors.purple;
       case 'message_received':
         return Colors.cyan.shade700;
+      case 'encuesta_laboral':
+        return Colors.orange.shade800;
       default:
         return Colors.indigo;
     }
@@ -251,7 +271,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                                         ),
                                       )
                                     : null,
-                                onTap: () => _marcarLeida(n),
+                                onTap: () => _abrirAviso(n),
                               ),
                             );
                           },

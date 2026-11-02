@@ -113,6 +113,7 @@ const temasAyuda = <TemaAyuda>[
     pasos: [
       'En «Datos personales» actualizá tu nombre, contacto, ciudad y disponibilidad.',
       'En «Mi CV» cargá tu formación, experiencia, idiomas y habilidades: pesan en la afinidad.',
+      'En «Editar perfil», «Redactar con IA» te propone un resumen profesional con tus datos: editalo y guardalo si te sirve.',
       'Desde acá también cambiás tu contraseña o cerrás sesión.',
     ],
   ),
@@ -154,6 +155,28 @@ const temasAyuda = <TemaAyuda>[
     pasos: [
       'Desde cada entrevista podés unirte a la videollamada, ver cómo llegar o mandarle un mensaje al egresado.',
       'Proponer, reprogramar o cancelar entrevistas se hace desde el panel web.',
+    ],
+  ),
+  TemaAyuda(
+    id: 'encuestas',
+    titulo: 'Encuestas laborales',
+    paraEmpresa: false,
+    resumen: 'Tu universidad te pide cada tanto unos minutos para saber tu situación laboral. Con eso mide la inserción de sus egresados.',
+    pasos: [
+      'Cuando llega una encuesta te avisa la app; también la ves en «Encuestas» desde el inicio.',
+      'Si trabajás, te pregunta dónde, en qué y cuánto se relaciona con tu carrera.',
+      'Se responde una sola vez por período y hasta la fecha de cierre.',
+    ],
+  ),
+  TemaAyuda(
+    id: 'asistente',
+    titulo: 'Asistente EGRESA',
+    paraEmpresa: false,
+    resumen: 'Un asistente que responde dudas sobre la plataforma: cómo postularte, el estado de tus postulaciones, tu perfil y más.',
+    pasos: [
+      'Escribí tu pregunta o tocá una de las sugerencias.',
+      'Si le preguntás por tus postulaciones, te muestra cada una con su estado.',
+      'Con el botón de arriba empezás una conversación nueva.',
     ],
   ),
   TemaAyuda(
