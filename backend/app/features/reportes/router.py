@@ -10,12 +10,15 @@ from app.common.request_context import get_client_ip
 from app.core.database import get_db
 from app.features.planes.limites import plan_vigente
 from app.features.reportes.catalogo import Contexto
+from app.features.reportes.interprete import InterpreteReportes
 from app.features.reportes.schema import (
     CatalogoReportes,
     ConsultaReporte,
     EnviarReporte,
     EnvioReporteResponse,
     ExportarReporte,
+    InterpretarReporte,
+    ReporteInterpretado,
     VistaPreviaReporte,
 )
 from app.features.reportes.service import ReporteService
@@ -24,6 +27,7 @@ from app.models.usuario import AppUser
 from app.security.dependencies import CurrentUser, get_current_user
 from app.security.permisos import exigir_permiso
 from app.security.tenant import AlcanceStaff, alcance_staff
+from app.shared import ia_generativa
 from app.shared.email_service import EmailService
 
 router = APIRouter(prefix="/reportes", tags=["reportes"])
@@ -101,7 +105,18 @@ def catalogo(solicitante: Solicitante = Depends(get_solicitante), db: Session = 
         correo_disponible=EmailService().configurado(),
         plan_permite=solicitante.mensaje_plan is None,
         mensaje_plan=solicitante.mensaje_plan,
+        ia_disponible=ia_generativa.disponible("reportes"),
     )
+
+
+@router.post("/interpretar", response_model=ReporteInterpretado)
+def interpretar(
+    pedido: InterpretarReporte,
+    solicitante: Solicitante = Depends(get_habilitado),
+    db: Session = Depends(get_db),
+):
+    """Arma la consulta a partir de un pedido escrito o dictado, con Gemini; no la ejecuta."""
+    return InterpreteReportes(db).interpretar(solicitante.contexto, pedido.pedido)
 
 
 @router.post("/vista-previa", response_model=VistaPreviaReporte)

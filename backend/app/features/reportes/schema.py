@@ -62,6 +62,8 @@ class CatalogoReportes(BaseModel):
     correo_disponible: bool
     plan_permite: bool = True
     mensaje_plan: str | None = None
+    # Hay clave de Gemini para pedir el reporte con palabras (escrito o dictado).
+    ia_disponible: bool = False
 
 
 class VistaPreviaReporte(BaseModel):
@@ -76,3 +78,16 @@ class VistaPreviaReporte(BaseModel):
 class EnvioReporteResponse(BaseModel):
     mensaje: str
     destinatarios: list[str]
+
+
+class InterpretarReporte(BaseModel):
+    """Pedido en lenguaje natural, escrito o dictado ("colocados de Sistemas en 2026, en Excel")."""
+
+    pedido: str = Field(..., min_length=3, max_length=500)
+
+
+class ReporteInterpretado(BaseModel):
+    consulta: ConsultaReporte
+    explicacion: str
+    formato: Literal["excel", "pdf", "html"] | None = None  # si lo pidió, el generador lo descarga
+    motor: str

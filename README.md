@@ -394,6 +394,18 @@ El correo completo es el usuario más el dominio de su universidad: `@uagrm.egre
   un admin de la UMSA). El correo usa SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`,
   `SMTP_PASSWORD`, `SMTP_FROM`) o la API de Brevo (`BREVO_API_KEY`, con `SMTP_FROM`
   verificado en Brevo); Railway bloquea SMTP en sus planes básicos.
+- **IA generativa (Google Gemini):** con `GEMINI_API_KEY_REPORTES`, arriba del generador de
+  reportes aparece "Pedilo con tus palabras": se escribe o se dicta con el micrófono
+  (Chrome, Edge o Safari) algo como "colocados de Sistemas en 2026, en Excel" y la IA
+  completa la fuente, los filtros, las columnas y el orden; si se pidió un formato, lo
+  descarga. A Gemini le llega solo el pedido y el catálogo de columnas, nunca filas de la
+  base, y lo que devuelve se valida contra ese catálogo. Con `GEMINI_API_KEY_ASISTENTE`,
+  el chatbot (HU-28) y los borradores de resumen (HU-26) y de vacante (HU-27) los redacta
+  Gemini con los datos reales de la cuenta (sin correo, teléfono ni documento); el pedido
+  de datos ajenos se corta antes de llegar a Gemini. Sin clave, o si Gemini no responde,
+  todo sigue con las reglas de siempre. El plan gratuito de Google tiene cupo diario por
+  modelo (20 pedidos en `gemini-3.5-flash`), por eso se usan varios en cascada
+  (`GEMINI_MODELOS`); el cupo es por proyecto de Google, no por clave.
 - **Ayuda en línea (requisito 4):** botón **?** (o la tecla F1) en todas las pantallas de
   la web, que abre la ayuda de esa pantalla, y el centro de ayuda en `/ayuda`. En la app, el
   ícono de ayuda de la barra superior de cada pantalla.

@@ -410,6 +410,7 @@ def _base_postulaciones(ctx: Contexto) -> Select:
         .join(CandidateProfile, CandidateProfile.id == Application.candidate_id)
         .join(AppUser, AppUser.id == CandidateProfile.user_id)
         .outerjoin(JobSelectionStage, JobSelectionStage.id == Application.current_stage_id)
+        .outerjoin(Institution, Institution.id == _UNIVERSIDAD_EGRESADO)
     )
     if ctx.rol == "empresa":
         return stmt.where(JobPosting.company_id == ctx.company_id)
@@ -426,6 +427,8 @@ POSTULACIONES = Fuente(
     columnas=(
         Columna("egresado", "Egresado", "texto", lambda c: _NOMBRE_EGRESADO, por_defecto=True),
         Columna("correo", "Correo", "texto", _correo_postulante),
+        Columna("carrera", "Carrera", "texto", lambda c: _CARRERA),
+        Columna("universidad", "Universidad", "texto", lambda c: Institution.name, visible=_solo_superadmin),
         Columna("vacante", "Vacante", "texto", lambda c: JobPosting.title, por_defecto=True),
         Columna("empresa", "Empresa", "texto", lambda c: _NOMBRE_EMPRESA, por_defecto=True, visible=_solo_staff),
         Columna("estado", "Estado", "estado", lambda c: Application.current_status, ESTADO_POSTULACION, True),
@@ -437,6 +440,15 @@ POSTULACIONES = Fuente(
     ),
     filtros=(
         Filtro("egresado", "Egresado", "texto", lambda c: _NOMBRE_EGRESADO),
+        Filtro("carrera", "Carrera", "texto", lambda c: _CARRERA),
+        Filtro(
+            "universidad",
+            "Universidad",
+            "opciones",
+            lambda c: cast(_UNIVERSIDAD_EGRESADO, String),
+            opciones_de=_universidades,
+            visible=_solo_superadmin,
+        ),
         Filtro("vacante", "Vacante", "texto", lambda c: JobPosting.title),
         Filtro("empresa", "Empresa", "texto", lambda c: _NOMBRE_EMPRESA, visible=_solo_staff),
         Filtro("estado", "Estado", "opciones", lambda c: Application.current_status, ESTADO_POSTULACION),

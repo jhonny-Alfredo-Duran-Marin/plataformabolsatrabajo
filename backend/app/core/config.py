@@ -55,6 +55,16 @@ class Settings(BaseSettings):
     # HU-28: interruptor del microservicio/asistente conversacional de orientación.
     ia_chatbot_activo: bool = True
 
+    # IA generativa (Google Gemini). Una clave para el chatbot y los borradores (HU-26/27/28)
+    # y otra para los reportes pedidos en lenguaje natural; el cupo de Google es por proyecto,
+    # así que solo se separa si las claves son de proyectos distintos. Sin clave, el chatbot y
+    # los borradores siguen con sus reglas y los reportes se arman a mano.
+    gemini_api_key_asistente: str | None = None
+    gemini_api_key_reportes: str | None = None
+    # En orden de uso. El plan gratuito tiene cupo por minuto y por día para cada modelo (el
+    # de gemini-3.5-flash es de 20 pedidos diarios): si uno lo agota (429), responde el siguiente.
+    gemini_modelos: list[str] = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.5-flash"]
+
     # Tareas automáticas diarias (copia de seguridad, cierre de vacantes vencidas, boletín
     # de ofertas). Se ejecutan una vez por día desde la hora indicada (hora de Bolivia).
     # Sin definir, corren solo en el servidor (producción o Railway), no en la computadora

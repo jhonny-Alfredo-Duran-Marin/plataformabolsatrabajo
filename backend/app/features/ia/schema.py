@@ -19,6 +19,7 @@ class GenerarResumenResponse(BaseModel):
     variante: int
     total_variantes: int = 3
     datos_utilizados: dict[str, Any] = {}
+    motor: str = "plantillas"  # el modelo de Gemini que lo redactó, o "plantillas"
 
 
 # --- MODELOS PARA HU-23 (Egresado -> Vacantes) ---
@@ -117,6 +118,7 @@ class ChatbotRespuestaResponse(BaseModel):
     postulaciones: list[PostulacionResumenChatbotDTO] = []
     sugerencias: list[str] = []
     enlaces_utiles: list[EnlaceUtilChatbotDTO] = []
+    motor: str = "reglas"  # el modelo de Gemini que respondió, o "reglas"
 
 
 class ChatbotSesionResponse(BaseModel):
@@ -149,6 +151,7 @@ class GenerarBorradorVacanteResponse(BaseModel):
     indicacion_original: str
     fecha: datetime
     advertencia: str = "Borrador generado por IA. La empresa debe revisar y editar las secciones antes de enviar a moderación."
+    motor: str = "plantillas"  # el modelo de Gemini que lo redactó, o "plantillas"
 
 
 # --- MODELOS PARA HU-25 (Búsqueda Semántica de Vacantes) ---

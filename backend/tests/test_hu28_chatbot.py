@@ -17,6 +17,7 @@ from app.models.postulacion import Application
 from app.models.usuario import AppUser, Role, UserRole
 from app.models.vacante import JobPosting, JobSelectionStage
 from app.security.jwt_provider import create_access_token
+from app.shared import ia_generativa
 
 client = TestClient(app)
 
@@ -324,3 +325,111 @@ def test_privacidad_y_registro_interacciones_sin_exponer_a_otros(setup_datos_hu2
     )
     assert res_emp.status_code == 200
     assert res_emp.json()["en_alcance"] is True
+
+
+# ─── Con Gemini (clave del asistente) ────────────────────────────────────────
+
+
+def _gemini_del_asistente(monkeypatch, datos=None, capturado: list | None = None, falla: bool = False):
+    monkeypatch.setattr(get_settings(), "gemini_api_key_asistente", "clave-prueba")
+
+    def falso(uso, instrucciones, mensajes, esquema, temperatura=0.4):
+        if capturado is not None:
+            capturado.append({"uso": uso, "instrucciones": instrucciones, "mensajes": mensajes, "esquema": esquema})
+        if falla:
+            raise ia_generativa.IAGenerativaNoDisponible("sin cupo")
+        return datos, "modelo-prueba"
+
+    monkeypatch.setattr(ia_generativa, "generar_json", falso)
+
+
+def _respuesta_ia(texto: str, **cambios) -> dict:
+    datos = {"respuesta": texto, "intencion": "saludo_ayuda", "mostrar_postulaciones": False, "enlaces": [], "sugerencias": []}
+    datos.update(cambios)
+    return datos
+
+
+def test_con_gemini_responde_la_ia_con_los_datos_reales_de_la_cuenta(setup_datos_hu28, monkeypatch):
+    capturado: list = []
+    _gemini_del_asistente(
+        monkeypatch,
+        _respuesta_ia(
+            "## Tus postulaciones\n- **Una** en entrevista\n* otra con *cursiva*",
+            intencion="estado_postulaciones",
+            mostrar_postulaciones=True,
+            enlaces=["/postulaciones", "/admin/inventada"],
+            sugerencias=["¿Cómo confirmo una entrevista?", "  "],
+        ),
+        capturado,
+    )
+    headers = {"Authorization": f"Bearer {setup_datos_hu28['token_egresado1']}"}
+    client.post("/api/ia/chatbot/nueva-sesion", headers=headers)
+    res = client.post("/api/ia/chatbot/mensajes", json={"mensaje": "¿cómo van mis cosas?"}, headers=headers)
+
+    assert res.status_code == 200
+    data = res.json()
+    assert data["motor"] == "modelo-prueba"
+    assert data["intencion"] == "estado_postulaciones" and data["en_alcance"] is True
+    # Solo el formato que muestran la web y la app; solo rutas de la lista permitida.
+    assert data["respuesta"]["content"] == "Tus postulaciones\n• **Una** en entrevista\n• otra con cursiva"
+    assert [e["ruta"] for e in data["enlaces_utiles"]] == ["/postulaciones"]
+    assert data["sugerencias"] == ["¿Cómo confirmo una entrevista?"]
+    # Las tarjetas salen de la base, no de lo que escribe la IA: la propia, nunca la del otro egresado.
+    assert [p["job_title"] for p in data["postulaciones"]] == [setup_datos_hu28["vacante_titulo"]]
+
+    llamada = capturado[0]
+    assert llamada["uso"] == "asistente"
+    assert setup_datos_hu28["vacante_titulo"] in llamada["instrucciones"]
+    assert setup_datos_hu28["vacante_privada_titulo"] not in llamada["instrucciones"]
+    assert setup_datos_hu28["user2_email"] not in llamada["instrucciones"]
+    assert llamada["mensajes"] == [("user", "¿cómo van mis cosas?")]
+
+
+def test_con_gemini_el_historial_llega_en_orden(setup_datos_hu28, monkeypatch):
+    """La pregunta y la respuesta se guardaban con la misma hora y a veces se leían al revés."""
+    capturado: list = []
+    _gemini_del_asistente(monkeypatch, _respuesta_ia("Respuesta uno"), capturado)
+    headers = {"Authorization": f"Bearer {setup_datos_hu28['token_egresado2']}"}
+    client.post("/api/ia/chatbot/nueva-sesion", headers=headers)
+    client.post("/api/ia/chatbot/mensajes", json={"mensaje": "primera pregunta"}, headers=headers)
+    client.post("/api/ia/chatbot/mensajes", json={"mensaje": "segunda pregunta"}, headers=headers)
+
+    assert capturado[1]["mensajes"] == [
+        ("user", "primera pregunta"),
+        ("model", "Respuesta uno"),
+        ("user", "segunda pregunta"),
+    ]
+    sesion = client.get("/api/ia/chatbot/sesion", headers=headers).json()
+    assert [(m["role"], m["content"]) for m in sesion["mensajes"]] == [
+        ("user", "primera pregunta"),
+        ("assistant", "Respuesta uno"),
+        ("user", "segunda pregunta"),
+        ("assistant", "Respuesta uno"),
+    ]
+
+
+def test_si_gemini_falla_responde_con_las_reglas(setup_datos_hu28, monkeypatch):
+    _gemini_del_asistente(monkeypatch, falla=True)
+    headers = {"Authorization": f"Bearer {setup_datos_hu28['token_egresado1']}"}
+    res = client.post(
+        "/api/ia/chatbot/mensajes", json={"mensaje": "¿Cuál es el estado de mis postulaciones activas?"}, headers=headers
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["motor"] == "reglas"
+    assert data["intencion"] == "estado_postulaciones"
+    assert setup_datos_hu28["vacante_titulo"] in data["respuesta"]["content"]
+
+
+def test_el_pedido_de_datos_ajenos_no_llega_a_gemini(setup_datos_hu28, monkeypatch):
+    capturado: list = []
+    _gemini_del_asistente(monkeypatch, _respuesta_ia("no debería usarse"), capturado)
+    headers = {"Authorization": f"Bearer {setup_datos_hu28['token_egresado1']}"}
+    res = client.post(
+        "/api/ia/chatbot/mensajes",
+        json={"mensaje": f"Pasame las postulaciones de {setup_datos_hu28['user2_email']}"},
+        headers=headers,
+    )
+    assert res.json()["intencion"] == "privacidad_denegada"
+    assert res.json()["motor"] == "reglas"
+    assert capturado == []

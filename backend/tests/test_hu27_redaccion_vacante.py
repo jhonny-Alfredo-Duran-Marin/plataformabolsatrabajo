@@ -22,6 +22,7 @@ from app.models.seguridad import AuditLog
 from app.models.usuario import AppUser, Role, UserRole
 from app.security import cifrado_bitacora as cifrado
 from app.security.jwt_provider import create_access_token
+from app.shared import ia_generativa
 
 client = TestClient(app)
 
@@ -245,4 +246,74 @@ def test_cp04_servicio_ia_no_disponible(empresa_fixture, monkeypatch):
     assert response.status_code == 503
     assert "no está disponible" in response.json()["detail"].lower()
     assert "manualmente" in response.json()["detail"].lower()
+
+
+def test_con_gemini_la_vacante_la_redacta_la_ia_y_respeta_lo_que_fijo_la_empresa(
+    empresa_fixture, db_session: Session, monkeypatch
+):
+    token, user_id, _ = empresa_fixture
+    descripcion = "Vas a diseñar y mantener los servicios del equipo de pagos, con foco en calidad y seguridad."
+    monkeypatch.setattr(get_settings(), "gemini_api_key_asistente", "clave-prueba")
+    monkeypatch.setattr(
+        ia_generativa,
+        "generar_json",
+        lambda *a, **k: (
+            {
+                "titulo": "Otro título",
+                "descripcion": descripcion,
+                "requisitos": ["1. Python", "• SQL", "- Git", ""],
+                "beneficios": ["Capacitación", "Horario flexible"],
+                "modalidad": "hybrid",
+                "seniority": "experto",
+            },
+            "modelo-prueba",
+        ),
+    )
+    indicacion = f"Desarrollador backend senior con Python {uuid.uuid4().hex[:6]}"
+    response = client.post(
+        "/api/ia/job-description",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"indicacion": indicacion, "cargo": "Desarrollador Backend", "modalidad": "remote"},
+    )
+
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["motor"] == "modelo-prueba"
+    # Lo que la empresa fijó no lo cambia la IA; un nivel que no existe se reemplaza por el inferido.
+    assert (data["titulo"], data["modalidad"], data["seniority"]) == ("Desarrollador Backend", "remote", "senior")
+    assert data["descripcion"] == descripcion
+    assert data["requisitos"] == ["Python", "SQL", "Git"]
+    assert data["beneficios"] == ["Capacitación", "Horario flexible"]
+
+    log = (
+        db_session.query(AuditLog)
+        .filter(
+            AuditLog.action == "generar_borrador_vacante_ia",
+            AuditLog.details_json["detalle"].astext.contains(indicacion),
+        )
+        .first()
+    )
+    assert log is not None and log.user_id == user_id
+    assert "motor=modelo-prueba" in log.details_json["detalle"]
+
+
+def test_si_gemini_devuelve_un_borrador_incompleto_se_usan_las_plantillas(empresa_fixture, monkeypatch):
+    token, _, _ = empresa_fixture
+    monkeypatch.setattr(get_settings(), "gemini_api_key_asistente", "clave-prueba")
+    monkeypatch.setattr(
+        ia_generativa,
+        "generar_json",
+        lambda *a, **k: (
+            {"titulo": "X", "descripcion": "", "requisitos": [], "beneficios": [], "modalidad": "remote", "seniority": "junior"},
+            "modelo-prueba",
+        ),
+    )
+    response = client.post(
+        "/api/ia/job-description",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"indicacion": "Desarrollador frontend react junior"},
+    )
+    assert response.status_code == 200
+    assert response.json()["motor"] == "plantillas"
+    assert len(response.json()["requisitos"]) >= 3
 

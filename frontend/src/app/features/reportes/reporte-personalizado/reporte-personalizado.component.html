@@ -31,6 +31,63 @@
         </div>
       </section>
     } @else {
+      @if (cat.ia_disponible) {
+        <!-- Atajo: pedido con palabras, escrito o dictado; la IA completa los pasos de abajo -->
+        <section class="paso pedido-ia">
+          <div class="paso-cabecera">
+            <h2><span class="numero numero--ia" aria-hidden="true">✦</span> Pedilo con tus palabras</h2>
+            <span class="marca-ia">Con IA</span>
+          </div>
+          <p class="ayuda">
+            Escribilo{{ vozDisponible ? ' o dictalo con el micrófono' : '' }}, por ejemplo: «colocados de
+            Sistemas en 2026, en Excel». La IA completa los pasos de abajo y vos los revisás antes de
+            exportar.
+          </p>
+          <form class="pedido-form" (ngSubmit)="armarConIA()">
+            <input
+              type="text"
+              name="pedido"
+              [ngModel]="pedido()"
+              (ngModelChange)="pedido.set($event)"
+              maxlength="500"
+              [placeholder]="escuchando() ? 'Te escucho…' : '¿Qué reporte necesitás?'"
+              [readonly]="escuchando()"
+              aria-label="Pedido del reporte"
+            />
+            @if (vozDisponible) {
+              <button
+                type="button"
+                class="microfono"
+                [class.microfono--activo]="escuchando()"
+                [attr.aria-pressed]="escuchando()"
+                [attr.aria-label]="escuchando() ? 'Dejar de escuchar' : 'Dictar el pedido'"
+                [title]="escuchando() ? 'Dejar de escuchar' : 'Dictar el pedido'"
+                [disabled]="interpretando()"
+                (click)="dictar()"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2Z"
+                  />
+                </svg>
+              </button>
+            }
+            <button
+              type="submit"
+              class="btn btn-primario"
+              [disabled]="interpretando() || escuchando() || pedido().trim().length < 3"
+            >
+              {{ interpretando() ? 'Armando…' : 'Armar reporte' }}
+            </button>
+          </form>
+          @if (explicacion()) {
+            <p class="pedido-resultado" role="status">
+              ✓ {{ explicacion() }} Revisá los pasos de abajo; podés ajustarlos.
+            </p>
+          }
+        </section>
+      }
+
       <!-- 1. Qué reportar -->
       <section class="paso">
         <h2><span class="numero">1</span> ¿Qué querés reportar?</h2>

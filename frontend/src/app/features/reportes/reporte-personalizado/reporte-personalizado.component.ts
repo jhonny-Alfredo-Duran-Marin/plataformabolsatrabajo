@@ -1,8 +1,18 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  OnDestroy,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
+import { DictadoService, Escucha } from '../../../core/services/dictado.service';
+import { PermisosService } from '../../../core/services/permisos.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { PaginadorComponent } from '../../../shared/components/paginador/paginador.component';
 import { AuthService } from '../../auth/auth.service';
@@ -44,6 +54,8 @@ function mensajeDeError(err: HttpErrorResponse, porDefecto: string): string {
 /**
  * Reportes personalizados (requisito 5): el usuario elige qué reportar, filtra, elige y
  * ordena las columnas, ve la vista previa y la exporta a Excel, PDF o HTML, o la manda por correo.
+ * También puede pedirlo con sus palabras, escrito o dictado: la IA arma la configuración y
+ * la persona la revisa en los mismos pasos antes de exportar.
  */
 @Component({
   selector: 'app-reporte-personalizado',
@@ -52,9 +64,12 @@ function mensajeDeError(err: HttpErrorResponse, porDefecto: string): string {
   templateUrl: './reporte-personalizado.component.html',
   styleUrl: './reporte-personalizado.component.scss',
 })
-export class ReportePersonalizadoComponent implements OnInit {
+export class ReportePersonalizadoComponent implements OnInit, OnDestroy {
   private readonly servicio = inject(ReportesService);
   private readonly toast = inject(ToastService);
+  private readonly dictado = inject(DictadoService);
+  private readonly permisos = inject(PermisosService);
+  private readonly cdr = inject(ChangeDetectorRef);
   readonly auth = inject(AuthService);
 
   readonly esEmpresa = computed(() => this.auth.rol() === 'empresa');
@@ -84,6 +99,14 @@ export class ReportePersonalizadoComponent implements OnInit {
   readonly exportando = signal<FormatoReporte | null>(null);
   readonly envio = signal<Envio | null>(null);
 
+  // Pedido con palabras (IA)
+  readonly vozDisponible = this.dictado.disponible;
+  readonly pedido = signal('');
+  readonly interpretando = signal(false);
+  readonly escuchando = signal(false);
+  readonly explicacion = signal('');
+  private escucha: Escucha | null = null;
+
   ngOnInit(): void {
     this.servicio.catalogo().subscribe({
       next: (catalogo) => {
@@ -98,8 +121,81 @@ export class ReportePersonalizadoComponent implements OnInit {
     });
   }
 
+  ngOnDestroy(): void {
+    this.escucha?.detener();
+  }
+
   icono(clave: string): string {
     return ICONO_FUENTE[clave] ?? '📊';
+  }
+
+  // ─── 0. Pedido con palabras ─────────────────────────────────────────────
+
+  /** Escucha el pedido; al terminar de hablar lo manda a armar. */
+  dictar(): void {
+    if (this.escucha) {
+      this.escucha.detener();
+      return;
+    }
+    this.pedido.set('');
+    this.escuchando.set(true);
+    const escucha = this.dictado.escuchar((texto) => this.pedido.set(texto));
+    this.escucha = escucha;
+    escucha.resultado
+      .then(
+        (texto) => {
+          this.pedido.set(texto);
+          if (texto.length >= 3) this.armarConIA();
+        },
+        (err: Error) => this.toast.warning(err.message),
+      )
+      .finally(() => {
+        this.escucha = null;
+        this.escuchando.set(false);
+      });
+  }
+
+  armarConIA(): void {
+    const pedido = this.pedido().trim();
+    if (pedido.length < 3 || this.interpretando()) return;
+    this.interpretando.set(true);
+    this.explicacion.set('');
+    this.servicio.interpretar(pedido).subscribe({
+      next: (r) => {
+        this.interpretando.set(false);
+        if (!this.aplicar(r.consulta)) {
+          this.toast.error('No se pudo armar ese reporte. Probá con otras palabras.');
+          return;
+        }
+        this.explicacion.set(r.explicacion);
+        this.generar();
+        // Si pidió el archivo («…en Excel»), se descarga como con el botón.
+        if (r.formato && this.permisos.puede('boton.reportes.exportar')) this.exportar(r.formato);
+        this.cdr.markForCheck();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.interpretando.set(false);
+        this.toast.error(mensajeDeError(err, 'No se pudo armar el reporte. Probá de nuevo o armalo a mano.'));
+      },
+    });
+  }
+
+  /** Carga en los pasos de abajo la consulta que armó la IA, para revisarla y ajustarla. */
+  private aplicar(consulta: ConsultaReporte): boolean {
+    const fuente = this.catalogo()?.fuentes.find((f) => f.clave === consulta.fuente);
+    if (!fuente) return false;
+    const filtros = this.filtrosVacios(fuente);
+    for (const [clave, valor] of Object.entries(consulta.filtros)) {
+      if (clave in filtros) filtros[clave] = valor;
+    }
+    this.fuenteClave.set(fuente.clave);
+    this.columnas.set(consulta.columnas);
+    this.orden.set(consulta.orden.length ? consulta.orden : fuente.orden.map((o) => ({ ...o })));
+    this.filtros = filtros;
+    this.titulo = consulta.titulo ?? '';
+    this.vista.set(null);
+    this.consultaGenerada = null;
+    return true;
   }
 
   // ─── 1. Fuente ──────────────────────────────────────────────────────────

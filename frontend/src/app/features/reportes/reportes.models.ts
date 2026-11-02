@@ -41,6 +41,8 @@ export interface CatalogoReportes {
   correo_disponible: boolean;
   plan_permite: boolean;
   mensaje_plan: string | null;
+  /** Se puede pedir el reporte con palabras (escrito o dictado): el servidor tiene la IA configurada. */
+  ia_disponible: boolean;
 }
 
 /** Valor de un filtro según su tipo: texto, opciones elegidas, rango de fechas o de números. */
@@ -62,6 +64,14 @@ export interface VistaPrevia {
   pagina: number;
   tamanio: number;
   descripcion: string[];
+}
+
+/** Lo que armó la IA a partir de un pedido escrito o dictado; se revisa antes de exportar. */
+export interface ReporteInterpretado {
+  consulta: ConsultaReporte;
+  explicacion: string;
+  formato: FormatoReporte | null;
+  motor: string;
 }
 
 export interface EnvioReporte {

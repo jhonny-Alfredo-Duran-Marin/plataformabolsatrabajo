@@ -8,6 +8,7 @@ import {
   ConsultaReporte,
   EnvioReporte,
   FormatoReporte,
+  ReporteInterpretado,
   VistaPrevia,
 } from './reportes.models';
 
@@ -19,6 +20,11 @@ export class ReportesService {
 
   catalogo(): Observable<CatalogoReportes> {
     return this.http.get<CatalogoReportes>(`${this.base}/fuentes`);
+  }
+
+  /** Arma la consulta a partir de un pedido en lenguaje natural (escrito o dictado). */
+  interpretar(pedido: string): Observable<ReporteInterpretado> {
+    return this.http.post<ReporteInterpretado>(`${this.base}/interpretar`, { pedido });
   }
 
   vistaPrevia(consulta: ConsultaReporte, pagina: number, tamanio: number): Observable<VistaPrevia> {

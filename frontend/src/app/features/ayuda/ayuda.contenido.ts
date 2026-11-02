@@ -333,6 +333,7 @@ export const TEMAS_AYUDA: TemaAyuda[] = [
       'Completá solo los filtros que te interesen: fechas, estados, textos o rangos de números.',
       'Elegí las columnas y ordenalas con las flechas. Definí por qué columnas se ordenan las filas.',
       'Tocá «Generar reporte» para ver la vista previa y después exportala o enviala por correo.',
+      'Atajo: en «Pedilo con tus palabras» escribí o dictá con el micrófono lo que necesitás (por ejemplo «colocados de Sistemas en 2026, en Excel»). La IA completa los pasos y vos los revisás.',
     ],
     preguntas: [
       {
@@ -344,6 +345,11 @@ export const TEMAS_AYUDA: TemaAyuda[] = [
         pregunta: 'Dice que mi plan no incluye reportes',
         respuesta:
           'Los reportes están incluidos en los planes Profesional e Institucional de la universidad.',
+      },
+      {
+        pregunta: 'El micrófono no funciona o no aparece',
+        respuesta:
+          'El dictado usa el reconocimiento de voz del navegador: funciona en Chrome, Edge y Safari, con internet y con permiso para usar el micrófono. Si no está, escribí el pedido.',
       },
       {
         pregunta: 'El botón de correo está deshabilitado',

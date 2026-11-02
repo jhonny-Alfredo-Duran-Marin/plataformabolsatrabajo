@@ -12,9 +12,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import get_settings
+from app.core.database import SessionLocal
 from app.features.ia.services.asistente_generativo_service import AsistenteGenerativoService
 from app.main import app
+from app.models.candidato import CandidateProfile
+from app.models.usuario import AppUser
 from app.security.jwt_provider import create_access_token
+from app.shared import ia_generativa
 
 
 @pytest.fixture
@@ -153,3 +157,48 @@ def test_resumen_separa_habilidades_blandas_y_cuenta_idiomas(client, candidato_t
     )
     datos = response.json()["datos_utilizados"]
     assert datos["total_idiomas"] == len(datos["idiomas"])
+
+
+def test_con_gemini_el_resumen_lo_redacta_la_ia_solo_con_datos_del_perfil(client, candidato_token, monkeypatch):
+    token, user_id = candidato_token
+    texto = (
+        "Soy profesional en Ingeniería de Sistemas, con experiencia en desarrollo de software y análisis "
+        "de datos, y con interés en proyectos de impacto."
+    )
+    capturado: dict = {}
+
+    def falso(uso, instrucciones, mensajes, esquema, temperatura=0.4):
+        capturado.update(uso=uso, pedido=mensajes[0][1])
+        return {"resumen": f"  {texto}\n\n\n   Me motiva   aprender.  "}, "modelo-prueba"
+
+    monkeypatch.setattr(get_settings(), "gemini_api_key_asistente", "clave-prueba")
+    monkeypatch.setattr(ia_generativa, "generar_json", falso)
+    response = client.post(
+        "/api/ia/resumen-profesional/generar", headers={"Authorization": f"Bearer {token}"}, json={"variante": 2}
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["motor"] == "modelo-prueba"
+    assert data["borrador"] == f"{texto}\n\nMe motiva aprender."
+    assert capturado["uso"] == "asistente"
+    assert "perfil técnico" in capturado["pedido"]
+    # A Gemini no le llegan el nombre ni los datos de contacto.
+    with SessionLocal() as db:
+        perfil = db.query(CandidateProfile).filter_by(user_id=user_id).one()
+        correo = db.get(AppUser, perfil.user_id).email
+    for dato in (perfil.first_name, perfil.last_name, perfil.phone, correo):
+        if dato:
+            assert dato not in capturado["pedido"]
+
+
+def test_si_gemini_devuelve_un_resumen_vacio_se_usan_las_plantillas(client, candidato_token, monkeypatch):
+    monkeypatch.setattr(get_settings(), "gemini_api_key_asistente", "clave-prueba")
+    monkeypatch.setattr(ia_generativa, "generar_json", lambda *a, **k: ({"resumen": "  "}, "modelo-prueba"))
+    token, _ = candidato_token
+    response = client.post(
+        "/api/ia/resumen-profesional/generar", headers={"Authorization": f"Bearer {token}"}, json={"variante": 1}
+    )
+    assert response.status_code == 200
+    assert response.json()["motor"] == "plantillas"
+    assert len(response.json()["borrador"]) > 80
