@@ -153,12 +153,30 @@ def test_cp01_carrera_con_colocaciones_y_encuestas_calcula_indicadores(db_sessio
     db_session.add(skill_py)
     db_session.flush()
 
+    # Encuesta laboral (HU-30) con la pregunta de relación con la carrera (escala 1 a 5)
+    encuesta = Survey(title="Situación laboral", period="2025", institution_id=univ.id)
+    db_session.add(encuesta)
+    db_session.flush()
+    relacion = SurveyQuestion(
+        survey_id=encuesta.id,
+        code="relacion_carrera",
+        question_text="¿Qué tan relacionado está tu trabajo con tu carrera?",
+        question_type="scale",
+        position=1,
+    )
+    db_session.add(relacion)
+    db_session.flush()
+
     # Registrar 6 egresados con colocación (>= 5 para activar métricas)
-    for i in range(6):
+    for valor in (5, 5, 4, 4, 4, 5):
         cand = _crear_egresado_con_carrera(db_session, univ.id, carrera.id, anio_egreso=2025)
         db_session.add(CandidateSkill(candidate_id=cand.id, skill_id=skill_py.id, proficiency_level="advanced"))
         # inicio 6 meses después
         _crear_colocacion(db_session, univ.id, cand.id, date(2025, 12, 15), cargo="Ingeniero de Software")
+        respuesta = SurveyResponse(survey_id=encuesta.id, candidate_id=cand.id)
+        db_session.add(respuesta)
+        db_session.flush()
+        db_session.add(SurveyAnswer(response_id=respuesta.id, question_id=relacion.id, answer_number=valor))
     db_session.commit()
 
     # Consultar tablero filtrando por la carrera
@@ -171,9 +189,33 @@ def test_cp01_carrera_con_colocaciones_y_encuestas_calcula_indicadores(db_sessio
     assert data["total_colocaciones"] == 6
     assert data["tasa_colocacion"] is not None
     assert data["tasa_colocacion"] > 0
-    assert data["tiempo_promedio_primer_empleo_meses"] is not None
-    assert data["pertinencia_empleo_porcentaje"] is not None
+    # Egreso 15/06/2025 -> empleo 15/12/2025
+    assert data["tiempo_promedio_primer_empleo_meses"] == 6.0
+    # Respuestas 5, 5, 4, 4, 4, 5 -> promedio 4,5 de 5
+    assert data["pertinencia_empleo_porcentaje"] == 90.0
     assert len(data["habilidades_demandadas"]) > 0
+
+
+def test_sin_encuesta_ni_habilidades_no_se_inventan_indicadores(db_session: Session):
+    """Con colocaciones pero sin encuesta, fecha de egreso ni habilidades, esos indicadores quedan vacíos."""
+    univ = Institution(name=f"Universidad {uuid.uuid4().hex[:6]}", is_tenant=True)
+    db_session.add(univ)
+    db_session.commit()
+    staff = _crear_usuario_staff(db_session, univ.id)
+    headers = {"Authorization": f"Bearer {create_access_token(str(staff.id), 'moderator')}"}
+
+    for _ in range(5):
+        perfil = _crear_egresado_con_carrera(db_session, univ.id, None, anio_egreso=2025)
+        db_session.query(CandidateEducation).filter_by(candidate_id=perfil.id).update({"graduation_date": None})
+        _crear_colocacion(db_session, univ.id, perfil.id, date(2025, 12, 15), cargo="Vendedor")
+    db_session.commit()
+
+    data = client.get("/api/indicadores/tablero", headers=headers).json()
+
+    assert data["hay_suficientes_datos"] is True
+    assert data["tiempo_promedio_primer_empleo_meses"] is None
+    assert data["pertinencia_empleo_porcentaje"] is None
+    assert data["habilidades_demandadas"] == []
 
 
 def test_cp02_filtrar_por_periodo_recalcula_indicadores(db_session: Session):

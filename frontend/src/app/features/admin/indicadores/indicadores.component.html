@@ -160,11 +160,15 @@
             </div>
           </div>
           <div class="kpi-value-row">
-            <span class="kpi-value">{{ t.tiempo_promedio_primer_empleo_meses }}</span>
-            <span class="kpi-sub">meses en promedio</span>
+            @if (t.tiempo_promedio_primer_empleo_meses !== null) {
+              <span class="kpi-value">{{ t.tiempo_promedio_primer_empleo_meses }}</span>
+              <span class="kpi-sub">meses en promedio</span>
+            } @else {
+              <span class="kpi-value">Sin datos</span>
+            }
           </div>
           <div class="kpi-footer">
-            <span>Desde la fecha de graduación registrada</span>
+            <span>Encuesta laboral o fecha de egreso registrada</span>
           </div>
         </div>
 
@@ -179,11 +183,15 @@
             </div>
           </div>
           <div class="kpi-value-row">
-            <span class="kpi-value">{{ t.pertinencia_empleo_porcentaje }}%</span>
-            <span class="kpi-sub">alineado a la carrera</span>
+            @if (t.pertinencia_empleo_porcentaje !== null) {
+              <span class="kpi-value">{{ t.pertinencia_empleo_porcentaje }}%</span>
+              <span class="kpi-sub">alineado a la carrera</span>
+            } @else {
+              <span class="kpi-value">Sin datos</span>
+            }
           </div>
           <div class="kpi-footer">
-            <span>Según colocaciones y encuestas laborales</span>
+            <span>Según la encuesta laboral (relación con la carrera)</span>
           </div>
         </div>
 

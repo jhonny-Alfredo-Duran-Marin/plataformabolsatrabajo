@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.models.candidato import CandidateEducation, CandidateProfile, CandidateSkill
 from app.models.catalogo import FieldOfStudy, Skill
 from app.models.colocacion import Placement
-from app.models.encuesta import Survey, SurveyAnswer, SurveyQuestion, SurveyQuestionOption, SurveyResponse
+from app.models.encuesta import Survey, SurveyAnswer, SurveyQuestion, SurveyResponse
 from app.security.tenant import AlcanceStaff
 from app.features.indicadores.schema import (
     HabilidadDemandaItem,
@@ -193,63 +193,25 @@ class IndicadoresService:
         if tasa_colocacion > 100.0:
             tasa_colocacion = 100.0
 
-        # B) Tiempo promedio al primer empleo (en meses)
-        # Diferencia entre graduation_date y start_date
-        diferencias_meses = []
-        for col in colocaciones:
-            f_grad = egresados_map.get(col.candidate_id)
-            if f_grad and col.start_date:
-                # meses = (col.start_date - f_grad).days / 30.4
-                dias = (col.start_date - f_grad).days
-                meses = max(0.0, round(dias / 30.4375, 1))
-                diferencias_meses.append(meses)
-            elif col.start_date:
-                # Si no se especificó graduation_date pero se conoce año de inicio, estimamos promedio base
-                diferencias_meses.append(4.5)
+        # B) Tiempo promedio al primer empleo (en meses), con la misma regla que la exportación (HU-32):
+        # lo que declararon en la encuesta laboral y, sin respuestas, de la fecha de egreso al inicio del empleo.
+        # Sin ninguno de los dos queda en None ("Sin datos"), no en un valor estimado.
+        ids_respuestas = [r.id for r in respuestas_encuestas]
+        meses_encuesta = self._respuestas_numericas(ids_respuestas, "meses_primer_empleo")
+        if meses_encuesta:
+            tiempo_promedio = round(sum(meses_encuesta) / len(meses_encuesta), 1)
+        else:
+            diferencias_meses = [
+                max(0.0, (col.start_date - egresados_map[col.candidate_id]).days / 30.4375)
+                for col in colocaciones
+                if egresados_map.get(col.candidate_id) and col.start_date
+            ]
+            tiempo_promedio = round(sum(diferencias_meses) / len(diferencias_meses), 1) if diferencias_meses else None
 
-        tiempo_promedio = round(sum(diferencias_meses) / len(diferencias_meses), 1) if diferencias_meses else 5.2
-
-        # C) Pertinencia del empleo (% empleo acorde a carrera)
-        # Combinamos colocaciones con título afín + respuestas de encuestas sobre pertinencia
-        afines_count = 0
-        total_evaluados = 0
-
-        # 1. Desde encuestas laborales
-        if respuestas_encuestas:
-            ids_respuestas = [r.id for r in respuestas_encuestas]
-            q_resp_pertinencia = (
-                select(SurveyAnswer, SurveyQuestionOption.option_text)
-                .join(SurveyQuestion, SurveyQuestion.id == SurveyAnswer.question_id)
-                .outerjoin(SurveyQuestionOption, SurveyQuestionOption.id == SurveyAnswer.selected_option_id)
-                .where(
-                    SurveyAnswer.response_id.in_(ids_respuestas),
-                    (SurveyQuestion.code == "pertinencia_carrera") | (SurveyQuestion.question_text.ilike("%relación con su carrera%"))
-                )
-            )
-            for ans, opt_text in self.db.execute(q_resp_pertinencia).all():
-                total_evaluados += 1
-                texto = (opt_text or ans.answer_text or "").lower()
-                if any(w in texto for w in ("alta", "total", "directa", "muy", "relacionado", "si", "acorde")):
-                    afines_count += 1
-                elif ans.answer_number and ans.answer_number >= 3:
-                    afines_count += 1
-
-        # 2. Si las encuestas no tienen suficientes preguntas de pertinencia, evaluar colocaciones
-        for col in colocaciones:
-            total_evaluados += 1
-            pos = col.position_title.lower()
-            # Si el cargo denota formación técnica/profesional acorde
-            if any(w in pos for w in ("ing", "desarrollador", "developer", "analista", "software", "sistemas", "especialista", "consultor", "jefe", "coordinador", "licenc")):
-                afines_count += 1
-            elif not carrera_nombre or carrera_nombre.lower() in pos:
-                afines_count += 1
-            else:
-                # Ponderación positiva estándar para colocaciones validadas por universidad
-                afines_count += 1
-
-        pertinencia_pct = round((afines_count / total_evaluados) * 100.0, 1) if total_evaluados > 0 else 85.0
-        if pertinencia_pct > 100.0:
-            pertinencia_pct = 100.0
+        # C) Pertinencia del empleo: pregunta "relación con la carrera" de la encuesta (escala 1 a 5).
+        # El cargo de la colocación no dice si el empleo es acorde a la carrera: sin respuestas queda en None.
+        relacion = self._respuestas_numericas(ids_respuestas, "relacion_carrera")
+        pertinencia_pct = round(sum(relacion) / len(relacion) / 5.0 * 100.0, 1) if relacion else None
 
         # D) Demanda de Habilidades
         # Extraemos las habilidades de los candidatos colocados
@@ -264,18 +226,13 @@ class IndicadoresService:
         )
         skills_res = self.db.execute(q_skills).all()
 
-        habilidades_list = []
-        if skills_res:
-            for s_name, s_count in skills_res:
-                pct = round((s_count / len(candidatos_colocados_ids)) * 100.0, 1)
-                habilidades_list.append(HabilidadDemandaItem(nombre=s_name, total=s_count, porcentaje=pct))
-        else:
-            # Fallback con habilidades de catálogo si los candidatos aún no cargaron tags
-            top_catalogo = self.db.scalars(select(Skill.name).limit(5)).all()
-            for i, name in enumerate(top_catalogo, start=1):
-                cnt = max(1, total_colocaciones - i)
-                pct = round((cnt / total_colocaciones) * 100.0, 1)
-                habilidades_list.append(HabilidadDemandaItem(nombre=name, total=cnt, porcentaje=pct))
+        # Si los colocados no cargaron habilidades la lista queda vacía (la pantalla lo indica).
+        habilidades_list = [
+            HabilidadDemandaItem(
+                nombre=s_name, total=s_count, porcentaje=round((s_count / len(candidatos_colocados_ids)) * 100.0, 1)
+            )
+            for s_name, s_count in skills_res
+        ]
 
         return IndicadoresResponse(
             fecha_actualizacion=now,
@@ -292,3 +249,18 @@ class IndicadoresService:
             pertinencia_empleo_porcentaje=pertinencia_pct,
             habilidades_demandadas=habilidades_list,
         )
+
+    def _respuestas_numericas(self, ids_respuestas: list[uuid.UUID], codigo: str) -> list[float]:
+        """Valores numéricos que los egresados dieron a una pregunta de la encuesta laboral (por su código)."""
+        if not ids_respuestas:
+            return []
+        valores = self.db.scalars(
+            select(SurveyAnswer.answer_number)
+            .join(SurveyQuestion, SurveyQuestion.id == SurveyAnswer.question_id)
+            .where(
+                SurveyAnswer.response_id.in_(ids_respuestas),
+                SurveyQuestion.code == codigo,
+                SurveyAnswer.answer_number.is_not(None),
+            )
+        ).all()
+        return [float(v) for v in valores]
