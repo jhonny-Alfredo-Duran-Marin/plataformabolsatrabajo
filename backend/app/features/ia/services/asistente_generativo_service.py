@@ -82,7 +82,10 @@ class AsistenteGenerativoService:
         empresas = [e.company_name for e in experiencias if e.company_name]
 
         # Obtener habilidades técnicas y blandas
-        habilidades = [s.name for s in self.repo.listar_habilidades(perfil.id)]
+        skills = self.repo.listar_habilidades(perfil.id)
+        habilidades = [s.name for s in skills]
+        tecnicas = [s.name for s in skills if s.category != "Blanda"]
+        blandas = [s.name.lower() for s in skills if s.category == "Blanda"]
 
         # Obtener idiomas
         idiomas_data = self.repo.listar_idiomas(perfil.id)
@@ -98,6 +101,7 @@ class AsistenteGenerativoService:
             "total_habilidades": len(habilidades),
             "habilidades_principales": habilidades[:6],
             "idiomas": idiomas,
+            "total_idiomas": len(idiomas),
         }
 
         # Generar borrador según variante y perfil
@@ -108,7 +112,8 @@ class AsistenteGenerativoService:
             institucion=institucion_texto,
             cargos=cargos,
             empresas=empresas,
-            habilidades=habilidades,
+            tecnicas=tecnicas,
+            blandas=blandas,
             idiomas=idiomas,
             variante=variante,
         )
@@ -130,13 +135,15 @@ class AsistenteGenerativoService:
         institucion: str,
         cargos: list[str],
         empresas: list[str],
-        habilidades: list[str],
+        tecnicas: list[str],
+        blandas: list[str],
         idiomas: list[str],
         variante: int,
     ) -> str:
         """Sintetiza variantes de redacción profesional basadas en el contexto del candidato."""
-        habs_txt = ", ".join(habilidades[:4]) if habilidades else "solución de problemas y aprendizaje continuo"
-        otras_habs_txt = ", ".join(habilidades[4:8]) if len(habilidades) > 4 else "trabajo colaborativo y adaptabilidad"
+        habs_txt = ", ".join(tecnicas[:4]) if tecnicas else "solución de problemas y aprendizaje continuo"
+        # Las frases de actitud llevan solo habilidades blandas: una técnica ahí ("la responsabilidad y HTML") no se lee bien.
+        otras_habs_txt = ", ".join(blandas[:3]) if blandas else "trabajo colaborativo y adaptabilidad"
         idiomas_txt = f" Manejo de {', '.join(idiomas)}." if idiomas else ""
 
         tiene_experiencia = len(cargos) > 0
@@ -150,7 +157,7 @@ class AsistenteGenerativoService:
             # Variante 1: Enfoque Ejecutivo y Trayectoria
             if tiene_experiencia:
                 p1 = (
-                    f"{titulo} con sólida formación académica por {institucion} y trayectoria en {cargos_txt}{empresas_txt}. "
+                    f"{titulo} con sólida formación académica por {institucion} y trayectoria como {cargos_txt}{empresas_txt}. "
                     f"Especializado/a en {habs_txt}, con enfoque en la entrega de resultados y optimización de procesos."
                 )
             else:
@@ -168,7 +175,7 @@ class AsistenteGenerativoService:
             # Variante 2: Enfoque Técnico y Orientado a Soluciones
             if tiene_experiencia:
                 p1 = (
-                    f"Profesional en {carrera or titulo} con experiencia demostrada en {cargos_txt}. "
+                    f"Profesional en {carrera or titulo} con experiencia demostrada como {cargos_txt}. "
                     f"Cuento con dominio técnico en herramientas y metodologías como {habs_txt}, aportando capacidad analítica y resolución eficiente de incidencias."
                 )
             else:
@@ -186,7 +193,7 @@ class AsistenteGenerativoService:
             # Variante 3: Enfoque Dinámico y Proactivo (Alto Potencial)
             if tiene_experiencia:
                 p1 = (
-                    f"Perfil proactivo en {titulo} respaldado por formación en {institucion} y experiencia aplicada en {cargos_txt}. "
+                    f"Perfil proactivo en {titulo} respaldado por formación en {institucion} y experiencia aplicada como {cargos_txt}. "
                     f"Destaco por mi versatilidad, proactividad y manejo de competencias clave en {habs_txt}."
                 )
             else:

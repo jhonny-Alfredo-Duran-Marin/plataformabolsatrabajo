@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import {
   FormBuilder,
   FormGroup,
@@ -18,10 +18,7 @@ import {
   WorkModality,
 } from '../../../core/models/vacante.models';
 import { ToastService } from '../../../core/services/toast.service';
-import {
-  CatalogoItem,
-  VacanteService,
-} from '../../../core/services/vacante.service';
+import { CatalogoItem, VacanteService } from '../../../core/services/vacante.service';
 
 interface HabilidadSeleccionada {
   skill_id: string;
@@ -46,6 +43,7 @@ export class CrearVacanteComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly vacanteService = inject(VacanteService);
   private readonly toast = inject(ToastService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   form!: FormGroup;
   guardando = false;
@@ -91,15 +89,18 @@ export class CrearVacanteComponent implements OnInit {
           title: resp.titulo,
           description: resp.descripcion,
           requirements_json: (resp.requisitos || []).join('\n'),
-          responsibilities_json: (resp.beneficios || []).join('\n'),
+          benefits_json: (resp.beneficios || []).join('\n'),
           work_modality: resp.modalidad,
           seniority_level: resp.seniority,
         });
 
         this.toast.success('¡Borrador generado por IA! Puedes revisar y editar cualquier sección.');
+        this.cdr.markForCheck();
       },
       error: () => {
+        // Sin esto el modal queda en «Generando…» tras un 503 hasta el siguiente clic (la app no usa zone.js).
         this.generandoIa = false;
+        this.cdr.markForCheck();
       },
     });
   }
@@ -158,6 +159,7 @@ export class CrearVacanteComponent implements OnInit {
       description: ['', [Validators.required, Validators.minLength(10)]],
       responsibilities_json: [''],
       requirements_json: [''],
+      benefits_json: [''],
       category_id: [''],
       seniority_level: ['junior'],
       employment_type: ['permanent'],
@@ -200,16 +202,14 @@ export class CrearVacanteComponent implements OnInit {
     }
 
     const yaExiste = this.habilidadesSeleccionadas.some(
-      (h) => h.skill_id === this.skillSeleccionadaId
+      (h) => h.skill_id === this.skillSeleccionadaId,
     );
     if (yaExiste) {
       this.toast.warning('Esta habilidad ya ha sido agregada.');
       return;
     }
 
-    const skillObj = this.habilidadesCatalogo.find(
-      (h) => h.id === this.skillSeleccionadaId
-    );
+    const skillObj = this.habilidadesCatalogo.find((h) => h.id === this.skillSeleccionadaId);
     if (!skillObj) return;
 
     this.habilidadesSeleccionadas.push({
@@ -260,7 +260,10 @@ export class CrearVacanteComponent implements OnInit {
 
     const aLineas = (texto: string | null | undefined): string[] | null => {
       if (!texto) return null;
-      const lineas = texto.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+      const lineas = texto
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0);
       return lineas.length > 0 ? lineas : null;
     };
 
@@ -269,6 +272,7 @@ export class CrearVacanteComponent implements OnInit {
       description: formVal.description,
       responsibilities_json: aLineas(formVal.responsibilities_json),
       requirements_json: aLineas(formVal.requirements_json),
+      benefits_json: aLineas(formVal.benefits_json),
       category_id: formVal.category_id || null,
       seniority_level: formVal.seniority_level,
       employment_type: formVal.employment_type,
@@ -283,7 +287,9 @@ export class CrearVacanteComponent implements OnInit {
       salary_visible: !!formVal.salary_visible,
       positions_available: formVal.positions_available ? Number(formVal.positions_available) : 1,
       status: comoBorrador ? 'draft' : 'published',
-      application_deadline: formVal.application_deadline ? new Date(formVal.application_deadline).toISOString() : null,
+      application_deadline: formVal.application_deadline
+        ? new Date(formVal.application_deadline).toISOString()
+        : null,
       skills: skillsDto,
       asistida_por_ia: this.asistidaPorIa,
       indicacion_ia: this.indicacionOriginalIa,
@@ -294,23 +300,22 @@ export class CrearVacanteComponent implements OnInit {
         this.guardando = false;
         if (resp.status === 'draft' && !comoBorrador) {
           this.toast.warning(
-            'Vacante guardada en borrador. Se publicará cuando tu empresa sea verificada por la UAGRM.'
+            'Vacante guardada en borrador. Se publicará cuando tu empresa sea verificada por la UAGRM.',
           );
         } else if (resp.status === 'pending_review') {
           this.toast.success(
-            'Vacante enviada a revisión institucional. Se publicará cuando un moderador la apruebe.'
+            'Vacante enviada a revisión institucional. Se publicará cuando un moderador la apruebe.',
           );
         } else {
           this.toast.success(
-            comoBorrador
-              ? 'Borrador guardado exitosamente.'
-              : '¡Vacante publicada con éxito!'
+            comoBorrador ? 'Borrador guardado exitosamente.' : '¡Vacante publicada con éxito!',
           );
         }
         this.router.navigate(['/vacantes/mis-vacantes']);
       },
       error: () => {
         this.guardando = false;
+        this.cdr.markForCheck();
       },
     });
   }

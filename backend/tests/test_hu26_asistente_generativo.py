@@ -12,6 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import get_settings
+from app.features.ia.services.asistente_generativo_service import AsistenteGenerativoService
 from app.main import app
 from app.security.jwt_provider import create_access_token
 
@@ -124,3 +125,31 @@ def test_cp04_servicio_ia_no_disponible(client, candidato_token, monkeypatch):
     assert response.status_code == 503
     assert "no está disponible" in response.json()["detail"].lower()
     assert "manualmente" in response.json()["detail"].lower()
+
+
+def test_resumen_separa_habilidades_blandas_y_cuenta_idiomas(client, candidato_token):
+    """La frase de actitud lleva solo habilidades blandas y la respuesta informa cuántos idiomas usó."""
+    borrador = AsistenteGenerativoService(db=None)._construir_borrador(
+        nombre="Ana",
+        titulo="Ingeniera de Sistemas",
+        carrera="Ingeniería de Sistemas",
+        institucion="la UAGRM",
+        cargos=["Pasante"],
+        empresas=["Pil"],
+        tecnicas=["SQL", "Python", "Docker", "Power BI", "HTML"],
+        blandas=["trabajo en equipo"],
+        idiomas=["Inglés"],
+        variante=1,
+    )
+    assert "trayectoria como Pasante" in borrador
+    assert "la responsabilidad y trabajo en equipo." in borrador
+    assert "HTML" not in borrador
+
+    token, _ = candidato_token
+    response = client.post(
+        "/api/ia/resumen-profesional/generar",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"variante": 1},
+    )
+    datos = response.json()["datos_utilizados"]
+    assert datos["total_idiomas"] == len(datos["idiomas"])

@@ -69,6 +69,14 @@ def test_el_excel_no_ejecuta_formulas_de_los_usuarios():
     assert not any(isinstance(v, str) and v.startswith("=") for v in valores)
 
 
+def test_el_excel_pinta_la_fila_de_encabezados():
+    tabla = Tabla(titulo="Reporte", descripcion=["Línea 1", "Línea 2"], encabezados=["Nombre", "Saldo"], filas=[["Ana", 3]])
+    hoja = load_workbook(BytesIO(a_excel(tabla))).active
+    encabezado = next(fila for fila in hoja.iter_rows() if fila[0].value == "Nombre")
+    assert encabezado[0].font.bold and encabezado[0].fill.fgColor.rgb.endswith("1E3A8A")
+    assert hoja.freeze_panes == f"A{encabezado[0].row + 1}"
+
+
 def test_el_bloqueo_de_login_no_se_evade_con_mayusculas():
     correo = f"Bloqueo_{uuid.uuid4().hex[:6]}@Test.bo"
     variantes = (correo, correo.lower(), correo.upper(), f"  {correo}  ", correo.swapcase())

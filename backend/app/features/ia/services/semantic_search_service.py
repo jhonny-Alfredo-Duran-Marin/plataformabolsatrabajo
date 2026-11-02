@@ -222,6 +222,7 @@ class SemanticSearchService:
         stopwords = {
             "de", "la", "el", "los", "las", "un", "una", "unos", "unas", "y", "o", "en", "para", "por",
             "con", "sin", "al", "del", "que", "como", "quiero", "trabajar", "busco", "necesito", "deseo",
+            "trabajo", "empleo", "vacante", "vacantes", "vigente", "vigentes", "oferta", "ofertas",
         }
         palabras = re.findall(r"\b[a-záéíóúñ]{3,}\b", texto)
         terminos = [p for p in palabras if p not in stopwords]
@@ -279,16 +280,22 @@ class SemanticSearchService:
                 score += 10
                 razones.append("modalidad híbrida flexible")
 
-        # 4. Concordancia con Términos Clave de la Consulta
+        # 4. Concordancia de Seniority
+        seniority_deseado = intencion.get("seniority_preferido")
+        if seniority_deseado and vacante.seniority_level == seniority_deseado:
+            score += 20
+            razones.append(f"nivel {seniority_deseado}")
+
+        # 5. Concordancia con Términos Clave de la Consulta: pesa la proporción de términos
+        # encontrados, así una búsqueda de una sola palabra ("python") que coincide supera el umbral.
         terminos = intencion.get("terminos_clave", [])
         coincidentes = [t for t in terminos if t in texto_vacante or t in skills_texto]
         if coincidentes:
-            puntos_terminos = min(len(coincidentes) * 10, 30)
-            score += puntos_terminos
-            razones.append(f"coincidencia en {', '.join(coincidentes[:3])}")
+            score += round(50 * len(coincidentes) / len(terminos))
+            razones.append(f"términos de tu búsqueda ({', '.join(coincidentes[:3])})")
 
-        # 5. Si la consulta era vacía o muy breve, puntaje estándar de novedad
-        if not consulta:
+        # 6. Consulta vacía o solo con palabras genéricas ("vacantes vigentes"): puntaje estándar de novedad
+        if not consulta or not any(intencion.values()):
             score = 60
             razones.append("vacante destacada vigente")
 

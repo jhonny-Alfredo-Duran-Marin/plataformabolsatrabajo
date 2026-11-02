@@ -63,8 +63,9 @@ def a_excel(tabla: Tabla) -> bytes:
     for linea in tabla.descripcion:
         ws.append([_valor_excel(linea)])
     ws.append([])
-    fila_encabezado = ws.max_row + 1
     ws.append(tabla.encabezados)
+    # Se toma después de escribirla: la fila vacía de arriba no cuenta en max_row (no tiene celdas).
+    fila_encabezado = ws.max_row
     for celda in ws[fila_encabezado]:
         celda.font = Font(bold=True, color="FFFFFF")
         celda.fill = PatternFill("solid", fgColor="1E3A8A")

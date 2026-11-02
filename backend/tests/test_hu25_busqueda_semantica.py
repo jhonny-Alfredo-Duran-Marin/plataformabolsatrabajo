@@ -187,3 +187,25 @@ def test_cp04_degradacion_elegante_cuando_ia_apagada(vacantes_semanticas_fixture
     assert r_alias.status_code == 200
     assert r_alias.json()["ia_disponible"] is False
 
+
+def test_busqueda_de_una_sola_palabra_devuelve_coincidencias(vacantes_semanticas_fixture):
+    """Una sola palabra presente en la vacante ("python") alcanza el umbral de relevancia."""
+    response = client.get("/api/search/semantic", params={"q": "python", "page_size": 100})
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["total"] >= 1
+    assert data["sugerencia"] is None
+    for item in data["items"]:
+        assert item["score_relevancia"] >= 45
+
+
+def test_consulta_generica_lista_las_vacantes_vigentes(vacantes_semanticas_fixture):
+    """Con la caja vacía la web envía "vacantes vigentes": se listan las vacantes en lugar de ninguna."""
+    response = client.get("/api/search/semantic", params={"q": "vacantes vigentes"})
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["total"] >= 3
+    assert data["sugerencia"] is None
+
