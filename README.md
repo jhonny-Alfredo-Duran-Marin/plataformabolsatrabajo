@@ -250,8 +250,9 @@ problema. La última también la aplica el backend solo al arrancar.
 > Son cuentas de demostración de la base compartida. Las claves reales (`DATABASE_URL`,
 > Stripe) **no** van acá: se piden por el grupo del equipo.
 
-Verificadas el 08/10/2026 contra producción (la Supabase compartida): todas inician sesión
-con la contraseña de la tabla.
+Verificadas el 02/11/2026 contra producción (la Supabase compartida): el superadmin, los
+admins, el moderador y una muestra de empresas y egresados inician sesión con la contraseña
+de la tabla.
 
 **Superadmin del SaaS.** Ve todas las universidades, aprueba altas, gestiona planes y
 pagos, y es el único que entra a Copias de seguridad: `superadmin@egresa.bo` / `Egresa2026!`.
@@ -356,12 +357,60 @@ El correo completo es el usuario más el dominio de su universidad: `@uagrm.egre
 - **Encuesta de situación laboral (HU-30):** con el admin de una universidad, menú "Encuestas
   laborales" → "Nueva encuesta": período (ej. `2026-2`), a toda la universidad o a una carrera
   y, si querés, fecha de cierre. Les llega a los egresados validados como aviso en la campanita y
-  por push, y la ven en "Mis encuestas" (`/encuestas`). Responden una vez por período; el admin
+  por push, y la ven en "Mis encuestas" (`/encuestas`; en la app, "Encuestas" en el Inicio).
+  Responden una vez por período; el admin
   ve el porcentaje que respondió y cómo se reparte la situación laboral (solo totales) y puede
   cerrarla. Las preguntas son fijas (situación, empresa, cargo, relación con la carrera, meses
   hasta el primer empleo) y cada una tiene un `code` estable para el tablero de la HU-31. Usa las
   tablas `survey*` del diseño; el backend les agrega al arrancar `survey.period` y
   `survey_question(.option).code` (aditivo e idempotente, ver `core/esquema.py`).
+
+**Sprint 3 (IA e inserción laboral).** Lo que redacta la IA en las HU-26, HU-27 y HU-28 lo
+escribe Gemini cuando el backend tiene las claves (ver "IA generativa" más abajo; en producción
+ya están cargadas); sin ellas usa plantillas y reglas, con el mismo flujo.
+
+- **Búsqueda semántica (HU-25):** con un egresado, en "Buscar vacantes" (`/vacantes`) activá
+  "Búsqueda Semántica IA" y escribí con tus palabras lo que buscás, por ejemplo "quiero
+  programar sin atención al público" o "backend python remoto". Cada resultado muestra su
+  porcentaje de relevancia y por qué coincide. En la app, el botón "Búsqueda Semántica IA" de
+  Vacantes. La interpretación la hace el backend con reglas propias, sin Gemini; con
+  `IA_RECOMENDACIONES_ACTIVAS=false` busca por palabras y lo avisa (CP04).
+- **Resumen profesional con IA (HU-26):** con un egresado (`antonio@prueba.com` tiene el
+  perfil completo), en "Perfil profesional" → "Redactar con Asistente IA", junto al resumen.
+  Propone un borrador editable y muestra qué datos usó (experiencias, habilidades e idiomas):
+  "Aplicar y guardar en mi perfil", "Generar otra versión" o "Descartar". A la IA no le llegan
+  el correo, el teléfono ni el documento. En la app: "Editar perfil" → "Redactar con IA".
+- **Vacante redactada con IA (HU-27):** con una empresa, "Publicar vacante" → "Redactar con
+  IA": una indicación breve (ej. "Desarrollador backend junior remoto en Python"), el tono
+  (corporativo, ágil o formativo) y "Generar borrador". Completa el formulario para revisarlo
+  antes de enviarlo, y "Regenerar otra variante" propone otra redacción. La vacante pasa a
+  revisión de la universidad como cualquier otra.
+- **Asistente de orientación (HU-28):** con cualquier cuenta, el botón del asistente en todas
+  las pantallas de la web o "Asistente" en el Inicio de la app. Se le pregunta con palabras
+  propias ("¿cómo van mis postulaciones?", "¿cómo me postulo?", "¿qué me falta en el
+  perfil?"): responde con los datos de la cuenta, muestra las postulaciones como tarjetas,
+  enlaza a la pantalla que corresponde y sigue el hilo de la conversación ("Nueva
+  conversación" empieza de cero). Si se le piden datos de otra persona, lo rechaza antes de
+  llegar a Gemini.
+- **Registro de colocaciones (HU-29):** cuando una empresa pasa a un postulante a
+  "Contratado" (Gestionar Candidatos y Etapas), al admin de su universidad le aparece en
+  "Colocaciones" como sugerida: con "Ver las pendientes" la confirma con la fecha real de
+  inicio. También se registra a mano con "Registrar colocación" (egresado, empresa, cargo,
+  fecha de inicio y, si se quiere, salario), y se corrige o se elimina indicando el motivo.
+  Solo las confirmadas cuentan en los indicadores.
+- **Tablero de indicadores (HU-31):** con el admin, "Tablero de indicadores": tasa de
+  colocación, tiempo promedio al primer empleo, pertinencia con la carrera y habilidades más
+  pedidas en las contrataciones, filtrable por carrera y período, con la muestra y las
+  fuentes usadas. Sale de las colocaciones confirmadas (HU-29) y de las encuestas (HU-30). Un
+  dato que no existe se muestra vacío (no se inventan valores) y con menos de 5 casos avisa
+  "Sin datos suficientes". Al 02/11/2026 solo UAGRM tiene datos en producción (1 colocación y
+  1 encuesta): para mostrarlo con números, contratá un postulante con una empresa, confirmá
+  la colocación y respondé una encuesta con un egresado de esa universidad.
+- **Exportar indicadores (HU-32):** en el Dashboard del admin, sección "Indicadores de
+  Inserción Laboral", botones PDF y Excel: descargan el tablero de la universidad con la
+  fecha y hora de Bolivia y la advertencia si la muestra es chica. Cada exportación queda en
+  la bitácora.
+- **Reportes por voz o texto:** ver "IA generativa" en los requisitos generales, abajo.
 
 **Requisitos generales de la materia:**
 
