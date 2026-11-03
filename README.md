@@ -397,15 +397,17 @@ ya están cargadas); sin ellas usa plantillas y reglas, con el mismo flujo.
   "Colocaciones" como sugerida: con "Ver las pendientes" la confirma con la fecha real de
   inicio. También se registra a mano con "Registrar colocación" (egresado, empresa, cargo,
   fecha de inicio y, si se quiere, salario), y se corrige o se elimina indicando el motivo.
-  Solo las confirmadas cuentan en los indicadores.
+  En el "Tablero de indicadores" cuentan solo las confirmadas; el Dashboard y la exportación
+  suman también las sugeridas.
 - **Tablero de indicadores (HU-31):** con el admin, "Tablero de indicadores": tasa de
   colocación, tiempo promedio al primer empleo, pertinencia con la carrera y habilidades más
   pedidas en las contrataciones, filtrable por carrera y período, con la muestra y las
   fuentes usadas. Sale de las colocaciones confirmadas (HU-29) y de las encuestas (HU-30). Un
   dato que no existe se muestra vacío (no se inventan valores) y con menos de 5 casos avisa
-  "Sin datos suficientes". Al 02/11/2026 solo UAGRM tiene datos en producción (1 colocación y
-  1 encuesta): para mostrarlo con números, contratá un postulante con una empresa, confirmá
-  la colocación y respondé una encuesta con un egresado de esa universidad.
+  "Sin datos suficientes" (por ejemplo, al filtrar por un año con pocas colocaciones). Los
+  números salen de `sembrar_insercion_demo` (ver "Datos de inserción laboral" más abajo); para
+  sumar uno en vivo, contratá un postulante con una empresa, confirmá la colocación y respondé
+  la encuesta 2026-2 con `antonio@prueba.com`.
 - **Exportar indicadores (HU-32):** en el Dashboard del admin, sección "Indicadores de
   Inserción Laboral", botones PDF y Excel: descargan el tablero de la universidad con la
   fecha y hora de Bolivia y la advertencia si la muestra es chica. Cada exportación queda en
@@ -481,6 +483,15 @@ ya están cargadas); sin ellas usa plantillas y reglas, con el mismo flujo.
   cuentas nuevas usan `DEMO_PASSWORD` (están en las tablas de "Cuentas de prueba"). Si
   existen, `empresa@prueba.com` y `antonio@prueba.com` quedan con una entrevista para
   mañana: es el mejor par para mostrar los recordatorios.
+- **Datos de inserción laboral (HU-29 a HU-32):** `python -m scripts.sembrar_insercion_demo`
+  (después del escenario de demostración). En cada universidad agrega 12 egresados de
+  promociones 2022 a 2025 (9 ya trabajando, con su colocación confirmada), 3 contrataciones
+  hechas por la plataforma (2 confirmadas y 1 por confirmar, con el aviso al admin) y las
+  encuestas 2026-1 (cerrada) y 2026-2 (abierta) respondidas por parte de los egresados. Así el
+  registro de colocaciones, las encuestas, el tablero de indicadores y su exportación muestran
+  números. Las cuentas de prueba de las tablas de arriba quedan sin responder, para mostrar la
+  encuesta en vivo. No manda avisos de encuesta ni push y se puede volver a correr sin duplicar
+  nada. Las cuentas nuevas usan `DEMO_PASSWORD`.
 
 Si alguna deja de funcionar (alguien del equipo pudo haberla cambiado probando), se resetea corriendo los scripts de arriba o pidiendo que se actualice manualmente — avisen en el grupo antes de cambiarlas para no romper la sesión de otro compañero.
 
