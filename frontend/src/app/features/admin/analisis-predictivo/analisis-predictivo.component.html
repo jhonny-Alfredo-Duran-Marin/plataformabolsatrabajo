@@ -1,0 +1,207 @@
+<div class="admin-container">
+  <header class="admin-header">
+    <div>
+      <div class="header-badge">{{ auth.institucion() || 'Todas las universidades' }}</div>
+      <h1>Análisis predictivo: brecha de habilidades</h1>
+      <p class="subtitle">
+        Compará las habilidades que piden las vacantes de una carrera con las que declaran sus egresados. Las
+        habilidades con mayor brecha son las que conviene reforzar en la formación.
+      </p>
+    </div>
+  </header>
+
+  <!-- FILTROS (CA1) -->
+  <section class="filtros-card" aria-label="Filtros del análisis">
+    @if (cargandoFiltros()) {
+      <p class="filtros-estado"><span class="spinner spinner--chico"></span> Cargando carreras y períodos...</p>
+    } @else if (errorFiltros()) {
+      <div class="alerta alerta--error" role="alert">
+        <span>{{ errorFiltros() }}</span>
+        <button type="button" class="btn btn--neutro" (click)="cargarFiltros()">Reintentar</button>
+      </div>
+    } @else {
+      <form class="filtros-grid" (ngSubmit)="generar()">
+        <div class="campo">
+          <label for="ap-carrera">Carrera <span class="requerido">*</span></label>
+          <select
+            id="ap-carrera"
+            name="carrera"
+            [ngModel]="carreraId()"
+            (ngModelChange)="carreraId.set($event); alCambiarFiltro()"
+          >
+            <option value="">Elegí una carrera</option>
+            @for (c of carreras(); track c.id) {
+              <option [value]="c.id">{{ c.nombre }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="campo">
+          <label for="ap-periodo">Período de las vacantes</label>
+          <select
+            id="ap-periodo"
+            name="periodo"
+            [ngModel]="periodo()"
+            (ngModelChange)="periodo.set($event); alCambiarFiltro()"
+          >
+            <option value="">Todos los períodos</option>
+            @for (p of periodos(); track p) {
+              <option [value]="p">{{ etiquetaPeriodo(p) }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="filtros-acciones">
+          <button type="button" class="btn btn--neutro" (click)="limpiar()" [disabled]="!carreraId() && !periodo()">
+            Limpiar
+          </button>
+          <button type="submit" class="btn btn--primario" [disabled]="!puedeGenerar()">
+            {{ cargando() ? 'Calculando...' : 'Generar análisis' }}
+          </button>
+        </div>
+      </form>
+      @if (carreras().length === 0) {
+        <p class="ayuda">Todavía no hay vacantes con habilidades que pidan una carrera, así que no hay nada que analizar.</p>
+      }
+    }
+  </section>
+
+  <!-- RESULTADO -->
+  @if (cargando()) {
+    <div class="estado" role="status">
+      <div class="spinner"></div>
+      <p>Cruzando las habilidades de las vacantes con las de los egresados...</p>
+    </div>
+  } @else if (error()) {
+    <div class="alerta alerta--error" role="alert">
+      <span>{{ error() }}</span>
+      <button type="button" class="btn btn--neutro" (click)="generar()">Reintentar</button>
+    </div>
+  } @else if (resultado(); as r) {
+    @if (!r.hay_suficientes_datos) {
+      <!-- CP02: faltan datos -->
+      <div class="sin-datos" role="alert">
+        <div class="sin-datos-icono" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div>
+          <h2>No hay datos suficientes</h2>
+          <p>{{ r.mensaje }}</p>
+          <div class="pastillas">
+            <span class="pastilla">Vacantes con habilidades: <strong>{{ r.total_vacantes }}</strong> de {{ r.minimo_requerido }} mínimas</span>
+            <span class="pastilla">Egresados verificados: <strong>{{ r.total_egresados }}</strong> de {{ r.minimo_requerido }} mínimos</span>
+          </div>
+          <p class="ayuda">Probá con otro período, con todos los períodos, o con otra carrera.</p>
+        </div>
+      </div>
+    } @else {
+      <section class="resumen-grid" aria-label="Datos analizados">
+        <div class="dato">
+          <span class="dato-valor">{{ r.total_vacantes }}</span>
+          <span class="dato-etiqueta">vacantes analizadas</span>
+        </div>
+        <div class="dato">
+          <span class="dato-valor">{{ r.total_egresados }}</span>
+          <span class="dato-etiqueta">egresados verificados</span>
+        </div>
+        <div class="dato dato--alerta">
+          <span class="dato-valor">{{ conBrecha() }}</span>
+          <span class="dato-etiqueta">habilidades con brecha positiva</span>
+        </div>
+      </section>
+
+      <!-- Lectura de la IA: opcional -->
+      @if (r.resumen_ia) {
+        <section class="panel panel--ia" aria-label="Lectura con inteligencia artificial">
+          <h2>Lectura con IA</h2>
+          <p>{{ r.resumen_ia }}</p>
+          <p class="nota">Texto generado por IA a partir de las cifras de abajo. Revisalo antes de usarlo en un informe.</p>
+        </section>
+      } @else {
+        <p class="aviso-ia" role="status">
+          La lectura con IA no está disponible en este momento. El análisis numérico de abajo no cambia.
+        </p>
+      }
+
+      <!-- Tabla y barras: de mayor a menor brecha -->
+      <section class="panel" aria-label="Brecha por habilidad">
+        <div class="panel-cabecera">
+          <h2>
+            {{ r.carrera_nombre }}
+            <span class="panel-periodo">· {{ r.periodo ? etiquetaPeriodo(r.periodo) : 'todos los períodos' }}</span>
+          </h2>
+          <div class="leyenda" aria-hidden="true">
+            <span><i class="color color--demanda"></i> Demanda (vacantes que la piden)</span>
+            <span><i class="color color--oferta"></i> Oferta (egresados que la declaran)</span>
+          </div>
+        </div>
+
+        <div class="tabla-contenedor">
+          <table class="tabla">
+            <caption class="solo-lectores">
+              Habilidades ordenadas de mayor a menor brecha entre la demanda de las vacantes y la oferta de los egresados.
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Habilidad</th>
+                <th scope="col">Demanda</th>
+                <th scope="col">Oferta</th>
+                <th scope="col" class="col-brecha">Brecha</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (h of r.habilidades; track h.habilidad) {
+                <tr [class.fila--brecha]="h.brecha > 0">
+                  <th scope="row" class="habilidad">{{ h.habilidad }}</th>
+                  <td>
+                    <div class="barra" role="img" [attr.aria-label]="'Demanda: ' + h.demanda_pct + '% de las vacantes'">
+                      <div class="barra-relleno barra-relleno--demanda" [style.width.%]="h.demanda_pct"></div>
+                    </div>
+                    <span class="cifra">{{ h.demanda_pct }}% <span class="cifra-detalle">({{ h.demanda_vacantes }} vacantes)</span></span>
+                  </td>
+                  <td>
+                    <div class="barra" role="img" [attr.aria-label]="'Oferta: ' + h.oferta_pct + '% de los egresados'">
+                      <div class="barra-relleno barra-relleno--oferta" [style.width.%]="h.oferta_pct"></div>
+                    </div>
+                    <span class="cifra">{{ h.oferta_pct }}% <span class="cifra-detalle">({{ h.oferta_egresados }} egresados)</span></span>
+                  </td>
+                  <td class="col-brecha">
+                    <span class="brecha" [class.brecha--positiva]="h.brecha > 0" [class.brecha--negativa]="h.brecha < 0">
+                      {{ h.brecha > 0 ? '+' : '' }}{{ h.brecha }} pts
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <p class="nota">
+          Brecha = % de vacantes que piden la habilidad − % de egresados que la declaran. Positiva (resaltada):
+          faltan egresados con esa habilidad. Negativa: los egresados ya la cubren.
+          @if (r.total_habilidades > r.habilidades.length) {
+            Se muestran las {{ r.habilidades.length }} primeras de {{ r.total_habilidades }} habilidades.
+          }
+        </p>
+        @if (r.vacantes_sin_habilidades > 0 || r.egresados_sin_habilidades > 0) {
+          <p class="nota">
+            No entran al cálculo {{ r.vacantes_sin_habilidades }} vacantes de la carrera sin habilidades cargadas.
+            {{ r.egresados_sin_habilidades }} de los {{ r.total_egresados }} egresados no declararon ninguna habilidad
+            (cuentan como que no la tienen).
+          </p>
+        }
+      </section>
+
+      <p class="actualizacion">
+        Calculado el {{ r.fecha_actualizacion | date: 'dd/MM/yyyy HH:mm' }}
+      </p>
+    }
+  } @else if (!cargandoFiltros() && !errorFiltros()) {
+    <div class="estado">
+      <p class="vacio-titulo">Elegí una carrera para ver la brecha</p>
+      <p>Después tocá «Generar análisis». El período es opcional.</p>
+    </div>
+  }
+</div>

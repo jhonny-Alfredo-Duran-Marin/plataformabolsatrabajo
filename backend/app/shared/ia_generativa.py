@@ -10,6 +10,7 @@ correos, teléfonos ni documentos.
 import json
 import logging
 import re
+import time
 from typing import Any, Literal
 
 import httpx
@@ -44,12 +45,21 @@ def _modelos() -> list[str]:
     return list(dict.fromkeys(m for m in get_settings().gemini_modelos if m))
 
 
-def _pedir(modelo: str, clave: str, cuerpo: dict[str, Any], uso: Uso) -> httpx.Response | None:
-    """Una llamada, con un reintento si el modelo está sobrecargado; None si no respondió."""
+def _pedir(
+    modelo: str, clave: str, cuerpo: dict[str, Any], uso: Uso, limite: float | None = None
+) -> httpx.Response | None:
+    """Una llamada, con un reintento si el modelo está sobrecargado; None si no respondió.
+
+    `limite` es el instante (time.monotonic) en que ya no se espera más: cada intento usa solo el
+    tiempo que queda hasta ahí, y sin tiempo no se hace la llamada.
+    """
     for intento in (1, 2):
+        tiempo = _TIEMPO_MAXIMO if limite is None else min(_TIEMPO_MAXIMO, limite - time.monotonic())
+        if tiempo <= 0:
+            return None
         try:
             respuesta = httpx.post(
-                _URL.format(modelo=modelo), headers={"x-goog-api-key": clave}, json=cuerpo, timeout=_TIEMPO_MAXIMO
+                _URL.format(modelo=modelo), headers={"x-goog-api-key": clave}, json=cuerpo, timeout=tiempo
             )
         except httpx.HTTPError as exc:
             logger.warning("Gemini %s (%s) no respondió: %s", modelo, uso, type(exc).__name__)
@@ -65,14 +75,18 @@ def generar_json(
     mensajes: list[tuple[str, str]],
     esquema: dict[str, Any],
     temperatura: float = 0.4,
+    presupuesto: float | None = None,
 ) -> tuple[dict[str, Any], str]:
     """Pide a Gemini una respuesta JSON con la forma de `esquema`; devuelve (datos, modelo que respondió).
 
-    `mensajes` es la conversación en orden: ("user" | "model", texto).
+    `mensajes` es la conversación en orden: ("user" | "model", texto). `presupuesto` son los segundos
+    como máximo que puede tardar todo el pedido (reintentos y modelos de reserva incluidos); sin él se
+    usa el tiempo de siempre por llamada. Al agotarse lanza IAGenerativaNoDisponible.
     """
     clave = _clave(uso)
     if not clave:
         raise IAGenerativaNoDisponible("Falta la clave de Gemini.")
+    limite = None if presupuesto is None else time.monotonic() + presupuesto
     cuerpo = {
         "systemInstruction": {"parts": [{"text": instrucciones}]},
         "contents": [{"role": rol, "parts": [{"text": texto}]} for rol, texto in mensajes],
@@ -84,7 +98,9 @@ def generar_json(
         },
     }
     for modelo in _modelos():
-        respuesta = _pedir(modelo, clave, cuerpo, uso)
+        if limite is not None and time.monotonic() >= limite:
+            break
+        respuesta = _pedir(modelo, clave, cuerpo, uso, limite)
         if respuesta is not None and respuesta.status_code == 200:
             return _leer(respuesta, uso), modelo
         if respuesta is not None:
