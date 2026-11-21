@@ -95,7 +95,9 @@ export class GruposComponent implements OnInit {
         this.error.set(mensajeDeError(err, 'No se pudo cargar el catálogo de permisos.')),
     });
     if (this.esSuperadmin()) {
-      this.roles.listarUniversidades().subscribe({ next: (lista) => this.universidades.set(lista) });
+      this.roles
+        .listarUniversidades()
+        .subscribe({ next: (lista) => this.universidades.set(lista) });
     }
     this.cargar();
   }
@@ -271,7 +273,11 @@ export class GruposComponent implements OnInit {
       next: (grupo) => {
         this.guardando.set(false);
         this.editor.set(null);
-        this.mensaje.set(e.id ? `Guardaste los cambios de «${grupo.nombre}».` : `Creaste el grupo «${grupo.nombre}».`);
+        this.mensaje.set(
+          e.id
+            ? `Guardaste los cambios de «${grupo.nombre}».`
+            : `Creaste el grupo «${grupo.nombre}».`,
+        );
         this.alCambiar();
       },
       error: (err: HttpErrorResponse) => {
@@ -289,7 +295,9 @@ export class GruposComponent implements OnInit {
       next: () => {
         this.guardando.set(false);
         this.editor.set(null);
-        this.mensaje.set(`Eliminaste el grupo «${e.nombre}». Sus miembros vuelven a ver lo de su rol.`);
+        this.mensaje.set(
+          `Eliminaste el grupo «${e.nombre}». Sus miembros vuelven a ver lo de su rol.`,
+        );
         this.alCambiar();
       },
       error: (err: HttpErrorResponse) => {
