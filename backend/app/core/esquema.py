@@ -104,6 +104,29 @@ _CHATBOT = (
     "ALTER TABLE chatbot_message ENABLE ROW LEVEL SECURITY",
 )
 
+# HU-36 (ADR-003): cola de push fallidos por un error pasajero de Firebase, a la espera de reintento.
+_PUSH_PENDIENTE = (
+    """CREATE TABLE IF NOT EXISTS push_pendiente (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id uuid NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
+    titulo varchar(200) NOT NULL,
+    cuerpo text,
+    enlace varchar(500),
+    datos jsonb NOT NULL DEFAULT '{}'::jsonb,
+    tokens jsonb NOT NULL DEFAULT '[]'::jsonb,
+    intentos integer NOT NULL DEFAULT 1,
+    estado varchar(20) NOT NULL DEFAULT 'pendiente',
+    ultimo_error varchar(500),
+    proximo_intento_at timestamptz NOT NULL DEFAULT now(),
+    created_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT ck_push_pendiente_estado CHECK (estado IN ('pendiente', 'enviado', 'fallido'))
+)""",
+    "CREATE INDEX IF NOT EXISTS ix_push_pendiente_user_id ON push_pendiente (user_id)",
+    "CREATE INDEX IF NOT EXISTS ix_push_pendiente_cola ON push_pendiente (proximo_intento_at) "
+    "WHERE estado = 'pendiente'",
+    "ALTER TABLE push_pendiente ENABLE ROW LEVEL SECURITY",
+)
+
 
 def asegurar_esquema_requisitos(conn: Connection) -> list[str]:
     """Bitácora cifrada, copias automáticas, tareas programadas y grupos de usuarios.
@@ -159,6 +182,13 @@ def asegurar_esquema_requisitos(conn: Connection) -> list[str]:
         for sentencia in _CHATBOT:
             conn.execute(text(sentencia))
         cambios.append("chatbot_session, chatbot_message")
+
+    # HU-36: cola de reintento de push.
+    falta_push = conn.execute(text("SELECT to_regclass('public.push_pendiente')")).scalar() is None
+    if existe_base and falta_push:
+        for sentencia in _PUSH_PENDIENTE:
+            conn.execute(text(sentencia))
+        cambios.append("push_pendiente")
 
     _asegurar_columnas_de_encuestas(conn, cambios)
     _adaptar_colocaciones(conn, cambios)

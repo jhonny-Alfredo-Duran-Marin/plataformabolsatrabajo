@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../core/models/notificacion.dart';
 import '../../core/services/notificacion_service.dart';
+import '../../core/utils/destino_push.dart';
 import '../../core/widgets/boton_ayuda.dart';
 import '../encuestas/encuesta_formulario_screen.dart';
+import '../postulaciones/postulacion_detalle_screen.dart';
 import 'preferencias_notificaciones_screen.dart';
 
 class NotificacionesScreen extends StatefulWidget {
@@ -84,9 +86,19 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
     );
   }
 
-  /// Marca el aviso como leído y, si es de una encuesta laboral (HU-30), abre su formulario.
+  /// Marca el aviso como leído y abre lo que anuncia: el detalle de la postulación si cambió de
+  /// estado (HU-36) o el formulario si es una encuesta laboral (HU-30).
   Future<void> _abrirAviso(Notificacion notif) async {
     await _marcarLeida(notif);
+    final postulacionId = postulacionIdDeAviso(notif);
+    if (mounted && postulacionId != null) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => PostulacionDetalleScreen(accessToken: widget.accessToken, postulacionId: postulacionId),
+        ),
+      );
+      return;
+    }
     final link = notif.link ?? '';
     if (!mounted || notif.notificationType != 'encuesta_laboral' || !link.startsWith('/encuestas/')) return;
     await Navigator.of(context).push(
@@ -106,6 +118,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
   IconData _getIcono(String tipo) {
     switch (tipo) {
       case 'stage_change':
+      case 'application_status':
         return Icons.trending_up;
       case 'job_match':
         return Icons.auto_awesome;
@@ -124,6 +137,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
   Color _getColor(String tipo) {
     switch (tipo) {
       case 'stage_change':
+      case 'application_status':
         return Colors.teal;
       case 'job_match':
         return Colors.amber.shade700;

@@ -125,6 +125,18 @@ def ejecutar(clave: str, disparador: str = "automatico", autor: str | None = Non
         return resultado_de(corrida)
 
 
+def reintentar_push_pendientes() -> dict[str, int]:
+    """Reintenta los push fallidos (HU-36). Va en cada ciclo, no una vez al día; usa su propia sesión."""
+    from app.features.notificaciones.reintento import reintentar_pendientes
+
+    with SessionLocal() as db:
+        try:
+            return reintentar_pendientes(db)
+        except Exception:
+            db.rollback()
+            raise
+
+
 def revisar() -> list[ResultadoCorrida]:
     """Una vuelta del planificador: corre las tareas a las que les toca."""
     corridas: list[ResultadoCorrida] = []
@@ -176,6 +188,12 @@ class Planificador:
                     logger.info("Tarea %s: %s (%s)", corrida.tarea, corrida.estado, corrida.resumen)
             except Exception:  # noqa: BLE001 - p. ej. la base no responde: se reintenta en 5 minutos
                 logger.exception("Falló la revisión de tareas automáticas")
+            try:
+                resumen = reintentar_push_pendientes()
+                if resumen["revisados"]:
+                    logger.info("Reintento de push pendientes: %s", resumen)
+            except Exception:  # noqa: BLE001 - se reintenta en el próximo ciclo
+                logger.exception("Falló el reintento de push pendientes")
             if self._detener.wait(_INTERVALO_SEGUNDOS):
                 return
 

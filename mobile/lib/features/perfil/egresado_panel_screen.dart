@@ -43,6 +43,9 @@ class _EgresadoPanelScreenState extends State<EgresadoPanelScreen> {
   void initState() {
     super.initState();
     PushService.instancia.activar(_sesion.accessToken);
+    // HU-36: si el egresado entró tocando un push, se abre ese detalle apenas termina de armarse el panel.
+    final acceso = _sesion.accessToken;
+    WidgetsBinding.instance.addPostFrameCallback((_) => PushService.instancia.destinos.iniciarSesion(acceso));
   }
 
   void _irA(int indice) {

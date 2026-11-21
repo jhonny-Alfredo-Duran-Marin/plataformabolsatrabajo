@@ -7,6 +7,7 @@ from app.common.exceptions import BadRequestException, ForbiddenException, NotFo
 from app.features.bitacora.service import BitacoraService
 from app.features.colocaciones.service import ColocacionService
 from app.features.ia.services import afinidad as motor_afinidad
+from app.features.notificaciones.estado_postulacion import notificar_cambio_estado
 from app.features.postulaciones.schema import ESTADOS_INFO, MODALIDADES_INFO, TIPOS_EMPLEO_INFO
 from app.features.seleccion.repository import SeleccionRepository
 from app.features.seleccion.schema import (
@@ -379,16 +380,8 @@ class SeleccionService:
         if nuevo_status == "hired" and estado_anterior != "hired":
             self._sugerir_colocacion(app, user_id)
 
-        # Disparar notificación automática al egresado (Criterio de Aceptación)
-        empresa_nombre = miembro.company.trade_name or miembro.company.legal_name
-        if app.candidate and app.candidate.user_id:
-            self.repo.crear_notificacion(
-                user_id=app.candidate.user_id,
-                tipo="application_status",
-                titulo=f"Avance en proceso: {app.job_posting.title}",
-                cuerpo=f"¡Felicidades! Has avanzado a la etapa '{etapa_destino.name}' en el proceso de selección de {empresa_nombre}.",
-                enlace=f"/postulaciones",
-            )
+        # HU-36: aviso al egresado con el nuevo estado legible (campanita y push).
+        notificar_cambio_estado(self.db, app, detalle=f"Etapa: {etapa_destino.name}.")
 
         # Registro en bitácora
         self.bitacora.registrar(
@@ -427,16 +420,8 @@ class SeleccionService:
             motivo=data.motivo,
         )
 
-        # Disparar notificación al egresado
-        empresa_nombre = miembro.company.trade_name or miembro.company.legal_name
-        if app.candidate and app.candidate.user_id:
-            self.repo.crear_notificacion(
-                user_id=app.candidate.user_id,
-                tipo="application_status",
-                titulo=f"Actualización de tu postulación: {app.job_posting.title}",
-                cuerpo=f"Tu proceso de postulación a {app.job_posting.title} en {empresa_nombre} ha finalizado. Te agradecemos por tu interés y tiempo.",
-                enlace=f"/postulaciones",
-            )
+        # HU-36: aviso al egresado con el nuevo estado legible (campanita y push).
+        notificar_cambio_estado(self.db, app)
 
         # Registro en bitácora
         self.bitacora.registrar(

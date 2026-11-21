@@ -64,8 +64,11 @@ def emitir_notificacion(
     titulo: str,
     cuerpo: str | None = None,
     enlace: str | None = None,
+    datos_extra: dict[str, str] | None = None,
 ) -> Notification | None:
     """Crea el aviso en la campanita y lo manda por push según las preferencias.
+
+    `datos_extra` se suma al payload `data` del push (HU-36: tipo y id de la postulación).
 
     No hace commit: queda en la transacción de quien llama. Devuelve None si el
     usuario no quiere avisos de este tipo dentro de la app.
@@ -89,5 +92,5 @@ def emitir_notificacion(
         # Import diferido: fcm_service carga firebase_admin solo si hace falta.
         from app.features.notificaciones import fcm_service
 
-        fcm_service.enviar_push_seguro(db, user_id, titulo, cuerpo, enlace)
+        fcm_service.enviar_push_seguro(db, user_id, titulo, cuerpo, enlace, datos_extra)
     return notif

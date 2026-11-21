@@ -14,7 +14,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.models.notificacion import UserDeviceToken
+from app.models.notificacion import PushPending, UserDeviceToken
 
 logger = logging.getLogger(__name__)
 
@@ -139,16 +139,23 @@ def enviar_push_fcm(
     body: str | None,
     link: str | None = None,
     datos_extra: dict[str, str] | None = None,
+    solo_tokens: list[str] | None = None,
 ) -> dict[str, Any]:
-    """Envía un mensaje Push vía Firebase Cloud Messaging a todos los dispositivos del usuario.
+    """Envía un mensaje Push vía Firebase Cloud Messaging a los dispositivos del usuario.
+
+    `solo_tokens` limita el envío a esos dispositivos (reintento de HU-36: no se duplica el aviso
+    en los que ya lo recibieron); los que ya no estén activos se omiten.
 
     No hace commit: los tokens que Firebase rechaza quedan desactivados en la
-    transacción de quien llama.
+    transacción de quien llama. En `tokens_pasajeros` devuelve los que fallaron por un error
+    pasajero (corte, cuota, 5xx), candidatos a reintento.
     """
     if not inicializar_firebase():
         return {"enviados": 0, "fallidos": 0, "mensaje": "Firebase no está configurado en el servidor."}
 
     tokens = obtener_tokens_activos(db, user_id)
+    if solo_tokens is not None:
+        tokens = [t for t in tokens if t in set(solo_tokens)]
     if not tokens:
         return {"enviados": 0, "fallidos": 0, "mensaje": "Usuario no tiene dispositivos FCM registrados"}
 
@@ -160,7 +167,7 @@ def enviar_push_fcm(
         "click_action": enlace,
     }
     if datos_extra:
-        data_payload.update(datos_extra)
+        data_payload.update({k: str(v) for k, v in datos_extra.items()})
 
     from firebase_admin import messaging
 
@@ -177,7 +184,18 @@ def enviar_push_fcm(
             fcm_options=messaging.WebpushFCMOptions(link=url_web) if url_web.startswith("https://") else None,
         ),
     )
-    respuesta = messaging.send_each_for_multicast(mensaje_multicast)
+    try:
+        respuesta = messaging.send_each_for_multicast(mensaje_multicast)
+    except Exception as exc:  # noqa: BLE001 - Firebase no respondió (red, cuota, 5xx): es pasajero
+        logger.warning("FCM no respondió al enviar el push al usuario %s: %s", user_id, exc)
+        return {
+            "enviados": 0,
+            "fallidos": len(tokens),
+            "tokens_destino": len(tokens),
+            "titulo": title,
+            "tokens_pasajeros": list(tokens),
+            "error": str(exc)[:500],
+        }
 
     # Solo se desactivan los tokens que Firebase da por muertos (app desinstalada, token de otro
     # proyecto o mal formado). Un corte o una cuota agotada es pasajero: ese token sigue activo.
@@ -185,9 +203,19 @@ def enviar_push_fcm(
     invalidos = [
         tokens[i] for i, r in enumerate(respuesta.responses) if not r.success and isinstance(r.exception, muertos)
     ]
-    pasajeros = respuesta.failure_count - len(invalidos)
-    if pasajeros:
-        logger.warning("FCM: %s envíos fallaron por un error pasajero para el usuario %s.", pasajeros, user_id)
+    tokens_pasajeros = [
+        tokens[i]
+        for i, r in enumerate(respuesta.responses)
+        if not r.success and not isinstance(r.exception, muertos)
+    ]
+    error = next(
+        (str(r.exception)[:500] for r in respuesta.responses if not r.success and not isinstance(r.exception, muertos)),
+        None,
+    )
+    if tokens_pasajeros:
+        logger.warning(
+            "FCM: %s envíos fallaron por un error pasajero para el usuario %s.", len(tokens_pasajeros), user_id
+        )
     if invalidos:
         db.query(UserDeviceToken).filter(UserDeviceToken.fcm_token.in_(invalidos)).update(
             {"is_active": False, "updated_at": datetime.now(timezone.utc)}, synchronize_session=False
@@ -198,22 +226,52 @@ def enviar_push_fcm(
         "fallidos": respuesta.failure_count,
         "tokens_destino": len(tokens),
         "titulo": title,
+        "tokens_pasajeros": tokens_pasajeros,
+        "error": error,
     }
 
 
 def enviar_push_seguro(
-    db: Session, user_id: uuid.UUID, title: str, body: str | None, link: str | None = None
+    db: Session,
+    user_id: uuid.UUID,
+    title: str,
+    body: str | None,
+    link: str | None = None,
+    datos_extra: dict[str, str] | None = None,
 ) -> None:
     """Push que acompaña a una notificación: si falla, el flujo que notifica sigue igual.
 
     Sin credenciales de Firebase no consulta nada. Las consultas van en un
     savepoint para no abortar la transacción de quien llama si, por ejemplo,
-    falta la tabla user_device_token.
+    falta la tabla user_device_token. Los dispositivos que fallan por un error pasajero
+    quedan en `push_pendiente` para el reintento del planificador (HU-36, ADR-003).
     """
     if not inicializar_firebase():
         return
     try:
         with db.begin_nested():
-            enviar_push_fcm(db, user_id, title, body, link)
+            resultado = enviar_push_fcm(db, user_id, title, body, link, datos_extra)
     except Exception:
         logger.warning("No se pudo enviar el push FCM al usuario %s", user_id, exc_info=True)
+        return
+    pasajeros = resultado.get("tokens_pasajeros")
+    if not pasajeros:
+        return
+    try:
+        with db.begin_nested():
+            db.add(
+                PushPending(
+                    user_id=user_id,
+                    titulo=title[:200],
+                    cuerpo=body,
+                    enlace=link,
+                    datos={k: str(v) for k, v in (datos_extra or {}).items()},
+                    tokens=pasajeros,
+                    intentos=1,
+                    estado="pendiente",
+                    ultimo_error=resultado.get("error"),
+                    proximo_intento_at=datetime.now(timezone.utc),
+                )
+            )
+    except Exception:
+        logger.warning("No se pudo dejar pendiente el push del usuario %s", user_id, exc_info=True)

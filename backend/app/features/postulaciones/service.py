@@ -9,6 +9,7 @@ from app.common.exceptions import BadRequestException, NotFoundException
 from app.core.tenancy import institucion_efectiva
 from app.features.bitacora.service import BitacoraService
 from app.features.moderacion.reglas import esta_oculta
+from app.features.notificaciones.estado_postulacion import notificar_cambio_estado
 from app.features.postulaciones.repository import PostulacionRepository
 from app.features.postulaciones.schema import (
     ESTADOS_INFO,
@@ -131,6 +132,8 @@ class PostulacionService:
                     reason=motivo_descarte,
                 )
             )
+            # HU-36: el descarte automático por filtros también se avisa (campanita y push).
+            notificar_cambio_estado(self.db, new_app)
 
         self.db.commit()
         self.db.refresh(new_app)

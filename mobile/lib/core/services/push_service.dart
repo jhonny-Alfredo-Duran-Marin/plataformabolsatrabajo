@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../firebase_options.dart';
+import '../utils/destino_push.dart';
 import 'api_config.dart';
 import 'api_http.dart';
 
@@ -21,6 +22,12 @@ class PushService {
 
   static bool get _disponible => !kIsWeb && Platform.isAndroid;
 
+  /// Abre el detalle de una postulación; lo asigna main.dart (el navegador vive allá).
+  static AbrirPostulacion? abrirPostulacion;
+
+  /// Destino del push tocado (HU-36): se abre al instante con sesión o al iniciarla.
+  late final GestorDestinoPush destinos = GestorDestinoPush((token, id) => abrirPostulacion?.call(token, id));
+
   String? _accessToken;
   String? _token;
   StreamSubscription<String>? _renovacion;
@@ -31,9 +38,18 @@ class PushService {
     if (!_disponible) return;
     try {
       await Firebase.initializeApp(options: opcionesFirebaseAndroid);
+      await instancia._escucharToques();
     } catch (e) {
       debugPrint('Firebase no se pudo inicializar: $e');
     }
+  }
+
+  /// Tocar el aviso con la app en segundo plano o cerrada abre el detalle de la postulación (HU-36).
+  /// Se escucha desde el arranque, antes del login: sin sesión el destino queda pendiente.
+  Future<void> _escucharToques() async {
+    final inicial = await FirebaseMessaging.instance.getInitialMessage();
+    if (inicial != null) destinos.alTocar(inicial.data);
+    FirebaseMessaging.onMessageOpenedApp.listen((mensaje) => destinos.alTocar(mensaje.data));
   }
 
   /// Al entrar con una cuenta: pide el permiso la primera vez (Android 13+) y
@@ -80,10 +96,7 @@ class PushService {
     final titulo = mensaje.notification?.title ?? mensaje.data['title'] as String? ?? 'EGRESA';
     final cuerpo = mensaje.notification?.body ?? mensaje.data['body'] as String? ?? '';
     mensajeroGlobal.currentState?.showSnackBar(
-      SnackBar(
-        content: Text(cuerpo.isEmpty ? titulo : '$titulo\n$cuerpo'),
-        duration: const Duration(seconds: 6),
-      ),
+      snackBarDeAviso(titulo: titulo, cuerpo: cuerpo, data: mensaje.data, alVer: destinos.abrirAhora),
     );
   }
 
@@ -93,6 +106,7 @@ class PushService {
     final token = _token;
     _accessToken = null;
     _token = null;
+    destinos.cerrarSesion();
     await _renovacion?.cancel();
     _renovacion = null;
     await _primerPlano?.cancel();

@@ -11,6 +11,7 @@ from app.common.exceptions import (
 )
 from app.features.bitacora.service import BitacoraService
 from app.features.entrevistas.repository import EntrevistasRepository
+from app.features.notificaciones.estado_postulacion import notificar_cambio_estado
 from app.features.entrevistas.schema import (
     EntrevistaCrear,
     EntrevistaOut,
@@ -349,6 +350,7 @@ class EntrevistasService:
 
         entrevista.status = "confirmed"
         app = entrevista.application
+        estado_previo = app.current_status
 
         # Auto-sync Kanban: mover a etapa "entrevista" si no está en ella (Decisión 5)
         etapas = self.repo.obtener_etapas_vacante(app.job_id)
@@ -366,6 +368,10 @@ class EntrevistasService:
                 )
             elif app.current_status != "interview":
                 app.current_status = "interview"
+
+        # HU-36: si el sistema movió la postulación a «En entrevista», se avisa al egresado.
+        if app.current_status != estado_previo:
+            notificar_cambio_estado(self.db, app)
 
         # CP02: Notificar a la empresa
         cand_nombre = f"{perfil.first_name} {perfil.last_name}"

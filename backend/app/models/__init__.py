@@ -24,7 +24,7 @@ from app.models.institucion import (
     UniversitySignupRequest,
 )
 from app.models.moderacion import ModerationReport
-from app.models.notificacion import Notification, NotificationPreference
+from app.models.notificacion import Notification, NotificationPreference, PushPending
 from app.models.respaldo import SystemBackup
 from app.models.tarea import ScheduledTaskRun
 from app.models.seguridad import AuditLog, LoginAttempt
@@ -100,6 +100,7 @@ __all__ = [
     "Notification",
     "NotificationPreference",
     "PlanPayment",
+    "PushPending",
     "Placement",
     "Role",
     "SaasPlan",

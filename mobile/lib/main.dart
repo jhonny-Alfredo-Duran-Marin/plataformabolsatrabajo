@@ -8,6 +8,7 @@ import 'core/services/api_http.dart';
 import 'core/services/push_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/login_screen.dart';
+import 'features/postulaciones/postulacion_detalle_screen.dart';
 
 /// Para volver al login desde fuera de una pantalla (cuando vence la sesión).
 final navegadorGlobal = GlobalKey<NavigatorState>();
@@ -31,6 +32,12 @@ void _sesionVencida() {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // HU-36: al tocar un push de una postulación se abre su detalle.
+  PushService.abrirPostulacion = (accessToken, postulacionId) => navegadorGlobal.currentState?.push(
+    MaterialPageRoute(
+      builder: (_) => PostulacionDetalleScreen(accessToken: accessToken, postulacionId: postulacionId),
+    ),
+  );
   await PushService.inicializarFirebase();
   alVencerLaSesion = _sesionVencida;
   runApp(const EgresaApp());
