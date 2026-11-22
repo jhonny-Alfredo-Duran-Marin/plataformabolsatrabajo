@@ -47,22 +47,28 @@ http.Response _revisarSesion(http.Response respuesta, String? accessToken) {
   return respuesta;
 }
 
-Future<http.Response> obtener(Uri uri, {String? accessToken}) async {
+Future<http.Response> obtener(Uri uri, {String? accessToken, http.Client? client}) async {
   final http.Response respuesta;
   try {
-    respuesta = await http.get(uri, headers: encabezados(accessToken)).timeout(_espera);
+    final req = client != null
+        ? client.get(uri, headers: encabezados(accessToken))
+        : http.get(uri, headers: encabezados(accessToken));
+    respuesta = await req.timeout(_espera);
   } catch (_) {
     throw const ApiException(mensajeSinConexion);
   }
   return _revisarSesion(respuesta, accessToken);
 }
 
-Future<http.Response> enviar(Uri uri, {String? accessToken, Object? cuerpo}) async {
+Future<http.Response> enviar(Uri uri, {String? accessToken, Object? cuerpo, http.Client? client}) async {
   final http.Response respuesta;
   try {
-    respuesta = await http
-        .post(uri, headers: encabezados(accessToken, json: true), body: jsonEncode(cuerpo ?? const {}))
-        .timeout(_espera);
+    final headers = encabezados(accessToken, json: true);
+    final body = jsonEncode(cuerpo ?? const {});
+    final req = client != null
+        ? client.post(uri, headers: headers, body: body)
+        : http.post(uri, headers: headers, body: body);
+    respuesta = await req.timeout(_espera);
   } catch (_) {
     throw const ApiException(mensajeSinConexion);
   }

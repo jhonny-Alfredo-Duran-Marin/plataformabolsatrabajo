@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/models/vacante.dart';
+import '../../core/services/postulacion_service.dart';
+import '../../core/services/vacante_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatos.dart';
 import '../../core/widgets/boton_ayuda.dart';
@@ -9,16 +11,82 @@ import '../auth/registro_egresado_screen.dart';
 import 'denunciar_oferta.dart';
 import 'postulacion_screen.dart';
 
-/// Detalle de una vacante. Sin [accessToken] (visitante, HU-34) invita a
-/// iniciar sesión o crear una cuenta en lugar de postularse.
-class VacanteDetalleScreen extends StatelessWidget {
+/// Detalle de una vacante (HU-13 / HU-35). Sin [accessToken] (visitante, HU-34)
+/// invita a iniciar sesión o crear una cuenta en lugar de postularse.
+/// Si el egresado ya se postuló a esta vacante, lo informa y no permite duplicar (CP03).
+class VacanteDetalleScreen extends StatefulWidget {
   final String? accessToken;
   final Vacante vacante;
+  final bool yaPostulado;
+  final PostulacionService? postulacionService;
+  final VacanteService? vacanteService;
 
-  const VacanteDetalleScreen({super.key, this.accessToken, required this.vacante});
+  const VacanteDetalleScreen({
+    super.key,
+    this.accessToken,
+    required this.vacante,
+    this.yaPostulado = false,
+    this.postulacionService,
+    this.vacanteService,
+  });
+
+  @override
+  State<VacanteDetalleScreen> createState() => _VacanteDetalleScreenState();
+}
+
+class _VacanteDetalleScreenState extends State<VacanteDetalleScreen> {
+  late final PostulacionService _postulacionServicio = widget.postulacionService ?? PostulacionService();
+  late bool _yaPostulado = widget.yaPostulado;
+  bool _cambioEstadoPostulacion = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.accessToken != null && !_yaPostulado) {
+      _verificarSiYaPostulo();
+    }
+  }
+
+  Future<void> _verificarSiYaPostulo() async {
+    final token = widget.accessToken;
+    if (token == null) return;
+    try {
+      final ids = await _postulacionServicio.obtenerVacantesPostuladasIds(token);
+      if (!mounted) return;
+      if (ids.contains(widget.vacante.id)) {
+        setState(() {
+          _yaPostulado = true;
+          _cambioEstadoPostulacion = true;
+        });
+      }
+    } catch (_) {
+      // Si falla la consulta previa de verificación, el backend igual protege contra duplicados en POST /postulaciones/.
+    }
+  }
+
+  Future<void> _abrirPostulacion(String token) async {
+    final postulo = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => PostulacionScreen(
+          accessToken: token,
+          vacante: widget.vacante,
+          vacanteService: widget.vacanteService,
+          postulacionService: _postulacionServicio,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (postulo == true) {
+      setState(() {
+        _yaPostulado = true;
+        _cambioEstadoPostulacion = true;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final vacante = widget.vacante;
     final afinidad = vacante.afinidadPorcentaje;
     final cierre = vacante.cierre;
     final datos = <(IconData, String, String)>[
@@ -30,117 +98,146 @@ class VacanteDetalleScreen extends StatelessWidget {
       (Icons.event_outlined, 'Cierre', cierre == null ? 'Sin fecha límite' : fechaCorta(cierre)),
     ].where((d) => d.$3.isNotEmpty).toList();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detalle de la vacante'),
-        actions: [
-          const BotonAyuda('vacante'),
-          if (accessToken case final token?)
-            PopupMenuButton<void>(
-              tooltip: 'Más opciones',
-              itemBuilder: (_) => [
-                PopupMenuItem(
-                  onTap: () => denunciarOferta(context, token, vacante),
-                  child: const ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.outlined_flag_rounded, color: AppColors.peligro),
-                    title: Text('Denunciar oferta'),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          Navigator.of(context).pop(_cambioEstadoPostulacion);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Detalle de la vacante'),
+          actions: [
+            const BotonAyuda('vacante'),
+            if (widget.accessToken case final token?)
+              PopupMenuButton<void>(
+                tooltip: 'Más opciones',
+                itemBuilder: (_) => [
+                  PopupMenuItem(
+                    onTap: () => denunciarOferta(context, token, vacante),
+                    child: const ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.outlined_flag_rounded, color: AppColors.peligro),
+                      title: Text('Denunciar oferta'),
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AvatarEmpresa(vacante.companyName, tamano: 52),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        vacante.companyName,
+                        style: const TextStyle(color: AppColors.textoSuave, fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(vacante.title, style: Theme.of(context).textTheme.titleLarge?.copyWith(height: 1.25)),
+                    ],
                   ),
                 ),
               ],
             ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AvatarEmpresa(vacante.companyName, tamano: 52),
-              const SizedBox(width: 14),
-              Expanded(
+            if (vacante.city.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              DatoConIcono(Icons.location_on_outlined, vacante.city),
+            ],
+            if (vacante.scoreRelevancia != null) ...[
+              const SizedBox(height: 18),
+              _RelevanciaSemantica(
+                score: vacante.scoreRelevancia!,
+                razon: vacante.razonCoincidencia,
+              ),
+            ] else if (afinidad != null) ...[
+              const SizedBox(height: 18),
+              _Afinidad(afinidad),
+            ],
+            const SizedBox(height: 18),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      vacante.companyName,
-                      style: const TextStyle(color: AppColors.textoSuave, fontWeight: FontWeight.w500),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(vacante.title, style: Theme.of(context).textTheme.titleLarge?.copyWith(height: 1.25)),
+                    for (var i = 0; i < datos.length; i += 2)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: _Dato(datos[i])),
+                            const SizedBox(width: 12),
+                            Expanded(child: i + 1 < datos.length ? _Dato(datos[i + 1]) : const SizedBox.shrink()),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),
-            ],
-          ),
-          if (vacante.city.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            DatoConIcono(Icons.location_on_outlined, vacante.city),
-          ],
-          if (vacante.scoreRelevancia != null) ...[
-            const SizedBox(height: 18),
-            _RelevanciaSemantica(
-              score: vacante.scoreRelevancia!,
-              razon: vacante.razonCoincidencia,
             ),
-          ] else if (afinidad != null) ...[
-            const SizedBox(height: 18),
-            _Afinidad(afinidad),
-          ],
-          const SizedBox(height: 18),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Column(
+            if (vacante.description.trim().isNotEmpty) ...[
+              const SizedBox(height: 22),
+              Text('Descripción', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Text(vacante.description.trim()),
+            ],
+            if (vacante.educationPreferences.isNotEmpty) ...[
+              const SizedBox(height: 22),
+              Text('Carreras afines', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
-                  for (var i = 0; i < datos.length; i += 2)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(child: _Dato(datos[i])),
-                          const SizedBox(width: 12),
-                          Expanded(child: i + 1 < datos.length ? _Dato(datos[i + 1]) : const SizedBox.shrink()),
-                        ],
-                      ),
+                  for (final c in vacante.educationPreferences)
+                    Insignia(
+                      c.name,
+                      colores: coloresDeEstado(c.isRequired ? 'blue' : 'gray'),
+                      icono: Icons.school_outlined,
                     ),
                 ],
               ),
-            ),
-          ),
-          if (vacante.description.trim().isNotEmpty) ...[
-            const SizedBox(height: 22),
-            Text('Descripción', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text(vacante.description.trim()),
+            ],
+            if (vacante.skills.isNotEmpty) ...[
+              const SizedBox(height: 22),
+              Text('Habilidades', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 4),
+              const Text(
+                'Las marcadas en azul son requeridas; el resto suma puntos.',
+                style: TextStyle(color: AppColors.textoSuave, fontSize: 13),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final s in vacante.skills)
+                    Insignia(
+                      s.skillName,
+                      colores: coloresDeEstado(s.importance == 'required' ? 'blue' : 'gray'),
+                      icono: s.importance == 'required' ? Icons.check_circle_outline_rounded : null,
+                    ),
+                ],
+              ),
+            ],
           ],
-          if (vacante.skills.isNotEmpty) ...[
-            const SizedBox(height: 22),
-            Text('Habilidades', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 4),
-            const Text(
-              'Las marcadas en azul son requeridas; el resto suma puntos.',
-              style: TextStyle(color: AppColors.textoSuave, fontSize: 13),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final s in vacante.skills)
-                  Insignia(
-                    s.skillName,
-                    colores: coloresDeEstado(s.importance == 'required' ? 'blue' : 'gray'),
-                    icono: s.importance == 'required' ? Icons.check_circle_outline_rounded : null,
-                  ),
-              ],
-            ),
-          ],
-        ],
+        ),
+        bottomNavigationBar: _BarraAccion(
+          accessToken: widget.accessToken,
+          yaPostulado: _yaPostulado,
+          onPostular: widget.accessToken == null ? null : () => _abrirPostulacion(widget.accessToken!),
+        ),
       ),
-      bottomNavigationBar: _BarraAccion(accessToken: accessToken, vacante: vacante),
     );
   }
 }
@@ -215,8 +312,14 @@ class _Afinidad extends StatelessWidget {
 
 class _BarraAccion extends StatelessWidget {
   final String? accessToken;
-  final Vacante vacante;
-  const _BarraAccion({required this.accessToken, required this.vacante});
+  final bool yaPostulado;
+  final VoidCallback? onPostular;
+
+  const _BarraAccion({
+    required this.accessToken,
+    required this.yaPostulado,
+    required this.onPostular,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -231,14 +334,46 @@ class _BarraAccion extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
           child: token != null
-              ? FilledButton(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => PostulacionScreen(accessToken: token, vacante: vacante),
-                    ),
-                  ),
-                  child: const Text('Postularme'),
-                )
+              ? (yaPostulado
+                  ? Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.exitoSuave,
+                        borderRadius: BorderRadius.circular(AppTheme.radio),
+                        border: Border.all(color: AppColors.exito),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.check_circle_rounded, color: AppColors.exito, size: 22),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Ya te postulaste a esta vacante',
+                                  style: TextStyle(
+                                    color: AppColors.exito,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Podés ver su seguimiento en Postulaciones (móvil y web).',
+                                  style: TextStyle(color: AppColors.textoSuave, fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : FilledButton(
+                      onPressed: onPostular,
+                      child: const Text('Postularme'),
+                    ))
               : Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -260,7 +395,6 @@ class _BarraAccion extends StatelessWidget {
     );
   }
 }
-
 
 class _RelevanciaSemantica extends StatelessWidget {
   final int score;
