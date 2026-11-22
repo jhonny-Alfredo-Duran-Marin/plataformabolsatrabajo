@@ -163,8 +163,10 @@ def test_la_base_solo_guarda_la_entrada_cifrada(db_session, datos, bitacora_cifr
     assert crudo.payload_cifrado.startswith("v1.")
     assert crudo.user_id is None and crudo.ip_address is None and crudo.details_json is None
     assert crudo.action == crudo.entity_type == "cifrado"
-    # La base guarda solo el día; la hora exacta va adentro del cifrado.
-    assert (crudo.created_at.hour, crudo.created_at.minute, crudo.created_at.second) == (0, 0, 0)
+    # La base guarda solo el día (medianoche UTC); la hora exacta va adentro del cifrado. psycopg devuelve la
+    # fecha en la zona de la sesión (La Paz en local), así que se pasa a UTC antes de comparar.
+    dia = crudo.created_at.astimezone(timezone.utc)
+    assert (dia.hour, dia.minute, dia.second) == (0, 0, 0)
     assert "accion_secreta" not in crudo.payload_cifrado and "10.1.2.3" not in crudo.payload_cifrado
 
 

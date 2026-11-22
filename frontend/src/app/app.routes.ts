@@ -135,6 +135,14 @@ export const routes: Routes = [
           import('./features/admin/indicadores/indicadores.component').then((m) => m.IndicadoresComponent),
       },
       {
+        path: 'analisis-predictivo',
+        data: { permiso: 'menu.analisis_predictivo' },
+        loadComponent: () =>
+          import('./features/admin/analisis-predictivo/analisis-predictivo.component').then(
+            (m) => m.AnalisisPredictivoComponent,
+          ),
+      },
+      {
         path: 'respaldos',
         canActivate: [superadminGuard],
         loadComponent: () => import('./features/admin/respaldos/respaldos.component').then((m) => m.RespaldosComponent),
