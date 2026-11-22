@@ -9,8 +9,14 @@ import 'insignia.dart';
 class TarjetaVacante extends StatelessWidget {
   final Vacante vacante;
   final VoidCallback onTap;
+  final bool yaPostulado;
 
-  const TarjetaVacante({super.key, required this.vacante, required this.onTap});
+  const TarjetaVacante({
+    super.key,
+    required this.vacante,
+    required this.onTap,
+    this.yaPostulado = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -81,6 +87,14 @@ class TarjetaVacante extends StatelessWidget {
                   if (vacante.nivelLegible.isNotEmpty) DatoConIcono(Icons.trending_up_rounded, vacante.nivelLegible),
                 ],
               ),
+              if (yaPostulado) ...[
+                const SizedBox(height: 10),
+                Insignia(
+                  'Ya te postulaste',
+                  colores: coloresDeEstado('green'),
+                  icono: Icons.check_circle_outline_rounded,
+                ),
+              ],
               if (razon != null && razon.trim().isNotEmpty) ...[
                 const SizedBox(height: 10),
                 Container(

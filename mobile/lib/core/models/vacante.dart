@@ -16,6 +16,7 @@ class Vacante {
   final int positionsAvailable;
   final String? applicationDeadline;
   final List<VacanteSkill> skills;
+  final List<VacanteCarrera> educationPreferences;
   final int? afinidadPorcentaje;
   final int? scoreRelevancia;
   final String? razonCoincidencia;
@@ -36,6 +37,7 @@ class Vacante {
     required this.positionsAvailable,
     required this.applicationDeadline,
     required this.skills,
+    this.educationPreferences = const [],
     this.afinidadPorcentaje,
     this.scoreRelevancia,
     this.razonCoincidencia,
@@ -71,6 +73,10 @@ class Vacante {
         }
         return VacanteSkill.fromJson(e as Map<String, dynamic>);
       }).toList(),
+      educationPreferences: (json['education_preferences'] as List<dynamic>? ?? [])
+          .whereType<Map<String, dynamic>>()
+          .map(VacanteCarrera.fromJson)
+          .toList(),
       afinidadPorcentaje: json['afinidad_porcentaje'] as int?,
       scoreRelevancia: (json['score_relevancia'] as num?)?.toInt(),
       razonCoincidencia: json['razon_coincidencia'] as String?,
@@ -79,6 +85,7 @@ class Vacante {
 
   /// Los códigos del backend vienen en inglés; en pantalla se muestran en español.
   static const _modalidades = {'onsite': 'Presencial', 'on_site': 'Presencial', 'remote': 'Remoto', 'hybrid': 'Híbrido'};
+  static String etiquetaModalidad(String codigo) => _modalidades[codigo] ?? codigo;
   static const _jornadas = {
     'permanent': 'Tiempo completo',
     'full_time': 'Tiempo completo',
@@ -143,6 +150,83 @@ class VacanteSkill {
       skillName: json['skill_name'] as String? ?? json['name'] as String? ?? '',
       importance: json['importance'] as String? ?? '',
       minProficiency: json['min_proficiency'] as String? ?? '',
+    );
+  }
+}
+
+/// Carrera preferida o requerida por una vacante (HU-13 / HU-35).
+class VacanteCarrera {
+  final String fieldOfStudyId;
+  final String name;
+  final bool isRequired;
+
+  const VacanteCarrera({
+    required this.fieldOfStudyId,
+    required this.name,
+    this.isRequired = true,
+  });
+
+  factory VacanteCarrera.fromJson(Map<String, dynamic> json) {
+    return VacanteCarrera(
+      fieldOfStudyId: (json['field_of_study_id'] ?? '').toString(),
+      name: json['name'] as String? ?? '',
+      isRequired: json['is_required'] as bool? ?? true,
+    );
+  }
+}
+
+/// Elemento del catálogo de carreras devuelto por GET /vacantes/buscar/filtros.
+class CarreraFiltro {
+  final String id;
+  final String name;
+  final String? category;
+
+  const CarreraFiltro({
+    required this.id,
+    required this.name,
+    this.category,
+  });
+
+  factory CarreraFiltro.fromJson(Map<String, dynamic> json) {
+    return CarreraFiltro(
+      id: (json['id'] ?? '').toString(),
+      name: json['name'] as String? ?? '',
+      category: json['category'] as String?,
+    );
+  }
+}
+
+/// Opciones vigentes para los filtros de búsqueda móvil y web (GET /vacantes/buscar/filtros).
+class FiltrosDisponiblesVacantes {
+  final List<String> ciudades;
+  final List<String> modalidades;
+  final List<CarreraFiltro> carreras;
+
+  const FiltrosDisponiblesVacantes({
+    this.ciudades = const [],
+    this.modalidades = const ['onsite', 'remote', 'hybrid'],
+    this.carreras = const [],
+  });
+
+  factory FiltrosDisponiblesVacantes.fromJson(Map<String, dynamic> json) {
+    final ciudades = (json['ciudades'] as List<dynamic>? ?? [])
+        .map((e) => e.toString().trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    final modalidadesRaw = (json['modalidades'] as List<dynamic>? ?? [])
+        .map((e) => e.toString().trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    final carreras = (json['carreras'] as List<dynamic>? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map(CarreraFiltro.fromJson)
+        .where((c) => c.id.isNotEmpty && c.name.isNotEmpty)
+        .toList();
+
+    return FiltrosDisponiblesVacantes(
+      ciudades: ciudades,
+      modalidades: modalidadesRaw.isEmpty ? const ['onsite', 'remote', 'hybrid'] : modalidadesRaw,
+      carreras: carreras,
     );
   }
 }
